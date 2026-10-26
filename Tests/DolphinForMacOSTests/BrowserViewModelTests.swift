@@ -85,4 +85,22 @@ final class BrowserViewModelTests: XCTestCase {
         XCTAssertEqual(vm.viewProperties.zoomLevel, 1.8)
         XCTAssertEqual(store.properties(for: tempDir).zoomLevel, 1.8)
     }
+
+    func test_select_setsSelectedItem() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        let item = vm.items[0]
+        vm.select(item)
+        XCTAssertEqual(vm.selectedItem, item)
+    }
+
+    func test_navigate_clearsSelection() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let sub = tempDir.appendingPathComponent("sub", isDirectory: true)
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.select(vm.items[0])
+        vm.navigate(to: sub)
+        XCTAssertNil(vm.selectedItem)
+    }
 }

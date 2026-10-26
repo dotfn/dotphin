@@ -7,6 +7,7 @@ final class BrowserViewModel {
     private(set) var items: [FileItem] = []
     private(set) var error: DirectoryReadError?
     private(set) var viewProperties: ViewProperties
+    private(set) var selectedItem: FileItem?
 
     private let reader: DirectoryReader
     private let store: ViewPropertiesStore
@@ -22,7 +23,12 @@ final class BrowserViewModel {
     func navigate(to url: URL) {
         currentURL = url
         viewProperties = store.properties(for: url)
+        selectedItem = nil
         load(url)
+    }
+
+    func select(_ item: FileItem?) {
+        selectedItem = item
     }
 
     func goUp() {
