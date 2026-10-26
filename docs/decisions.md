@@ -250,3 +250,50 @@ desaparecer el ítem sin forma de recuperarlo (no hay toggle de
   notificación entre paneles (no hay file-watching, ya logueado en
   slice 1).
 
+## 2026-10-26 — Slice 7: hallazgos de la revisión final de rama
+
+Revisión final (Opus, fresh context) sobre árbol de carpetas + búsqueda.
+Confirmado empíricamente: ni el árbol ni la búsqueda hacen loop con un
+symlink circular (el enumerator no sigue symlinks a directorios por
+default), y ambos degradan a vacío/salteado ante una carpeta sin
+permiso, sin crashear. Tres "Important" arreglados en el momento (ver
+el commit `fix: debounce de búsqueda, resultados se refrescan al
+borrar, selección en modo búsqueda`). El resto queda diferido:
+
+- El árbol de carpetas nunca vuelve a leer un nodo ya expandido
+  (`children == nil` es la única condición) — una carpeta creada,
+  renombrada o borrada por el slice 6 no aparece/desaparece del árbol
+  hasta reiniciar la app. Candidato: sacar la condición `children ==
+  nil` para que cada expand vuelva a leer.
+- La búsqueda usa `.skipsHiddenFiles` (respeta el flag `UF_HIDDEN` del
+  sistema), mientras que el resto de la app define "oculto" solo como
+  prefijo `.` (decisión del slice 1) — una carpeta marcada con el flag
+  de sistema (no muy común, pero existe) se salta en la búsqueda y se
+  ve en el navegador normal. Inconsistencia menor, no un bug de
+  seguridad.
+- Las carpetas vía symlink no aparecen en el árbol en absoluto (en vez
+  de aparecer como hoja no expandible) — el plan pedía "listado, no
+  seguido"; quedó como "ni listado". No hay riesgo de loop en ningún
+  caso.
+- Abrir un resultado de búsqueda que es una carpeta navega a su
+  carpeta contenedora (como pedía el plan), no entra a la carpeta — un
+  usuario que hace doble-click en una carpeta en los resultados
+  probablemente espera entrar, no ver el padre. Documentado como
+  tensión conocida, no se resuelve en este slice.
+- Los resultados de búsqueda no muestran la ruta/carpeta contenedora —
+  dos archivos con el mismo nombre en carpetas distintas se ven
+  idénticos en la lista.
+- La barra de estado sigue contando los ítems de la carpeta actual
+  durante una búsqueda activa, no los resultados.
+- El filtro de texto y la búsqueda pueden estar "activos" los dos a la
+  vez sin que la UI avise cuál gana (gana la búsqueda, por orden en
+  `BrowserView`) — no hay nada que le diga esto al usuario.
+- Un query de búsqueda de solo espacios dispara un recorrido completo
+  igual — mismo tipo de hueco que el filtro del slice 5.
+- Cada fila del árbol muestra una flecha de disclosure aunque sea una
+  hoja o una carpeta sin permiso (expande a nada, sin indicador), y el
+  árbol no resalta ni sigue la carpeta actualmente abierta.
+- Faltan tests directos de `SearchService` para symlink circular y
+  carpeta sin permiso (el comportamiento correcto está confirmado por
+  el revisor con un script aparte, pero no está fijado en la suite).
+
