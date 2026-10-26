@@ -7,3 +7,5 @@ Spec: docs/superpowers/specs/2026-10-25-dolphin-macos-design.md (leída)
 Task 1: complete
 Task 2: complete
 Task 3: complete, ruling: extracted shared sort comparator to avoid duplication (not literally in plan, DRY call)
+Task 4: complete. Consultado axiom-swiftui (containers-ref.md "File Browser"/LazyVGrid) y axiom-macos (swiftui-differences.md, Table) antes de implementar — confirman LazyVGrid para grid de iconos y Table(items) { TableColumn } para detalles. Ruling: no usé el sortOrder nativo de Table (column-click-to-sort) para no duplicar el control de orden con el Menu de la toolbar — un solo camino de orden (Menu) alimenta BrowserViewModel.setSort para los 3 modos.
+Task 5: suite completa 26/26, build limpio, smoke run sin crash.

@@ -6,7 +6,7 @@ struct IconGridView: View {
     let onOpen: (FileItem) -> Void
 
     private var columns: [GridItem] {
-        [GridItem(.adaptive(minimum: 64 * zoomLevel))]
+        [GridItem(.adaptive(minimum: 80 * zoomLevel))]
     }
 
     var body: some View {

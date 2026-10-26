@@ -23,6 +23,18 @@ final class DirectoryReaderTests: XCTestCase {
         XCTAssertEqual(names, ["zfolder", "big.txt", "small.txt"])
     }
 
+    func test_contentsSortedBySizeDescending_tiesBreakByNameAscending() throws {
+        // Varios archivos del mismo tamaño creados en orden inverso al alfabético:
+        // con un comparador roto para empates, el orden que sale no es "a","b","c"...
+        let names = ["j", "i", "h", "g", "f", "e", "d", "c", "b", "a"]
+        for name in names {
+            try "x".write(to: tempDir.appendingPathComponent("\(name).txt"), atomically: true, encoding: .utf8)
+        }
+        let reader = DirectoryReader()
+        let result = try reader.contents(of: tempDir, sortField: .size, ascending: false).map(\.name)
+        XCTAssertEqual(result, names.sorted().map { "\($0).txt" }, "tamaños iguales deben desambiguar por nombre, no quedar en orden arbitrario")
+    }
+
     func test_contentsSortedByModificationDateAscending() throws {
         let older = tempDir.appendingPathComponent("older.txt")
         let newer = tempDir.appendingPathComponent("newer.txt")
