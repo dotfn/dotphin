@@ -10,6 +10,10 @@ struct DirectoryReader {
     var showsHiddenFiles: Bool = false
 
     func contents(of url: URL) throws -> [FileItem] {
+        try contents(of: url, sortField: .name, ascending: true)
+    }
+
+    func contents(of url: URL, sortField: SortField, ascending: Bool) throws -> [FileItem] {
         let keys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey, .contentModificationDateKey]
         let urls: [URL]
         do {
@@ -56,7 +60,16 @@ struct DirectoryReader {
             if lhs.isDirectory != rhs.isDirectory {
                 return lhs.isDirectory
             }
-            return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+            let result: Bool
+            switch sortField {
+            case .name:
+                result = lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+            case .size:
+                result = (lhs.size ?? 0) < (rhs.size ?? 0)
+            case .modificationDate:
+                result = (lhs.modificationDate ?? .distantPast) < (rhs.modificationDate ?? .distantPast)
+            }
+            return ascending ? result : !result
         }
     }
 }

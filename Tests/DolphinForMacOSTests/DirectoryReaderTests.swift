@@ -14,6 +14,26 @@ final class DirectoryReaderTests: XCTestCase {
         try? FileManager.default.removeItem(at: tempDir)
     }
 
+    func test_contentsSortedBySizeDescending_foldersStillFirst() throws {
+        try "12345".write(to: tempDir.appendingPathComponent("small.txt"), atomically: true, encoding: .utf8)
+        try "1234567890".write(to: tempDir.appendingPathComponent("big.txt"), atomically: true, encoding: .utf8)
+        try FileManager.default.createDirectory(at: tempDir.appendingPathComponent("zfolder"), withIntermediateDirectories: true)
+        let reader = DirectoryReader()
+        let names = try reader.contents(of: tempDir, sortField: .size, ascending: false).map(\.name)
+        XCTAssertEqual(names, ["zfolder", "big.txt", "small.txt"])
+    }
+
+    func test_contentsSortedByModificationDateAscending() throws {
+        let older = tempDir.appendingPathComponent("older.txt")
+        let newer = tempDir.appendingPathComponent("newer.txt")
+        try "x".write(to: older, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -100)], ofItemAtPath: older.path)
+        try "x".write(to: newer, atomically: true, encoding: .utf8)
+        let reader = DirectoryReader()
+        let names = try reader.contents(of: tempDir, sortField: .modificationDate, ascending: true).map(\.name)
+        XCTAssertEqual(names, ["older.txt", "newer.txt"])
+    }
+
     func test_contentsOfEmptyDirectory_returnsEmptyArray() throws {
         let reader = DirectoryReader()
         XCTAssertEqual(try reader.contents(of: tempDir), [])
