@@ -5,20 +5,25 @@ struct SplitBrowserView: View {
     let onFocusPane: (Int) -> Void
 
     var body: some View {
-        if tab.isSplit {
-            HSplitView {
+        Group {
+            if tab.isSplit {
+                HSplitView {
+                    paneView(viewModel: tab.primary, index: 0)
+                    paneView(viewModel: tab.secondary!, index: 1)
+                }
+            } else {
                 paneView(viewModel: tab.primary, index: 0)
-                paneView(viewModel: tab.secondary!, index: 1)
             }
-        } else {
-            paneView(viewModel: tab.primary, index: 0)
         }
+        .id(tab.id)
     }
 
     private func paneView(viewModel: BrowserViewModel, index: Int) -> some View {
         BrowserView(viewModel: viewModel)
             .border(tab.focusedPaneIndex == index ? Color.accentColor : Color.clear, width: 2)
-            .onTapGesture {
+            .contentShape(Rectangle())
+            .simultaneousGesture(TapGesture().onEnded { onFocusPane(index) })
+            .onChange(of: viewModel.currentURL) { _, _ in
                 onFocusPane(index)
             }
     }
