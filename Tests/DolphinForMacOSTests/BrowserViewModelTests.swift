@@ -47,4 +47,42 @@ final class BrowserViewModelTests: XCTestCase {
         XCTAssertEqual(vm.error, .notFound(sub))
         XCTAssertEqual(vm.items, [])
     }
+
+    func test_init_loadsViewPropertiesForStartingFolder() throws {
+        let store = ViewPropertiesStore(defaults: UserDefaults(suiteName: "test.\(UUID().uuidString)")!)
+        var saved = ViewProperties()
+        saved.mode = .icons
+        store.setProperties(saved, for: tempDir)
+        let vm = BrowserViewModel(startingAt: tempDir, store: store)
+        XCTAssertEqual(vm.viewProperties.mode, .icons)
+    }
+
+    func test_setViewMode_persistsAndDoesNotRereadDisk() throws {
+        try "a".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let suite = UserDefaults(suiteName: "test.\(UUID().uuidString)")!
+        let store = ViewPropertiesStore(defaults: suite)
+        let vm = BrowserViewModel(startingAt: tempDir, store: store)
+        try FileManager.default.removeItem(at: tempDir.appendingPathComponent("a.txt"))
+        vm.setViewMode(.icons)
+        XCTAssertEqual(vm.viewProperties.mode, .icons)
+        XCTAssertEqual(vm.items.map(\.name), ["a.txt"], "no debió re-leer el disco al cambiar el modo")
+        XCTAssertEqual(store.properties(for: tempDir).mode, .icons)
+    }
+
+    func test_setSort_reordersWithoutError() throws {
+        try "12345".write(to: tempDir.appendingPathComponent("small.txt"), atomically: true, encoding: .utf8)
+        try "1234567890".write(to: tempDir.appendingPathComponent("big.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.setSort(field: .size, ascending: false)
+        XCTAssertEqual(vm.items.map(\.name), ["big.txt", "small.txt"])
+    }
+
+    func test_setZoomLevel_persists() throws {
+        let suite = UserDefaults(suiteName: "test.\(UUID().uuidString)")!
+        let store = ViewPropertiesStore(defaults: suite)
+        let vm = BrowserViewModel(startingAt: tempDir, store: store)
+        vm.setZoomLevel(1.8)
+        XCTAssertEqual(vm.viewProperties.zoomLevel, 1.8)
+        XCTAssertEqual(store.properties(for: tempDir).zoomLevel, 1.8)
+    }
 }
