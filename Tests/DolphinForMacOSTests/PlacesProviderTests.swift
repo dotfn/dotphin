@@ -1,0 +1,29 @@
+import XCTest
+@testable import DolphinForMacOS
+
+final class PlacesProviderTests: XCTestCase {
+    func test_staticBookmarks_returnsHomeDesktopDocumentsDownloadsInOrder() {
+        let provider = PlacesProvider()
+        let names = provider.staticBookmarks().map(\.name)
+        XCTAssertEqual(names, ["Home", "Desktop", "Documents", "Downloads"])
+    }
+
+    func test_staticBookmarks_homeURLMatchesFileManager() {
+        let provider = PlacesProvider()
+        let home = provider.staticBookmarks().first { $0.name == "Home" }
+        XCTAssertEqual(home?.url, FileManager.default.homeDirectoryForCurrentUser)
+    }
+
+    func test_mountedVolumes_includesBootVolume() {
+        let provider = PlacesProvider()
+        let volumes = provider.mountedVolumes()
+        XCTAssertFalse(volumes.isEmpty, "debe incluir al menos el volumen de arranque")
+    }
+
+    func test_allPlaces_isBookmarksThenVolumes() {
+        let provider = PlacesProvider()
+        let all = provider.allPlaces()
+        let bookmarks = provider.staticBookmarks()
+        XCTAssertEqual(Array(all.prefix(bookmarks.count)), bookmarks)
+    }
+}
