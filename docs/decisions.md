@@ -188,3 +188,32 @@ subiendo el estado de `BrowserView` a `ContentView`).
 - Botón del panel de información (`sidebar.right`) sin tooltip/label de
   accesibilidad — mismo gap que los botones de pestañas del slice 3.
 
+## 2026-10-26 — Slice 5: hallazgos de la revisión final de rama
+
+Revisión final (Opus, fresh context) sobre filtro + barra de estado. Un
+"Important" arreglado en el momento (el filtro no limpiaba la selección
+si ocultaba el ítem seleccionado — el panel de información seguía
+mostrando metadata de algo invisible). El resto queda diferido:
+
+- El espacio libre se consulta en cada render de `BrowserView`
+  (incluye cada tecla tipeada en el filtro) en vez de una vez en
+  `load(_:)`. Barato en disco local, puede trabar con un volumen de red
+  lento. Candidato: moverlo a estado del view model.
+- Se usa `.volumeAvailableCapacityKey` en vez de
+  `.volumeAvailableCapacityForImportantUsageKey` — Finder usa la
+  segunda (excluye espacio purgeable), así que el número puede no
+  coincidir con "Acerca de esta Mac". El spec nombra la key literal
+  usada; cambiarla es una decisión de producto, no un bug.
+- La barra de estado muestra "0 ítems" también cuando hay un error
+  (permiso denegado / no encontrado), lo que puede leerse como "carpeta
+  vacía". Candidato: ocultar el conteo o mostrar "—" si `viewModel.error != nil`.
+- Sin pluralización ("1 ítems" en vez de "1 ítem").
+- El estado "Sin resultados" se decide en la vista (`BrowserView`), no
+  en el view model — no hay un test directo de ese caso a nivel de VM,
+  solo indirectamente vía `filteredItems`/`filterText`.
+- Un filtro de solo espacios (`"   "`) cuenta como activo (matchea
+  cualquier nombre con un espacio) — candidato: trim antes del check de
+  vacío.
+- El botón de limpiar el filtro no tiene tooltip/accesibilidad — mismo
+  gap que otros botones de ícono de slices anteriores.
+
