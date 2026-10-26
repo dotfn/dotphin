@@ -158,6 +158,7 @@ struct BrowserView: View {
                     FileListView(
                         items: viewModel.searchResults,
                         selectedID: selectedID,
+                        gitStatuses: viewModel.gitStatuses,
                         onOpen: { item in viewModel.navigate(to: item.url.deletingLastPathComponent()) },
                         onDelete: onDelete
                     )
@@ -180,12 +181,14 @@ struct BrowserView: View {
                         selectedItem: viewModel.selectedItem,
                         onSelect: viewModel.select,
                         onOpen: onOpen,
-                        onDelete: onDelete
+                        onDelete: onDelete,
+                        gitStatuses: viewModel.gitStatuses
                     )
                 case .list:
                     FileListView(
                         items: viewModel.filteredItems,
                         selectedID: selectedID,
+                        gitStatuses: viewModel.gitStatuses,
                         onOpen: onOpen,
                         onDelete: onDelete
                     )
@@ -193,6 +196,7 @@ struct BrowserView: View {
                     DetailsListView(
                         items: viewModel.filteredItems,
                         selectedID: selectedID,
+                        gitStatuses: viewModel.gitStatuses,
                         onOpen: onOpen,
                         onDelete: onDelete
                     )

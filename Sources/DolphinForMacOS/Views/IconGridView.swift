@@ -7,6 +7,7 @@ struct IconGridView: View {
     let onSelect: (FileItem) -> Void
     let onOpen: (FileItem) -> Void
     let onDelete: (FileItem) -> Void
+    let gitStatuses: [String: GitFileStatus]
 
     private var columns: [GridItem] {
         [GridItem(.adaptive(minimum: 80 * zoomLevel))]
@@ -17,9 +18,12 @@ struct IconGridView: View {
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(items) { item in
                     VStack(spacing: 4) {
-                        Image(systemName: item.isDirectory ? "folder.fill" : "doc.fill")
-                            .font(.system(size: 32 * zoomLevel))
-                            .foregroundStyle(item.isDirectory ? .blue : .secondary)
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: item.isDirectory ? "folder.fill" : "doc.fill")
+                                .font(.system(size: 32 * zoomLevel))
+                                .foregroundStyle(item.isDirectory ? .blue : .secondary)
+                            GitStatusBadge(status: gitStatuses[item.name])
+                        }
                         Text(item.name)
                             .font(.caption)
                             .lineLimit(2)
