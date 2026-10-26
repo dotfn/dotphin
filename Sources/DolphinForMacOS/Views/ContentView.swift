@@ -4,6 +4,7 @@ struct ContentView: View {
     @State private var tabsViewModel = TabsViewModel(
         startingAt: FileManager.default.homeDirectoryForCurrentUser
     )
+    @State private var showsInfoPanel = false
     private let places = PlacesProvider().allPlaces()
 
     var body: some View {
@@ -24,8 +25,13 @@ struct ContentView: View {
                         } label: {
                             Image(systemName: "rectangle.split.2x1")
                         }
-                        .padding(.trailing, 8)
                     }
+                    Button {
+                        showsInfoPanel.toggle()
+                    } label: {
+                        Image(systemName: "sidebar.right")
+                    }
+                    .padding(.trailing, 8)
                 }
                 Divider()
                 if let tab = tabsViewModel.selectedTab {
@@ -33,6 +39,9 @@ struct ContentView: View {
                         tabsViewModel.setFocusedPane(index, for: tab.id)
                     }
                 }
+            }
+            .inspector(isPresented: $showsInfoPanel) {
+                InfoPanelView(item: tabsViewModel.selectedTab?.focused.selectedItem)
             }
         }
     }

@@ -3,20 +3,12 @@ import SwiftUI
 struct BrowserView: View {
     let viewModel: BrowserViewModel
 
-    @State private var showsInfoPanel = false
-
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 BreadcrumbView(url: viewModel.currentURL, onNavigate: viewModel.navigate)
 
                 Spacer()
-
-                Button {
-                    showsInfoPanel.toggle()
-                } label: {
-                    Image(systemName: "sidebar.right")
-                }
 
                 if viewModel.viewProperties.mode == .icons {
                     Slider(
@@ -96,9 +88,6 @@ struct BrowserView: View {
                     )
                 }
             }
-        }
-        .inspector(isPresented: $showsInfoPanel) {
-            InfoPanelView(item: viewModel.selectedItem)
         }
     }
 
