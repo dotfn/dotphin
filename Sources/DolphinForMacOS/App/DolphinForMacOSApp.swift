@@ -6,5 +6,8 @@ struct DolphinForMacOSApp: App {
         WindowGroup {
             ContentView()
         }
+        Settings {
+            SettingsView()
+        }
     }
 }
