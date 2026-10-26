@@ -677,3 +677,34 @@ resolución:
 115/115 tests en verde tras los fixes. Listo para mergear a main — cierra
 el roadmap completo de 15 slices (14 originales + el ítem de drag & drop
 que se había diferido explícitamente del slice 14).
+
+## 2026-10-26 — Recorte del slice 13 (terminal embebido): se mantiene, no se revierte
+
+Repregunta explícita sobre si el recorte del slice 13 (de "terminal
+embebido" a `open -a Terminal`) debería revertirse ahora que hay
+presión por cerrar todos los recortes de alcance del proyecto. Se
+decide NO revertirlo, por motivos distintos a los de "inicio"
+(slice 17, arriba) o "papelera" — ahí no había nada bloqueando excepto
+que no se le había prestado atención; acá sí hay un bloqueo real:
+
+- Un terminal embebido de verdad requiere un emulador de terminal real
+  (parseo de secuencias VT100/ANSI, manejo de PTY, teclado) — no es un
+  recorte de alcance menor, es un subsistema entero. La opción
+  conocida y madura es SwiftTerm, una dependencia de terceros. Eso
+  choca directo con la regla explícita del proyecto "sin dependencias
+  de terceros por default" (ver `project_dolphin_macos.md`).
+- Escribir un emulador de terminal desde cero (sin SwiftTerm) es un
+  proyecto de varias semanas en cualquier equipo real, no algo para
+  forzar al final de una sesión larga sin poder probarlo interactivamente.
+- A diferencia del slice 16 (fotos de iPhone), donde había hardware
+  real para verificar, un emulador de terminal embebido necesitaría
+  probarse exhaustivamente a mano (resize, colores, programas
+  interactivos como vim/less, señales) — no hay forma de dar por
+  verificado algo así sin uso real sostenido.
+
+Conclusión: el recorte del slice 13 queda como está, documentado como
+una decisión de ingeniería permanente (evitar una dependencia grande o
+reinventar un emulador de terminal), no como una tarea pendiente. Si
+en el futuro se decide agregar SwiftTerm como excepción explícita a la
+regla de "sin dependencias de terceros", eso es una decisión que le
+corresponde al usuario, no algo para asumir de forma autónoma.
