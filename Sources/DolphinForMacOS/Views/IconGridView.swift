@@ -4,9 +4,11 @@ struct IconGridView: View {
     let items: [FileItem]
     let zoomLevel: Double
     let selectedItem: FileItem?
+    let currentURL: URL
     let onSelect: (FileItem) -> Void
     let onOpen: (FileItem) -> Void
     let onDelete: (FileItem) -> Void
+    let onMoveDropped: ([URL], URL) -> Void
     let gitStatuses: [String: GitFileStatus]
 
     private var columns: [GridItem] {
@@ -43,9 +45,19 @@ struct IconGridView: View {
                     .contextMenu {
                         Button("Eliminar", role: .destructive) { onDelete(item) }
                     }
+                    .draggable(item.url)
+                    .dropDestination(for: URL.self) { urls, _ in
+                        guard item.isDirectory else { return false }
+                        onMoveDropped(urls, item.url)
+                        return true
+                    }
                 }
             }
             .padding()
+        }
+        .dropDestination(for: URL.self) { urls, _ in
+            onMoveDropped(urls, currentURL)
+            return true
         }
     }
 }

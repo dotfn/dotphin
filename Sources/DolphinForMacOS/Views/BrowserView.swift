@@ -186,8 +186,10 @@ struct BrowserView: View {
                         items: viewModel.searchResults,
                         selectedID: selectedID,
                         gitStatuses: [:], // los resultados vienen de carpetas distintas; gitStatuses es solo de currentURL
+                        currentURL: viewModel.currentURL,
                         onOpen: { item in viewModel.navigate(to: item.url.deletingLastPathComponent()) },
-                        onDelete: onDelete
+                        onDelete: onDelete,
+                        onMoveDropped: { urls, directory in viewModel.moveDroppedItems(urls, into: directory) }
                     )
                 }
             } else if viewModel.filteredItems.isEmpty && !viewModel.filterText.isEmpty {
@@ -206,9 +208,11 @@ struct BrowserView: View {
                         items: viewModel.filteredItems,
                         zoomLevel: viewModel.viewProperties.zoomLevel,
                         selectedItem: viewModel.selectedItem,
+                        currentURL: viewModel.currentURL,
                         onSelect: viewModel.select,
                         onOpen: onOpen,
                         onDelete: onDelete,
+                        onMoveDropped: { urls, directory in viewModel.moveDroppedItems(urls, into: directory) },
                         gitStatuses: viewModel.gitStatuses
                     )
                 case .list:
@@ -216,16 +220,20 @@ struct BrowserView: View {
                         items: viewModel.filteredItems,
                         selectedID: selectedID,
                         gitStatuses: viewModel.gitStatuses,
+                        currentURL: viewModel.currentURL,
                         onOpen: onOpen,
-                        onDelete: onDelete
+                        onDelete: onDelete,
+                        onMoveDropped: { urls, directory in viewModel.moveDroppedItems(urls, into: directory) }
                     )
                 case .details:
                     DetailsListView(
                         items: viewModel.filteredItems,
                         selectedID: selectedID,
                         gitStatuses: viewModel.gitStatuses,
+                        currentURL: viewModel.currentURL,
                         onOpen: onOpen,
-                        onDelete: onDelete
+                        onDelete: onDelete,
+                        onMoveDropped: { urls, directory in viewModel.moveDroppedItems(urls, into: directory) }
                     )
                 }
             }
