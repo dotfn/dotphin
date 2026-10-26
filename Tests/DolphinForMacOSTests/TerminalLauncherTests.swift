@@ -7,4 +7,11 @@ final class TerminalLauncherTests: XCTestCase {
         let args = TerminalLauncher().launchArguments(for: url)
         XCTAssertEqual(args, ["-a", "Terminal", "/tmp/some folder"])
     }
+
+    func test_openTerminal_throwsWhenPathDoesNotExist() {
+        let missing = URL(fileURLWithPath: "/tmp/\(UUID().uuidString)-does-not-exist")
+        XCTAssertThrowsError(try TerminalLauncher().openTerminal(at: missing)) { error in
+            XCTAssertNotNil((error as? LocalizedError)?.errorDescription)
+        }
+    }
 }

@@ -41,6 +41,7 @@ struct BrowserView: View {
                 } label: {
                     Image(systemName: "terminal")
                 }
+                .help("Abrir Terminal aquí")
 
                 Button {
                     nameInput = "Nueva carpeta"
