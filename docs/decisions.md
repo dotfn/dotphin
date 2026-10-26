@@ -519,3 +519,17 @@ Review de branch completo (fresh Opus, base a80042f..49b1c74). Veredicto:
   hallazgos nuevos.
 
 105/105 tests en verde tras el fix. Listo para mergear a main.
+
+## 2026-10-26 — Slice 14 (pulido): chequeo de adopción de Liquid Glass
+
+Según `axiom-design` (skills/liquid-glass-ref.md): "la mayoría de los
+componentes estándar de SwiftUI/UIKit adoptan Liquid Glass
+automáticamente". Se grepeó todo `Sources/` buscando
+`.ultraThinMaterial`, `NSVisualEffectView`, `.blur(`, `.regularMaterial`,
+`.thinMaterial` y `glassEffect` — cero resultados. Toda la app usa
+controles stock de SwiftUI sobre macOS 27
+(`NavigationSplitView`/`List`/`Table`/`Menu`/`Button`/`TextField`/
+`.alert`/`.inspector`/`TabView` propio hecho a mano con `HStack`, no un
+material custom). Conclusión: no hay nada que migrar ni override que
+corregir — la adopción es automática por construcción. No se agregó
+código por agregar.
