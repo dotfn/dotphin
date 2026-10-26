@@ -160,6 +160,21 @@ final class BrowserViewModel {
         operationError = nil
     }
 
+    func moveDroppedItems(_ urls: [URL], into directory: URL) {
+        defer { refresh() }
+        var failures: [String] = []
+        for url in urls {
+            do {
+                _ = try operations.move(url, toDirectory: directory)
+            } catch {
+                failures.append(url.lastPathComponent)
+            }
+        }
+        if !failures.isEmpty {
+            operationError = .other("No se pudieron mover: \(failures.joined(separator: ", "))")
+        }
+    }
+
     func emptyTrash() {
         guard isBrowsingTrash else { return }
         defer { refresh() }
