@@ -369,3 +369,47 @@ diferido:
   000` directo — cubierto en la práctica, no hay un test narrado
   específicamente como "simulación de falta de Full Disk Access".
 
+## 2026-10-26 — Slice 10: hallazgos de la revisión final de rama
+
+Revisión final (Opus, fresh context) sobre los overlays de git. Dos
+"Critical" y dos "Important" arreglados en el mismo pase (ver commit
+`fix: GitStatusProvider ya no cuelga la app ni calcula mal debajo de
+la raíz`): un deadlock real de pipe que colgaba la app
+permanentemente, badges mal calculados en cualquier subcarpeta del
+repo, nombres con espacios/no-ASCII que nunca hacían match, y los
+resultados de búsqueda mostrando los badges de la carpeta equivocada.
+El resto queda diferido:
+
+- **Diálogo de "instalar herramientas de línea de comandos" en una Mac
+  sin Xcode/CLT:** `/usr/bin/env git` podría resolver al shim de
+  `xcode-select` en una máquina sin CLT instalado, lo que
+  potencialmente dispara un diálogo del sistema (y, peor, podría ser
+  OTRA forma de colgar la navegación si el diálogo bloquea el proceso).
+  No se pudo verificar en este entorno (tiene Xcode instalado). Queda
+  como riesgo documentado, no como fix a ciegas — no hay forma
+  confiable de detectar "es el shim" sin invocarlo, que es justo lo que
+  se quiere evitar. Revisar en una Mac limpia antes de distribuir fuera
+  de esta máquina de desarrollo.
+- **Costo de la suite de tests:** cada test de `BrowserViewModel`/
+  `TabsViewModel` ahora dispara dos procesos `git` (`rev-parse
+  --show-prefix` + `status`) en `load()`, aunque la carpeta de test no
+  sea un repo. La suite completa pasó de ~0.06s a ~9.8s con este
+  slice. Es tolerable hoy, pero crece linealmente con cada test nuevo
+  de view model. Candidato: hacer `GitStatusProvider` inyectable vía
+  protocolo/closure e inyectar un no-op en los tests existentes que no
+  prueban nada relacionado a git — no se hizo en este fix pass porque
+  es un cambio de forma (afecta la firma pública de
+  `BrowserViewModel.init`), no un bug puntual.
+- Códigos de conflicto de merge (`UU`, `AA`, `DU`) caen en `.added`/
+  `.deleted` o se ignoran según el caso; no hay un estado dedicado a
+  "en conflicto".
+- Una carpeta con cambios mezclados (algo untracked y algo modificado
+  adentro) muestra el primer estado que se encuentra, no una
+  combinación — detalle menor de agregación.
+- `GitStatusBadge` es solo un punto de color sin `.help`/accessibility
+  label — mismo gap de accesibilidad en íconos que otros slices.
+- Sin test para una salida de `git` grande (el caso que gatilla el
+  deadlock original) — se verificó a mano con un script aparte (4000
+  archivos, ~67KB, termina en 1s) en vez de un test permanente, por el
+  costo de generar ese fixture en cada corrida de la suite.
+
