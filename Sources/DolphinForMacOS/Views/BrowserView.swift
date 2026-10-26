@@ -44,6 +44,13 @@ struct BrowserView: View {
 
             Divider()
 
+            FilterBarView(text: Binding(
+                get: { viewModel.filterText },
+                set: { viewModel.filterText = $0 }
+            ))
+
+            Divider()
+
             if let error = viewModel.error {
                 switch error {
                 case .permissionDenied(let url):
@@ -57,6 +64,10 @@ struct BrowserView: View {
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+            } else if viewModel.filteredItems.isEmpty && !viewModel.filterText.isEmpty {
+                Text("Sin resultados")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 let onOpen: (FileItem) -> Void = { item in
                     if item.isDirectory {
@@ -66,7 +77,7 @@ struct BrowserView: View {
                 switch viewModel.viewProperties.mode {
                 case .icons:
                     IconGridView(
-                        items: viewModel.items,
+                        items: viewModel.filteredItems,
                         zoomLevel: viewModel.viewProperties.zoomLevel,
                         selectedItem: viewModel.selectedItem,
                         onSelect: viewModel.select,
@@ -74,20 +85,28 @@ struct BrowserView: View {
                     )
                 case .list:
                     FileListView(
-                        items: viewModel.items,
+                        items: viewModel.filteredItems,
                         selectedItem: viewModel.selectedItem,
                         onSelect: viewModel.select,
                         onOpen: onOpen
                     )
                 case .details:
                     DetailsListView(
-                        items: viewModel.items,
+                        items: viewModel.filteredItems,
                         selectedItem: viewModel.selectedItem,
                         onSelect: viewModel.select,
                         onOpen: onOpen
                     )
                 }
             }
+
+            Divider()
+
+            StatusBarView(
+                itemCount: viewModel.filteredItems.count,
+                totalCount: viewModel.items.count,
+                availableCapacity: VolumeInfoProvider().availableCapacity(for: viewModel.currentURL)
+            )
         }
     }
 
