@@ -708,3 +708,44 @@ reinventar un emulador de terminal), no como una tarea pendiente. Si
 en el futuro se decide agregar SwiftTerm como excepción explícita a la
 regla de "sin dependencias de terceros", eso es una decisión que le
 corresponde al usuario, no algo para asumir de forma autónoma.
+
+## 2026-10-26 — Slice 17 (ubicación de inicio): review y rulings
+
+Review de branch completo (fresh Opus, base 7b40eb9..73ff74e, con
+verificación real compilando y decodificando un blob de prueba, no
+solo lectura de código). Veredicto inicial: "No listo para mergear" —
+Important real confirmado. Hallazgos y resolución:
+
+- **Important (fixed):** `AppSettings` tiene `var` con valores default
+  (`= .home`, `= false`, etc.), pero el `Decodable` sintetizado por
+  Swift exige la key en el JSON de todas formas — el default solo
+  sirve para `AppSettings()` en memoria, nunca para decodificar un
+  blob que no tiene esa key. Como `AppSettingsStore.settings()` usa
+  `try?` y cae a `AppSettings()` completo ante cualquier error, un
+  usuario con settings guardados ANTES de este slice perdía
+  silenciosamente `defaultViewMode` y `showsHiddenFiles` también (no
+  solo los 2 campos nuevos) la primera vez que la app arrancaba con
+  este código. El reviewer lo confirmó compilando y decodificando un
+  blob real de 2 keys, no especulando. Fix: `init(from:)` a mano con
+  `decodeIfPresent(...) ?? default` por campo + test de regresión que
+  decodifica ese mismo blob viejo.
+- **Minor (fixed):** el chequeo de "Carpeta personalizada" aceptaba
+  cualquier ítem del filesystem con `fileExists(atPath:)`, incluyendo
+  un archivo regular si reemplazaba a la carpeta elegida. Ahora exige
+  `isDirectory` explícitamente.
+- **Minor (deferred):** `.desktop` nunca verifica que `~/Desktop` en
+  verdad exista — en macOS casi siempre existe, no se agrega el check.
+- **Aclaración, no código:** cambiar la ubicación de inicio en
+  Settings con la app corriendo no mueve la ventana ya abierta —
+  `@State private var tabsViewModel` se evalúa una sola vez por
+  instancia de `ContentView`; una ventana nueva (Cmd-N) sí usa el
+  valor nuevo, una ya abierta nunca se reubica. Confirmado por el
+  reviewer leyendo el ciclo de vida de SwiftUI, no asumido.
+- Todo lo demás señalado como "declined to judge" (la interacción real
+  de `NSOpenPanel`, qué pasa si la carpeta de inicio se borra en el
+  instante exacto entre el chequeo y la navegación, si versiones
+  previas del proyecto ya tenían este mismo bug con
+  `showsHiddenFiles`) son límites de verificación de este entorno o
+  preguntas fuera del diff de este slice, no hallazgos nuevos.
+
+121/121 tests en verde tras el fix. Listo para mergear a main.
