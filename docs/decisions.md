@@ -217,3 +217,36 @@ mostrando metadata de algo invisible). El resto queda diferido:
 - El botón de limpiar el filtro no tiene tooltip/accesibilidad — mismo
   gap que otros botones de ícono de slices anteriores.
 
+## 2026-10-26 — Slice 6: hallazgos de la revisión final de rama
+
+Revisión final (Opus, fresh context) sobre operaciones de archivo — la
+única que toca archivos reales. Sin "Critical": ninguna ruta borra o
+renombra algo distinto del ítem seleccionado, y borrar siempre va a la
+Papelera (recuperable). Tres "Important" arreglados en el momento:
+selección fantasma tras renombrar (y, de forma genérica, tras cualquier
+refresh), el alert de borrado no nombraba ni fijaba su objetivo hasta
+confirmar, y renombrar a un nombre que empieza con "." hacía
+desaparecer el ítem sin forma de recuperarlo (no hay toggle de
+"mostrar ocultos" todavía). El resto queda diferido:
+
+- Nombres compuestos solo de salto de línea pasan la validación
+  (`validate` usa `.whitespaces`, no `.whitespacesAndNewlines`).
+- Renombrar solo cambiando mayúsculas/minúsculas (`a.txt` → `A.txt`) en
+  un volumen case-insensitive (APFS por defecto) falla con "ya existe"
+  en vez de aceptarse — igual que confirmar "Renombrar" sin cambiar el
+  nombre. Candidato: comparar por identidad del recurso, no por
+  `fileExists` crudo, o salir temprano si `newName == item.name`.
+- Renombrar a "." o ".." da el error genérico de "ya existe" en vez de
+  un mensaje específico (ambos quedan cubiertos por el rechazo de
+  nombres que empiezan con "." agregado en este fix pass, pero el
+  mensaje que ve el usuario sigue siendo "nombre inválido" genérico,
+  no algo como "nombre reservado").
+- Falta test de que `moveToTrash` sobre un ítem que ya no existe tira
+  (no se traga el error).
+- Con dos paneles de split mostrando la misma carpeta, la identidad por
+  path puede quedar stale en el panel no enfocado si el otro panel
+  renombra/borra — mitigado por el mismo mecanismo de reconciliación en
+  `load(_:)` la próxima vez que ese panel refresque, pero no hay
+  notificación entre paneles (no hay file-watching, ya logueado en
+  slice 1).
+
