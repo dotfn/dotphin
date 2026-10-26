@@ -339,3 +339,33 @@ documentado:
   Candidato: `init(from:)` manual con `decodeIfPresent ?? default`
   cuando se agregue el próximo campo.
 
+## 2026-10-26 — Slice 9: hallazgos de la revisión final de rama
+
+Revisión final (Opus, fresh context) sobre la papelera navegable —
+la única operación permanente de todo el proyecto. Tres "Important"
+arreglados en el momento (ver commit `fix: Vaciar papelera nunca
+apunta a otra carpeta, nunca falla en silencio`): la carpeta a vaciar
+dependía solo de que la vista mostrara el botón (ahora el view model
+tiene su propio guard), vaciar una papelera sin permiso de lectura
+reportaba éxito sin borrar nada, y un fallo parcial dejaba la lista
+mostrando ítems que ya se habían borrado de verdad. El resto queda
+diferido:
+
+- "Eliminar" (mover a la papelera) sigue disponible en el menú
+  contextual y la toolbar mientras se navega la papelera misma — el
+  wording del alert ("Se moverá a la Papelera") no tiene sentido para
+  un ítem que ya está ahí. El plan pedía explícitamente dejar esos
+  botones como están; queda como mejora de copy, no de lógica.
+- `restoreSelected()` siempre mueve a Home, incluso si el ítem
+  seleccionado es un resultado de búsqueda anidado dentro de una
+  carpeta de la papelera (`~/.Trash/carpeta/sub/x.txt`) — restaura solo
+  ese archivo, no la carpeta contenedora. No pierde datos, pero puede
+  sorprender.
+- El mensaje de fallo parcial de `emptyTrash` lista todos los nombres
+  que fallaron en un solo string sin límite — con muchos fallos el
+  alert puede crecer mucho. Candidato: "N ítems, p. ej. a, b, c…".
+- Sin test para "emptyTrash con un `trashURL` real que coincide pero
+  sin permiso de lectura" más allá del caso ya cubierto con `chmod
+  000` directo — cubierto en la práctica, no hay un test narrado
+  específicamente como "simulación de falta de Full Disk Access".
+
