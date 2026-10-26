@@ -12,7 +12,10 @@ struct BrowserView: View {
     private var selectedID: Binding<FileItem.ID?> {
         Binding(
             get: { viewModel.selectedItem?.id },
-            set: { id in viewModel.select(viewModel.items.first { $0.id == id }) }
+            set: { id in
+                let candidates = viewModel.items + viewModel.searchResults
+                viewModel.select(candidates.first { $0.id == id })
+            }
         )
     }
 
@@ -93,7 +96,15 @@ struct BrowserView: View {
                         set: { viewModel.searchQuery = $0 }
                     ))
                     .textFieldStyle(.plain)
-                    .onChange(of: viewModel.searchQuery) { _, _ in viewModel.performSearch() }
+                    .task(id: viewModel.searchQuery) {
+                        // ponytail: debounce nada más — la caminata sigue siendo
+                        // síncrona en el main actor por llamada; si una carpeta
+                        // enorme sigue sintiéndose lenta, el próximo paso es
+                        // moverla a un actor de background con cancelación real.
+                        try? await Task.sleep(for: .milliseconds(300))
+                        guard !Task.isCancelled else { return }
+                        viewModel.performSearch()
+                    }
                 }
                 .padding(6)
             }

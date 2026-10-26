@@ -253,4 +253,24 @@ final class BrowserViewModelTests: XCTestCase {
         XCTAssertEqual(vm.searchQuery, "")
         XCTAssertEqual(vm.searchResults, [])
     }
+
+    func test_settingSearchQuery_clearsStaleSelectionFromBrowseMode() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.select(vm.items[0])
+        vm.searchQuery = "report"
+        XCTAssertNil(vm.selectedItem, "la selección de modo navegación no debe sobrevivir invisible durante una búsqueda")
+    }
+
+    func test_delete_duringActiveSearch_refreshesSearchResultsToo() throws {
+        let sub = tempDir.appendingPathComponent("sub", isDirectory: true)
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        try "x".write(to: sub.appendingPathComponent("Report.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.searchQuery = "report"
+        vm.performSearch()
+        let found = vm.searchResults[0]
+        vm.delete(found)
+        XCTAssertEqual(vm.searchResults, [], "el resultado borrado no debe seguir apareciendo en la búsqueda")
+    }
 }

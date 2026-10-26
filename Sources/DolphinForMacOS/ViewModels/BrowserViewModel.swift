@@ -23,7 +23,11 @@ final class BrowserViewModel {
 
     private(set) var operationError: FileOperationError?
 
-    var searchQuery: String = ""
+    var searchQuery: String = "" {
+        didSet {
+            selectedItem = nil
+        }
+    }
     private(set) var searchResults: [FileItem] = []
 
     private let reader: DirectoryReader
@@ -77,6 +81,9 @@ final class BrowserViewModel {
 
     func refresh() {
         load(currentURL)
+        if !searchQuery.isEmpty {
+            performSearch()
+        }
     }
 
     func setViewMode(_ mode: ViewMode) {
