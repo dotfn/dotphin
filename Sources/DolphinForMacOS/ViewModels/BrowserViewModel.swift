@@ -30,11 +30,14 @@ final class BrowserViewModel {
     }
     private(set) var searchResults: [FileItem] = []
 
+    private(set) var gitStatuses: [String: GitFileStatus] = [:]
+
     private let reader: DirectoryReader
     private let store: ViewPropertiesStore
     private let operations: FileOperationsService
     private let search: SearchService
     private let trashURL: URL
+    private let gitStatus: GitStatusProvider
 
     var isBrowsingTrash: Bool {
         currentURL.standardizedFileURL.path == trashURL.standardizedFileURL.path
@@ -47,7 +50,8 @@ final class BrowserViewModel {
         operations: FileOperationsService = FileOperationsService(),
         search: SearchService = SearchService(),
         trashURL: URL = (try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false))
-            ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash")
+            ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash"),
+        gitStatus: GitStatusProvider = GitStatusProvider()
     ) {
         self.currentURL = url
         self.reader = reader
@@ -55,6 +59,7 @@ final class BrowserViewModel {
         self.operations = operations
         self.search = search
         self.trashURL = trashURL
+        self.gitStatus = gitStatus
         self.viewProperties = store.properties(for: url)
         load(url)
     }
@@ -192,5 +197,6 @@ final class BrowserViewModel {
             self.error = .other(error.localizedDescription)
         }
         selectedItem = selectedItem.flatMap { current in items.first { $0.id == current.id } }
+        gitStatuses = gitStatus.statuses(in: url)
     }
 }

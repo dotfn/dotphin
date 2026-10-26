@@ -317,4 +317,22 @@ final class BrowserViewModelTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: restoredPath))
         try? FileManager.default.removeItem(atPath: restoredPath)
     }
+
+    private func runGit(_ args: [String], in directory: URL) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["git"] + args
+        process.currentDirectoryURL = directory
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+        try process.run()
+        process.waitUntilExit()
+    }
+
+    func test_load_populatesGitStatusesForGitRepo() throws {
+        try runGit(["init", "-q"], in: tempDir)
+        try "x".write(to: tempDir.appendingPathComponent("new.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        XCTAssertEqual(vm.gitStatuses["new.txt"], .untracked)
+    }
 }
