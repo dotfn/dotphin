@@ -533,3 +533,43 @@ controles stock de SwiftUI sobre macOS 27
 material custom). Conclusión: no hay nada que migrar ni override que
 corregir — la adopción es automática por construcción. No se agregó
 código por agregar.
+
+## 2026-10-26 — Slice 14 (pulido): review y rulings
+
+Review de branch completo (fresh Opus, base 75dddda..d4e507f). Veredicto:
+"Ready to merge después de arreglar el Important #1". Hallazgos y
+resolución:
+
+- **Important (fixed):** en `InfoPanelView`, el continuation de
+  `QLThumbnailGenerator` no tiene punto de cancelación cooperativa — al
+  cambiar de selección, SwiftUI cancela el `Task` viejo pero la llamada
+  suspendida igual reanuda cuando Quick Look termina. Sin chequear
+  `Task.isCancelled` después del `await`, el thumbnail del ítem anterior
+  pisaba el del ítem nuevo de forma persistente (ej: seleccionar un video
+  grande y cambiar rápido a una carpeta — la carpeta terminaba mostrando
+  el thumbnail del video en vez del ícono azul). Fix: `guard
+  !Task.isCancelled else { return }` antes de asignar `thumbnail`.
+- **Minor (deferred):** un frame de thumbnail viejo puede verse antes de
+  que `.task(id:)` corra y limpie el estado al cambiar de selección —
+  cosmético, un solo frame, no se mergea una solución más compleja
+  (key del estado por URL) para esto ahora.
+- **Minor (deferred):** el barrido de accesibilidad del slice 14 no
+  cubrió `ViewModePicker` (los 3 segmentos son solo `Image(systemName:)`
+  sin `.help`/`.accessibilityLabel`) ni el `Slider` de zoom en
+  `BrowserView` — ambos están en archivos que sí se tocaron en este
+  slice, así que el alcance planeado quedó corto. Se deja como deuda
+  explícita para una próxima pasada, junto con `GitStatusBadge` (un
+  punto de color sin alternativa accesible — fuera del alcance original
+  del slice 14, detectado por el reviewer de todas formas).
+- **Minor (deferred):** el test de `ThumbnailLoader` depende del
+  servicio XPC de Quick Look estando disponible — podría ser flaky en
+  CI sandboxeado; no es un problema en el setup actual (local, sin CI).
+- Todo lo demás señalado por el reviewer como "declined to judge"
+  (qué tan probable es el bug en la práctica sin correr la GUI,
+  comportamiento exacto de `QLThumbnailGenerator.cancel`, qué lee
+  VoiceOver de un SF Symbol sin más contexto) son límites de verificación
+  de este entorno, no hallazgos nuevos.
+
+107/107 tests en verde tras el fix. Listo para mergear a main — cierra
+el roadmap original de 14 slices (con drag & drop explícitamente
+diferido, documentado arriba en la entrada del slice 14).
