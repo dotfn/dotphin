@@ -75,4 +75,78 @@ final class FileOperationsServiceTests: XCTestCase {
             XCTAssertEqual(error as? FileOperationError, .invalidName)
         }
     }
+
+    func test_restore_movesItemToDestination() throws {
+        let trashDir = tempDir.appendingPathComponent("trash", isDirectory: true)
+        try FileManager.default.createDirectory(at: trashDir, withIntermediateDirectories: true)
+        let destDir = tempDir.appendingPathComponent("home", isDirectory: true)
+        try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+        let itemURL = trashDir.appendingPathComponent("a.txt")
+        try "x".write(to: itemURL, atomically: true, encoding: .utf8)
+        let item = FileItem(url: itemURL, name: "a.txt", isDirectory: false, isSymbolicLink: false, size: 1, modificationDate: Date())
+
+        let newURL = try FileOperationsService().restore(item, to: destDir)
+        XCTAssertEqual(newURL, destDir.appendingPathComponent("a.txt"))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: itemURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: newURL.path))
+    }
+
+    func test_restore_toDestinationWithExistingName_throwsNameAlreadyExists() throws {
+        let trashDir = tempDir.appendingPathComponent("trash", isDirectory: true)
+        try FileManager.default.createDirectory(at: trashDir, withIntermediateDirectories: true)
+        let destDir = tempDir.appendingPathComponent("home", isDirectory: true)
+        try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+        try "x".write(to: destDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let itemURL = trashDir.appendingPathComponent("a.txt")
+        try "y".write(to: itemURL, atomically: true, encoding: .utf8)
+        let item = FileItem(url: itemURL, name: "a.txt", isDirectory: false, isSymbolicLink: false, size: 1, modificationDate: Date())
+
+        XCTAssertThrowsError(try FileOperationsService().restore(item, to: destDir)) { error in
+            XCTAssertEqual(error as? FileOperationError, .nameAlreadyExists(destDir.appendingPathComponent("a.txt")))
+        }
+        XCTAssertEqual(try? String(contentsOf: destDir.appendingPathComponent("a.txt"), encoding: .utf8), "x", "no debió sobrescribirse")
+    }
+
+    func test_restore_movesFolderWithContents() throws {
+        let trashDir = tempDir.appendingPathComponent("trash", isDirectory: true)
+        try FileManager.default.createDirectory(at: trashDir, withIntermediateDirectories: true)
+        let destDir = tempDir.appendingPathComponent("home", isDirectory: true)
+        try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+        let folderURL = trashDir.appendingPathComponent("folder", isDirectory: true)
+        try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
+        try "x".write(to: folderURL.appendingPathComponent("inside.txt"), atomically: true, encoding: .utf8)
+        let item = FileItem(url: folderURL, name: "folder", isDirectory: true, isSymbolicLink: false, size: nil, modificationDate: Date())
+
+        let newURL = try FileOperationsService().restore(item, to: destDir)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: newURL.appendingPathComponent("inside.txt").path))
+    }
+
+    func test_emptyTrash_onEmptyFolder_succeedsWithoutError() throws {
+        let trashDir = tempDir.appendingPathComponent("trash", isDirectory: true)
+        try FileManager.default.createDirectory(at: trashDir, withIntermediateDirectories: true)
+        XCTAssertNoThrow(try FileOperationsService().emptyTrash(at: trashDir))
+    }
+
+    func test_emptyTrash_removesAllContents() throws {
+        let trashDir = tempDir.appendingPathComponent("trash", isDirectory: true)
+        try FileManager.default.createDirectory(at: trashDir, withIntermediateDirectories: true)
+        try "x".write(to: trashDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        try "x".write(to: trashDir.appendingPathComponent("b.txt"), atomically: true, encoding: .utf8)
+        try FileOperationsService().emptyTrash(at: trashDir)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: trashDir.path), [])
+    }
+
+    func test_emptyTrash_withOneUndeletableItem_removesTheRestAndReportsFailure() throws {
+        let trashDir = tempDir.appendingPathComponent("trash", isDirectory: true)
+        try FileManager.default.createDirectory(at: trashDir, withIntermediateDirectories: true)
+        try "x".write(to: trashDir.appendingPathComponent("ok.txt"), atomically: true, encoding: .utf8)
+        let locked = trashDir.appendingPathComponent("locked", isDirectory: true)
+        try FileManager.default.createDirectory(at: locked, withIntermediateDirectories: true)
+        try "x".write(to: locked.appendingPathComponent("inside.txt"), atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: locked.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path) }
+
+        XCTAssertThrowsError(try FileOperationsService().emptyTrash(at: trashDir))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: trashDir.appendingPathComponent("ok.txt").path), "el que sí se pudo borrar debe haberse borrado igual")
+    }
 }

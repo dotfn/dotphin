@@ -48,4 +48,37 @@ struct FileOperationsService {
         }
         return destination
     }
+
+    func restore(_ item: FileItem, to destinationDirectory: URL) throws -> URL {
+        let destination = destinationDirectory.appendingPathComponent(item.name)
+        guard !FileManager.default.fileExists(atPath: destination.path) else {
+            throw FileOperationError.nameAlreadyExists(destination)
+        }
+        do {
+            try FileManager.default.moveItem(at: item.url, to: destination)
+        } catch {
+            throw FileOperationError.other(error.localizedDescription)
+        }
+        return destination
+    }
+
+    func emptyTrash(at trashURL: URL) throws {
+        let contents = (try? FileManager.default.contentsOfDirectory(
+            at: trashURL,
+            includingPropertiesForKeys: nil
+        )) ?? []
+
+        var failures: [String] = []
+        for url in contents {
+            do {
+                try FileManager.default.removeItem(at: url)
+            } catch {
+                failures.append(url.lastPathComponent)
+            }
+        }
+
+        if !failures.isEmpty {
+            throw FileOperationError.other("No se pudieron eliminar: \(failures.joined(separator: ", "))")
+        }
+    }
 }
