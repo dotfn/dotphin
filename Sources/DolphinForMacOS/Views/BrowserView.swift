@@ -3,12 +3,46 @@ import SwiftUI
 struct BrowserView: View {
     let viewModel: BrowserViewModel
 
+    @State private var showsDeleteConfirmation = false
+    @State private var showsRenamePrompt = false
+    @State private var showsNewFolderPrompt = false
+    @State private var nameInput = ""
+
+    private var selectedID: Binding<FileItem.ID?> {
+        Binding(
+            get: { viewModel.selectedItem?.id },
+            set: { id in viewModel.select(viewModel.items.first { $0.id == id }) }
+        )
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 BreadcrumbView(url: viewModel.currentURL, onNavigate: viewModel.navigate)
 
                 Spacer()
+
+                Button {
+                    nameInput = "Nueva carpeta"
+                    showsNewFolderPrompt = true
+                } label: {
+                    Image(systemName: "folder.badge.plus")
+                }
+
+                Button {
+                    nameInput = viewModel.selectedItem?.name ?? ""
+                    showsRenamePrompt = true
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .disabled(viewModel.selectedItem == nil)
+
+                Button {
+                    showsDeleteConfirmation = true
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .disabled(viewModel.selectedItem == nil)
 
                 if viewModel.viewProperties.mode == .icons {
                     Slider(
@@ -74,6 +108,10 @@ struct BrowserView: View {
                         viewModel.navigate(to: item.url)
                     }
                 }
+                let onDelete: (FileItem) -> Void = { item in
+                    viewModel.select(item)
+                    showsDeleteConfirmation = true
+                }
                 switch viewModel.viewProperties.mode {
                 case .icons:
                     IconGridView(
@@ -81,21 +119,22 @@ struct BrowserView: View {
                         zoomLevel: viewModel.viewProperties.zoomLevel,
                         selectedItem: viewModel.selectedItem,
                         onSelect: viewModel.select,
-                        onOpen: onOpen
+                        onOpen: onOpen,
+                        onDelete: onDelete
                     )
                 case .list:
                     FileListView(
                         items: viewModel.filteredItems,
-                        selectedItem: viewModel.selectedItem,
-                        onSelect: viewModel.select,
-                        onOpen: onOpen
+                        selectedID: selectedID,
+                        onOpen: onOpen,
+                        onDelete: onDelete
                     )
                 case .details:
                     DetailsListView(
                         items: viewModel.filteredItems,
-                        selectedItem: viewModel.selectedItem,
-                        onSelect: viewModel.select,
-                        onOpen: onOpen
+                        selectedID: selectedID,
+                        onOpen: onOpen,
+                        onDelete: onDelete
                     )
                 }
             }
@@ -107,6 +146,44 @@ struct BrowserView: View {
                 totalCount: viewModel.items.count,
                 availableCapacity: VolumeInfoProvider().availableCapacity(for: viewModel.currentURL)
             )
+        }
+        .alert("¿Eliminar este ítem?", isPresented: $showsDeleteConfirmation) {
+            Button("Eliminar", role: .destructive) { viewModel.deleteSelected() }
+            Button("Cancelar", role: .cancel) {}
+        }
+        .alert("Renombrar", isPresented: $showsRenamePrompt) {
+            TextField("Nombre", text: $nameInput)
+            Button("Renombrar") { viewModel.renameSelected(to: nameInput) }
+            Button("Cancelar", role: .cancel) {}
+        }
+        .alert("Nueva carpeta", isPresented: $showsNewFolderPrompt) {
+            TextField("Nombre", text: $nameInput)
+            Button("Crear") { viewModel.createFolder(named: nameInput) }
+            Button("Cancelar", role: .cancel) {}
+        }
+        .alert(
+            "No se pudo completar la operación",
+            isPresented: Binding(
+                get: { viewModel.operationError != nil },
+                set: { if !$0 { viewModel.clearOperationError() } }
+            )
+        ) {
+            Button("OK") { viewModel.clearOperationError() }
+        } message: {
+            Text(operationErrorMessage)
+        }
+    }
+
+    private var operationErrorMessage: String {
+        switch viewModel.operationError {
+        case .nameAlreadyExists:
+            return "Ya existe un ítem con ese nombre."
+        case .invalidName:
+            return "El nombre no es válido."
+        case .other(let message):
+            return message
+        case nil:
+            return ""
         }
     }
 

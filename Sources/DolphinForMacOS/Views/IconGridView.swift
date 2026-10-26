@@ -6,6 +6,7 @@ struct IconGridView: View {
     let selectedItem: FileItem?
     let onSelect: (FileItem) -> Void
     let onOpen: (FileItem) -> Void
+    let onDelete: (FileItem) -> Void
 
     private var columns: [GridItem] {
         [GridItem(.adaptive(minimum: 80 * zoomLevel))]
@@ -29,11 +30,15 @@ struct IconGridView: View {
                     .background(
                         item.id == selectedItem?.id ? Color.accentColor.opacity(0.15) : Color.clear
                     )
+                    .contentShape(Rectangle())
                     .gesture(
                         TapGesture(count: 2)
                             .onEnded { onOpen(item) }
                             .exclusively(before: TapGesture(count: 1).onEnded { onSelect(item) })
                     )
+                    .contextMenu {
+                        Button("Eliminar", role: .destructive) { onDelete(item) }
+                    }
                 }
             }
             .padding()
