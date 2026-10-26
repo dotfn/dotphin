@@ -36,6 +36,8 @@ struct ContentView: View {
                         } label: {
                             Image(systemName: "rectangle.split.2x1")
                         }
+                        .help("Dividir vista")
+                        .accessibilityLabel("Dividir vista")
                     }
                     Button {
                         showsInfoPanel.toggle()
@@ -43,6 +45,8 @@ struct ContentView: View {
                         Image(systemName: "sidebar.right")
                     }
                     .padding(.trailing, 8)
+                    .help("Mostrar/ocultar panel de información")
+                    .accessibilityLabel("Mostrar/ocultar panel de información")
                 }
                 Divider()
                 if let tab = tabsViewModel.selectedTab {

@@ -17,6 +17,8 @@ struct FilterBarView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
+                .help("Limpiar filtro")
+                .accessibilityLabel("Limpiar filtro")
             }
         }
         .padding(6)

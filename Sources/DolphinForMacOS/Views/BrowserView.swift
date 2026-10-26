@@ -42,6 +42,7 @@ struct BrowserView: View {
                     Image(systemName: "terminal")
                 }
                 .help("Abrir Terminal aquí")
+                .accessibilityLabel("Abrir Terminal aquí")
 
                 Button {
                     nameInput = "Nueva carpeta"
@@ -49,6 +50,8 @@ struct BrowserView: View {
                 } label: {
                     Image(systemName: "folder.badge.plus")
                 }
+                .help("Nueva carpeta")
+                .accessibilityLabel("Nueva carpeta")
 
                 Button {
                     nameInput = viewModel.selectedItem?.name ?? ""
@@ -57,6 +60,8 @@ struct BrowserView: View {
                     Image(systemName: "pencil")
                 }
                 .disabled(viewModel.selectedItem == nil)
+                .help("Renombrar")
+                .accessibilityLabel("Renombrar")
 
                 Button {
                     pendingDelete = viewModel.selectedItem
@@ -65,6 +70,8 @@ struct BrowserView: View {
                     Image(systemName: "trash")
                 }
                 .disabled(viewModel.selectedItem == nil)
+                .help("Eliminar")
+                .accessibilityLabel("Eliminar")
 
                 if isBrowsingTrash {
                     Button {
@@ -73,12 +80,16 @@ struct BrowserView: View {
                         Image(systemName: "arrow.uturn.backward")
                     }
                     .disabled(viewModel.selectedItem == nil)
+                    .help("Restaurar")
+                    .accessibilityLabel("Restaurar")
 
                     Button {
                         showsEmptyTrashConfirmation = true
                     } label: {
                         Image(systemName: "trash.slash")
                     }
+                    .help("Vaciar la papelera")
+                    .accessibilityLabel("Vaciar la papelera")
                 }
 
                 if viewModel.viewProperties.mode == .icons {
@@ -105,6 +116,8 @@ struct BrowserView: View {
                 } label: {
                     Image(systemName: "arrow.up.arrow.down")
                 }
+                .help("Ordenar por")
+                .accessibilityLabel("Ordenar por")
 
                 ViewModePicker(mode: Binding(
                     get: { viewModel.viewProperties.mode },

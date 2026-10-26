@@ -15,6 +15,8 @@ struct TabBarView: View {
                         Image(systemName: "xmark")
                     }
                     .buttonStyle(.plain)
+                    .help("Cerrar pestaña")
+                    .accessibilityLabel("Cerrar pestaña")
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
@@ -33,6 +35,8 @@ struct TabBarView: View {
                 Image(systemName: "plus")
             }
             .buttonStyle(.plain)
+            .help("Nueva pestaña")
+            .accessibilityLabel("Nueva pestaña")
 
             Spacer()
         }
