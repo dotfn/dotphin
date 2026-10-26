@@ -2,6 +2,16 @@ import Foundation
 
 enum GitFileStatus: Equatable {
     case modified, added, deleted, untracked, renamed
+
+    var accessibilityDescription: String {
+        switch self {
+        case .modified: return "Modificado"
+        case .added: return "Agregado"
+        case .deleted: return "Eliminado"
+        case .untracked: return "Sin seguimiento"
+        case .renamed: return "Renombrado"
+        }
+    }
 }
 
 struct GitStatusProvider {

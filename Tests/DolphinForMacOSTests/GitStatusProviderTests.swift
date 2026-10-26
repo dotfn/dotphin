@@ -98,4 +98,12 @@ final class GitStatusProviderTests: XCTestCase {
         let statuses = GitStatusProvider().statuses(in: sub)
         XCTAssertEqual(statuses["inside.txt"], .modified, "consultado desde la subcarpeta, la key debe ser relativa a ESA carpeta, no a la raíz del repo")
     }
+
+    func test_accessibilityDescription_coversEveryCase() {
+        XCTAssertEqual(GitFileStatus.modified.accessibilityDescription, "Modificado")
+        XCTAssertEqual(GitFileStatus.added.accessibilityDescription, "Agregado")
+        XCTAssertEqual(GitFileStatus.deleted.accessibilityDescription, "Eliminado")
+        XCTAssertEqual(GitFileStatus.untracked.accessibilityDescription, "Sin seguimiento")
+        XCTAssertEqual(GitFileStatus.renamed.accessibilityDescription, "Renombrado")
+    }
 }

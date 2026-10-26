@@ -8,6 +8,7 @@ struct GitStatusBadge: View {
             Circle()
                 .fill(color(for: status))
                 .frame(width: 6, height: 6)
+                .accessibilityLabel(status.accessibilityDescription)
         }
     }
 
