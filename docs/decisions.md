@@ -80,3 +80,35 @@ una carpeta enorme o una red lenta — aceptable para este slice, revisar
 si se vuelve perceptible); un ítem individual que falle al leer sus
 resourceValues puede tirar toda la lectura de la carpeta en vez de
 saltear solo ese ítem.
+
+## 2026-10-26 — Slice 2: hallazgos de la revisión final de rama
+
+Revisión final (Opus, fresh context) sobre vistas/zoom/orden/view
+properties. Dos "Important" arreglados en el momento (comparador de
+orden con empates no determinísticos + descendente roto; overlap en la
+grilla de iconos en cualquier zoom, no solo en los extremos). El resto
+queda diferido, sin acción en este slice:
+
+- El menú de orden no muestra visualmente cuál es el campo/dirección
+  activa (sin checkmark). Candidato: reemplazar por `Picker` + `Toggle`
+  dentro del `Menu`.
+- El slider de zoom persiste en cada tick de arrastre (un JSON
+  encode + write por tick) en vez de solo al soltar.
+- `DetailsListView` (modo detalles) tiene la misma limitación de
+  doble-click que el modo lista del slice 1 (solo ícono+texto, sin
+  selección de fila ni Return). Tampoco tiene click-en-columna para
+  ordenar (`Table` lo soporta nativo vía `sortOrder`, no se usó para no
+  duplicar el control de orden — ver decisión del slice 2 sobre el Menu).
+- El texto de la celda en modo iconos no escala con el zoom (ilegible en
+  el extremo bajo, chico bajo un ícono grande en el extremo alto).
+- Las claves de `ViewPropertiesStore` usan `url.path` crudo — `/tmp/x` y
+  `/private/tmp/x` (o la misma carpeta vista por symlink) cuentan como
+  carpetas distintas. Candidato: normalizar con
+  `.resolvingSymlinksInPath().standardizedFileURL` antes de armar la key.
+- `zoomLevel` leído de `UserDefaults` no se clampea a 0.5...2.0 — solo
+  alcanzable con un valor corrupto editado a mano, no desde la UI.
+- Varios tests de `BrowserViewModelTests` usan `UserDefaults.standard` o
+  suites de `UserDefaults(suiteName:)` que nunca se limpian — dejan
+  entradas sueltas en las preferencias reales de quien corre los tests.
+  Candidato: inyectar siempre una suite descartable y limpiarla en
+  `tearDown`, como ya hace `ViewPropertiesStoreTests`.
