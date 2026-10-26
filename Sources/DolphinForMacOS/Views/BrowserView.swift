@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserView: View {
     let viewModel: BrowserViewModel
 
+    @State private var pendingDelete: FileItem?
     @State private var showsDeleteConfirmation = false
     @State private var showsRenamePrompt = false
     @State private var showsNewFolderPrompt = false
@@ -38,6 +39,7 @@ struct BrowserView: View {
                 .disabled(viewModel.selectedItem == nil)
 
                 Button {
+                    pendingDelete = viewModel.selectedItem
                     showsDeleteConfirmation = true
                 } label: {
                     Image(systemName: "trash")
@@ -109,7 +111,7 @@ struct BrowserView: View {
                     }
                 }
                 let onDelete: (FileItem) -> Void = { item in
-                    viewModel.select(item)
+                    pendingDelete = item
                     showsDeleteConfirmation = true
                 }
                 switch viewModel.viewProperties.mode {
@@ -147,9 +149,15 @@ struct BrowserView: View {
                 availableCapacity: VolumeInfoProvider().availableCapacity(for: viewModel.currentURL)
             )
         }
-        .alert("¿Eliminar este ítem?", isPresented: $showsDeleteConfirmation) {
-            Button("Eliminar", role: .destructive) { viewModel.deleteSelected() }
+        .alert(
+            "¿Eliminar este ítem?",
+            isPresented: $showsDeleteConfirmation,
+            presenting: pendingDelete
+        ) { item in
+            Button("Eliminar", role: .destructive) { viewModel.delete(item) }
             Button("Cancelar", role: .cancel) {}
+        } message: { item in
+            Text("Se moverá «\(item.name)» a la Papelera.")
         }
         .alert("Renombrar", isPresented: $showsRenamePrompt) {
             TextField("Nombre", text: $nameInput)
