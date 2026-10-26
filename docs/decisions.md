@@ -597,3 +597,83 @@ fixean en este pass):
   `.labelStyle(.iconOnly)` en vez de `Image` desnuda.
 
 108/108 tests en verde. Listo para mergear a main.
+
+## 2026-10-26 — Slice 15 (drag & drop): review y rulings
+
+Review de branch completo (fresh Opus, base d27ed2f..623384e, con una
+sonda real contra el SDK y el filesystem para verificar el formato de
+Transferable de `URL` y los guards de `move`). Veredicto: "Ready to
+merge con fixes". Ningún hallazgo de pérdida de datos. Hallazgos y
+resolución:
+
+- **Important (fixed):** soltar sobre una fila de ARCHIVO se rechazaba
+  (`return false`) en vez de caer al comportamiento de "soltar en el
+  fondo" — en una lista llena, la mayoría del área visible son filas de
+  archivo, así que la mayoría de los drops no hacían nada. Fix: enrutar
+  a `currentURL` cuando `!item.isDirectory`, en las 3 vistas de listado.
+- **Important (fixed):** en modo búsqueda, soltar sobre el fondo de la
+  lista movía el archivo a la carpeta que se está navegando, no a donde
+  realmente vive — un movimiento no pedido, aunque sin pérdida de datos.
+  `FileListView.currentURL` ahora es `URL?`; en búsqueda se pasa `nil` y
+  ese drop de fondo queda deshabilitado (soltar sobre una fila de
+  carpeta puntual sigue funcionando siempre, sin ambigüedad).
+- **Important (fixed):** arrastrar una carpeta y soltarla sobre sí misma
+  (no un descendiente — ella misma) no estaba cubierto por ningún guard
+  de `FileOperationsService.move` — el árbol quedaba intacto, pero el
+  usuario veía un error de "no se pudo mover" por una acción que debería
+  ser un no-op silencioso, como en Finder. Nuevo guard de igualdad +
+  test (`test_move_folderDroppedOntoItself_isNoOp`).
+- **Important (fixed):** "entre paneles" no refrescaba el pane que NO
+  originó el drop — quedaba desactualizado hasta navegar o refrescar a
+  mano, lo cual es el título mismo de este slice. `BrowserView` ganó un
+  callback opcional `onFilesMoved`; `SplitBrowserView` lo usa para
+  refrescar el pane sin tocar.
+- **Important (corrección de premisa del plan, sin fix de código):**
+  el plan afirma que `Table` no tiene un contenedor de "fila completa"
+  expuesto en SwiftUI, así que el drag/drop de `DetailsListView` se
+  limitó a la celda de la columna "Nombre". El reviewer encontró que
+  esto es **objetivamente falso**: el SDK tiene `TableRowContent.draggable(_:)`
+  y `.dropDestination(for:action:)` desde macOS 14, usando la sintaxis
+  `Table(of:selection:) { } rows: { ForEach(items) { TableRow($0)... } }`
+  en vez de la sintaxis de `TableColumn` por closure que usa este
+  archivo. No se migra ahora — el reviewer también señaló un riesgo no
+  verificado de conflicto de gestos entre `.draggable` en una celda y la
+  selección nativa de fila en `List`/`Table` (ambos corren sobre
+  `NSTableView`), y hacer este cambio sin poder clickear la GUI real es
+  más riesgo que valor a esta altura. Queda como el único "fix" de este
+  review que se decide NO aplicar ahora — ruling explícito, no omisión:
+  **antes de confiar en el drag/drop de `DetailsListView` en uso real,
+  alguien con la GUI a mano debe: (1) confirmar que un solo click sigue
+  seleccionando la fila y el doble click sigue abriendo, en la columna
+  Nombre; (2) si hay conflicto, migrar a `TableRow.draggable`/
+  `.dropDestination`, que de paso elimina la limitación de "solo
+  Nombre".**
+- **Minor (deferred):** el no-op de "soltar sobre la propia carpeta" no
+  cubre alias por symlink (`/tmp` vs `/private/tmp`) ni diferencias de
+  mayúsculas/minúsculas en el path — en esos casos rarísimos termina en
+  un error de "ya existe" en vez de un no-op silencioso. Sin riesgo de
+  datos (el guard de `fileExists` sigue protegiendo contra sobrescribir).
+- **Minor (deferred):** cuando `FileOperationsService.move` falla por un
+  motivo específico (ej. "no se puede mover una carpeta dentro de sí
+  misma"), `moveDroppedItems` descarta ese mensaje y solo reporta el
+  nombre del archivo en el error agregado — el mensaje claro que pide el
+  plan no llega al usuario en el caso de fallos parciales.
+- **Minor (deferred):** mover entre volúmenes distintos copia+borra de
+  forma síncrona en el main actor (comportamiento normal de
+  `FileManager.moveItem`, no es un bug nuevo de este slice) — sin
+  riesgo de pérdida de datos, pero es la primera operación de archivo
+  potencialmente larga de la app corriendo en el hilo principal.
+- Confirmado con una sonda real contra el SDK: una `URL` de tipo
+  `file://` exporta tanto `public.url` como `public.file-url` vía su
+  conformance built-in de `Transferable` — Finder recibe `public.file-url`
+  como un archivo real (no un webloc), confirmando la premisa
+  arquitectónica del plan sobre arrastrar hacia Finder.
+- Todo lo demás señalado por el reviewer como "declined to judge"
+  (comportamiento real de ruteo de drop anidado y gestos en macOS 27 sin
+  poder correr la GUI, qué operación exacta —copiar o mover— ofrece
+  `.draggable` hacia Finder, soltar en la vista de Papelera) son límites
+  de verificación de este entorno, no hallazgos nuevos.
+
+115/115 tests en verde tras los fixes. Listo para mergear a main — cierra
+el roadmap completo de 15 slices (14 originales + el ítem de drag & drop
+que se había diferido explícitamente del slice 14).
