@@ -112,3 +112,32 @@ queda diferido, sin acción en este slice:
   entradas sueltas en las preferencias reales de quien corre los tests.
   Candidato: inyectar siempre una suite descartable y limpiarla en
   `tearDown`, como ya hace `ViewPropertiesStoreTests`.
+
+## 2026-10-26 — Slice 3: hallazgos de la revisión final de rama
+
+Revisión final (Opus, fresh context) sobre pestañas/split view. Dos
+"Important" arreglados en el momento (foco de panel que casi nunca se
+activaba por perder contra los gestos hijos; estado de vista filtrándose
+entre pestañas por falta de `.id`). El resto queda diferido:
+
+- **Elección de pestaña al cerrar la seleccionada:** el código selecciona
+  la vecina de la derecha (la que cae en el mismo índice tras remover),
+  no la de la izquierda como describía el plan literalmente. Ambos
+  comportamientos son razonables (Dolphin también usa la derecha) — se
+  deja así, el plan queda corregido de hecho por esta decisión.
+- `setFocusedPane` acepta cualquier entero una vez que el tab está en
+  split (no valida que sea 0 o 1) — solo alcanzable con una llamada mal
+  formada desde código nuevo, no desde la UI actual.
+- El botón "+" abre la pestaña nueva en la carpeta del panel primario,
+  no del panel enfocado — coincide con lo que pedía el plan
+  literalmente, aunque Dolphin usa el panel activo. Queda así por ahora.
+- Activar split no mueve el foco al panel nuevo (se queda en el
+  primario).
+- Las pestañas no seleccionadas solo reciben el click sobre su texto
+  (fondo transparente no es "clickeable" visualmente), y no hay
+  `ScrollView` si hay muchas pestañas.
+- Los paneles de split no tienen `minWidth` — se pueden arrastrar a
+  ancho cero.
+- Sin tooltips/accesibilidad en los botones de ícono (cerrar, nueva
+  pestaña, split).
+
