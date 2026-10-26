@@ -297,3 +297,45 @@ borrar, selección en modo búsqueda`). El resto queda diferido:
   carpeta sin permiso (el comportamiento correcto está confirmado por
   el revisor con un script aparte, pero no está fijado en la suite).
 
+## 2026-10-26 — Slice 8: hallazgos de la revisión final de rama
+
+Revisión final (Opus, fresh context) sobre la ventana de preferencias.
+Sin hallazgos Critical ni Important — las 5 garantías del Review Focus
+se sostienen y los 79 tests pasan. Sin fixes en este pase. Queda
+documentado:
+
+- **Alcance reducido respecto al roadmap:** el ítem 8 del diseño dice
+  "vistas, inicio, papelera" — este slice solo implementa "vistas"
+  (modo de vista por defecto) y, además, "mostrar ocultos" (que no
+  estaba en el roadmap original pero ya existía en el código sin UI).
+  "Inicio" y "papelera" quedan afuera — "inicio" necesita persistir la
+  última ubicación visitada (sin dueño claro todavía) y "papelera"
+  depende del slice 9, que recién se está planeando.
+- **Los dos ajustes no tienen el mismo alcance de "cuándo aplican".**
+  El modo de vista por defecto aplica en la próxima navegación de
+  *cualquier* panel ya abierto a una carpeta sin `ViewProperties`
+  guardadas (no hace falta una pestaña nueva) — más inmediato de lo
+  que el plan prometía. "Mostrar ocultos" solo aplica a
+  `BrowserViewModel`s nuevos (pestaña nueva, split nuevo), porque se
+  lee una sola vez al construir el `DirectoryReader` por defecto. Esto
+  puede dar un tab con dos paneles en split mostrando ocultos distinto
+  si se activa el ajuste entre la creación de cada panel — es
+  consistente con la regla del plan de "no retroactivo", pero vale
+  tenerlo escrito.
+- `ViewPropertiesStore(defaults: suite)` sin pasar `appSettingsStore:`
+  sigue leyendo el fallback de modo desde `UserDefaults.standard`, no
+  desde la suite inyectada — filtra estado global a tests que ya eran
+  "aislados" antes de este slice (pasa hoy solo porque el dominio de
+  `xctest` no tiene la key `appSettings`). Candidato:
+  `appSettingsStore: AppSettingsStore? = nil` con fallback a
+  `AppSettingsStore(defaults: defaults)` cuando es `nil`, para que lea
+  de la misma suite.
+- `AppSettings` (como `ViewProperties`) decodifica con `Codable`
+  sintetizado, que no usa los valores default de las properties si
+  falta un campo en el JSON guardado — si un slice futuro le agrega un
+  campo (inicio, papelera), un `AppSettings` guardado con el esquema
+  viejo falla el decode completo y vuelve a todos los defaults,
+  perdiendo silenciosamente lo que el usuario ya había elegido.
+  Candidato: `init(from:)` manual con `decodeIfPresent ?? default`
+  cuando se agregue el próximo campo.
+
