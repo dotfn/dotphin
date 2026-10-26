@@ -42,4 +42,28 @@ final class ViewPropertiesStoreTests: XCTestCase {
         XCTAssertEqual(store.properties(for: b), ViewProperties())
         XCTAssertEqual(store.properties(for: a), propsA)
     }
+
+    func test_propertiesForNeverVisitedFolder_usesAppSettingsDefaultViewMode() {
+        let appSettingsStore = AppSettingsStore(defaults: defaults)
+        var settings = AppSettings()
+        settings.defaultViewMode = .icons
+        appSettingsStore.setSettings(settings)
+        let store = ViewPropertiesStore(defaults: defaults, appSettingsStore: appSettingsStore)
+        XCTAssertEqual(store.properties(for: URL(fileURLWithPath: "/tmp/never-visited")).mode, .icons)
+    }
+
+    func test_propertiesForAlreadyVisitedFolder_ignoresAppSettingsDefault() {
+        let appSettingsStore = AppSettingsStore(defaults: defaults)
+        let store = ViewPropertiesStore(defaults: defaults, appSettingsStore: appSettingsStore)
+        let url = URL(fileURLWithPath: "/tmp/already-visited")
+        var saved = ViewProperties()
+        saved.mode = .details
+        store.setProperties(saved, for: url)
+
+        var settings = AppSettings()
+        settings.defaultViewMode = .icons
+        appSettingsStore.setSettings(settings)
+
+        XCTAssertEqual(store.properties(for: url).mode, .details, "no debe pisar una carpeta ya visitada")
+    }
 }

@@ -37,7 +37,7 @@ final class BrowserViewModel {
 
     init(
         startingAt url: URL,
-        reader: DirectoryReader = DirectoryReader(),
+        reader: DirectoryReader = DirectoryReader(showsHiddenFiles: AppSettingsStore().settings().showsHiddenFiles),
         store: ViewPropertiesStore = ViewPropertiesStore(),
         operations: FileOperationsService = FileOperationsService(),
         search: SearchService = SearchService()
