@@ -150,4 +150,48 @@ final class BrowserViewModelTests: XCTestCase {
         vm.filterText = "a"
         XCTAssertNotNil(vm.selectedItem)
     }
+
+    func test_renameSelected_renamesAndRefreshes() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.select(vm.items[0])
+        vm.renameSelected(to: "b.txt")
+        XCTAssertEqual(vm.items.map(\.name), ["b.txt"])
+        XCTAssertNil(vm.operationError)
+    }
+
+    func test_renameSelected_toExistingName_setsOperationError_doesNotRefresh() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        try "x".write(to: tempDir.appendingPathComponent("b.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.select(vm.items[0])
+        vm.renameSelected(to: "b.txt")
+        XCTAssertNotNil(vm.operationError)
+        XCTAssertEqual(vm.items.map(\.name).sorted(), ["a.txt", "b.txt"])
+    }
+
+    func test_deleteSelected_removesItemAndClearsSelection() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.select(vm.items[0])
+        vm.deleteSelected()
+        XCTAssertEqual(vm.items, [])
+        XCTAssertNil(vm.selectedItem)
+    }
+
+    func test_createFolder_addsNewFolderToItems() throws {
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.createFolder(named: "Nueva carpeta")
+        XCTAssertEqual(vm.items.map(\.name), ["Nueva carpeta"])
+    }
+
+    func test_clearOperationError_clearsIt() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        try "x".write(to: tempDir.appendingPathComponent("b.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.select(vm.items[0])
+        vm.renameSelected(to: "b.txt")
+        vm.clearOperationError()
+        XCTAssertNil(vm.operationError)
+    }
 }

@@ -21,13 +21,22 @@ final class BrowserViewModel {
         return items.filter { $0.name.localizedCaseInsensitiveContains(filterText) }
     }
 
+    private(set) var operationError: FileOperationError?
+
     private let reader: DirectoryReader
     private let store: ViewPropertiesStore
+    private let operations: FileOperationsService
 
-    init(startingAt url: URL, reader: DirectoryReader = DirectoryReader(), store: ViewPropertiesStore = ViewPropertiesStore()) {
+    init(
+        startingAt url: URL,
+        reader: DirectoryReader = DirectoryReader(),
+        store: ViewPropertiesStore = ViewPropertiesStore(),
+        operations: FileOperationsService = FileOperationsService()
+    ) {
         self.currentURL = url
         self.reader = reader
         self.store = store
+        self.operations = operations
         self.viewProperties = store.properties(for: url)
         load(url)
     }
@@ -69,6 +78,46 @@ final class BrowserViewModel {
     func setZoomLevel(_ level: Double) {
         viewProperties.zoomLevel = level
         store.setProperties(viewProperties, for: currentURL)
+    }
+
+    func renameSelected(to newName: String) {
+        guard let item = selectedItem else { return }
+        do {
+            _ = try operations.rename(item, to: newName)
+            refresh()
+        } catch let opError as FileOperationError {
+            operationError = opError
+        } catch {
+            operationError = .other(error.localizedDescription)
+        }
+    }
+
+    func deleteSelected() {
+        guard let item = selectedItem else { return }
+        do {
+            try operations.moveToTrash(item)
+            selectedItem = nil
+            refresh()
+        } catch let opError as FileOperationError {
+            operationError = opError
+        } catch {
+            operationError = .other(error.localizedDescription)
+        }
+    }
+
+    func createFolder(named name: String) {
+        do {
+            _ = try operations.createFolder(in: currentURL, named: name)
+            refresh()
+        } catch let opError as FileOperationError {
+            operationError = opError
+        } catch {
+            operationError = .other(error.localizedDescription)
+        }
+    }
+
+    func clearOperationError() {
+        operationError = nil
     }
 
     private func load(_ url: URL) {
