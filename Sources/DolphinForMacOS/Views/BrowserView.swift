@@ -10,12 +10,8 @@ struct BrowserView: View {
     @State private var showsEmptyTrashConfirmation = false
     @State private var nameInput = ""
 
-    private var trashURL: URL? {
-        try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-    }
-
     private var isBrowsingTrash: Bool {
-        trashURL?.standardizedFileURL.path == viewModel.currentURL.standardizedFileURL.path
+        viewModel.isBrowsingTrash
     }
 
     private var selectedID: Binding<FileItem.ID?> {

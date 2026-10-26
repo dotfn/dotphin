@@ -149,4 +149,13 @@ final class FileOperationsServiceTests: XCTestCase {
         XCTAssertThrowsError(try FileOperationsService().emptyTrash(at: trashDir))
         XCTAssertFalse(FileManager.default.fileExists(atPath: trashDir.appendingPathComponent("ok.txt").path), "el que sí se pudo borrar debe haberse borrado igual")
     }
+
+    func test_emptyTrash_onUnreadableFolder_throws_doesNotReportFalseSuccess() throws {
+        let locked = tempDir.appendingPathComponent("locked-trash", isDirectory: true)
+        try FileManager.default.createDirectory(at: locked, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: locked.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path) }
+
+        XCTAssertThrowsError(try FileOperationsService().emptyTrash(at: locked))
+    }
 }

@@ -34,19 +34,27 @@ final class BrowserViewModel {
     private let store: ViewPropertiesStore
     private let operations: FileOperationsService
     private let search: SearchService
+    private let trashURL: URL
+
+    var isBrowsingTrash: Bool {
+        currentURL.standardizedFileURL.path == trashURL.standardizedFileURL.path
+    }
 
     init(
         startingAt url: URL,
         reader: DirectoryReader = DirectoryReader(showsHiddenFiles: AppSettingsStore().settings().showsHiddenFiles),
         store: ViewPropertiesStore = ViewPropertiesStore(),
         operations: FileOperationsService = FileOperationsService(),
-        search: SearchService = SearchService()
+        search: SearchService = SearchService(),
+        trashURL: URL = (try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false))
+            ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash")
     ) {
         self.currentURL = url
         self.reader = reader
         self.store = store
         self.operations = operations
         self.search = search
+        self.trashURL = trashURL
         self.viewProperties = store.properties(for: url)
         load(url)
     }
@@ -148,9 +156,10 @@ final class BrowserViewModel {
     }
 
     func emptyTrash() {
+        guard isBrowsingTrash else { return }
+        defer { refresh() }
         do {
-            try operations.emptyTrash(at: currentURL)
-            refresh()
+            try operations.emptyTrash(at: trashURL)
         } catch let opError as FileOperationError {
             operationError = opError
         } catch {

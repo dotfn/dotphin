@@ -276,10 +276,34 @@ final class BrowserViewModelTests: XCTestCase {
 
     func test_emptyTrash_removesItemsAndRefreshes() throws {
         try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
-        let vm = BrowserViewModel(startingAt: tempDir)
+        let vm = BrowserViewModel(startingAt: tempDir, trashURL: tempDir)
         vm.emptyTrash()
         XCTAssertEqual(vm.items, [])
         XCTAssertNil(vm.operationError)
+    }
+
+    func test_emptyTrash_whenNotBrowsingTrash_doesNothing() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let otherTrash = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: otherTrash, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: otherTrash) }
+        let vm = BrowserViewModel(startingAt: tempDir, trashURL: otherTrash)
+        vm.emptyTrash()
+        XCTAssertEqual(vm.items.map(\.name), ["a.txt"], "no debió borrar nada: currentURL no es la papelera")
+    }
+
+    func test_emptyTrash_withPartialFailure_stillRefreshesWhatWasActuallyDeleted() throws {
+        try "x".write(to: tempDir.appendingPathComponent("ok.txt"), atomically: true, encoding: .utf8)
+        let locked = tempDir.appendingPathComponent("locked", isDirectory: true)
+        try FileManager.default.createDirectory(at: locked, withIntermediateDirectories: true)
+        try "x".write(to: locked.appendingPathComponent("inside.txt"), atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: locked.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path) }
+
+        let vm = BrowserViewModel(startingAt: tempDir, trashURL: tempDir)
+        vm.emptyTrash()
+        XCTAssertNotNil(vm.operationError)
+        XCTAssertEqual(vm.items.map(\.name), ["locked"], "ok.txt se borró de verdad y no debe seguir en la lista")
     }
 
     func test_restoreSelected_movesToHomeAndClearsSelection() throws {

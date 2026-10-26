@@ -63,10 +63,15 @@ struct FileOperationsService {
     }
 
     func emptyTrash(at trashURL: URL) throws {
-        let contents = (try? FileManager.default.contentsOfDirectory(
-            at: trashURL,
-            includingPropertiesForKeys: nil
-        )) ?? []
+        let contents: [URL]
+        do {
+            contents = try FileManager.default.contentsOfDirectory(
+                at: trashURL,
+                includingPropertiesForKeys: nil
+            )
+        } catch {
+            throw FileOperationError.other(error.localizedDescription)
+        }
 
         var failures: [String] = []
         for url in contents {
