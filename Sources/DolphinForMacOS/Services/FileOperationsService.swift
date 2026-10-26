@@ -69,7 +69,11 @@ struct FileOperationsService {
         guard destinationPath != sourcePath else {
             return sourceURL
         }
-        guard !destinationDirectory.standardizedFileURL.path.hasPrefix(sourcePath + "/") else {
+        let destinationDirectoryPath = destinationDirectory.standardizedFileURL.path
+        guard destinationDirectoryPath != sourcePath else {
+            return sourceURL
+        }
+        guard !destinationDirectoryPath.hasPrefix(sourcePath + "/") else {
             throw FileOperationError.other("No se puede mover una carpeta dentro de sí misma.")
         }
         guard !FileManager.default.fileExists(atPath: destinationPath) else {

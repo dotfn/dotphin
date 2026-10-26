@@ -4,7 +4,11 @@ struct FileListView: View {
     let items: [FileItem]
     @Binding var selectedID: FileItem.ID?
     let gitStatuses: [String: GitFileStatus]
-    let currentURL: URL
+    /// `nil` cuando esta lista muestra resultados de búsqueda de varias
+    /// carpetas a la vez — ahí soltar sobre el fondo no tiene un destino
+    /// sin ambigüedad, así que ese drop se deshabilita. Soltar sobre una
+    /// fila de carpeta puntual sigue funcionando siempre.
+    let currentURL: URL?
     let onOpen: (FileItem) -> Void
     let onDelete: (FileItem) -> Void
     let onMoveDropped: ([URL], URL) -> Void
@@ -18,12 +22,14 @@ struct FileListView: View {
             .contentShape(Rectangle())
             .draggable(item.url)
             .dropDestination(for: URL.self) { urls, _ in
-                guard item.isDirectory else { return false }
-                onMoveDropped(urls, item.url)
+                let destination = item.isDirectory ? item.url : currentURL
+                guard let destination else { return false }
+                onMoveDropped(urls, destination)
                 return true
             }
         }
         .dropDestination(for: URL.self) { urls, _ in
+            guard let currentURL else { return false }
             onMoveDropped(urls, currentURL)
             return true
         }

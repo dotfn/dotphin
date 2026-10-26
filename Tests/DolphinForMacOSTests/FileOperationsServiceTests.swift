@@ -182,6 +182,16 @@ final class FileOperationsServiceTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
     }
 
+    func test_move_folderDroppedOntoItself_isNoOp() throws {
+        let folder = tempDir.appendingPathComponent("folder", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+
+        let result = try FileOperationsService().move(folder, toDirectory: folder)
+
+        XCTAssertEqual(result, folder)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: folder.path))
+    }
+
     func test_move_intoOwnDescendant_throws() throws {
         let folder = tempDir.appendingPathComponent("folder", isDirectory: true)
         let sub = folder.appendingPathComponent("sub", isDirectory: true)

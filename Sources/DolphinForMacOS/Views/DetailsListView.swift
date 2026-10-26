@@ -19,8 +19,7 @@ struct DetailsListView: View {
                 .contentShape(Rectangle())
                 .draggable(item.url)
                 .dropDestination(for: URL.self) { urls, _ in
-                    guard item.isDirectory else { return false }
-                    onMoveDropped(urls, item.url)
+                    onMoveDropped(urls, item.isDirectory ? item.url : currentURL)
                     return true
                 }
             }

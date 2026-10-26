@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BrowserView: View {
     let viewModel: BrowserViewModel
+    var onFilesMoved: (() -> Void)?
 
     @State private var pendingDelete: FileItem?
     @State private var showsDeleteConfirmation = false
@@ -186,10 +187,13 @@ struct BrowserView: View {
                         items: viewModel.searchResults,
                         selectedID: selectedID,
                         gitStatuses: [:], // los resultados vienen de carpetas distintas; gitStatuses es solo de currentURL
-                        currentURL: viewModel.currentURL,
+                        currentURL: nil, // mostrando resultados de varias carpetas — soltar sobre el fondo no tiene un destino sin ambigüedad
                         onOpen: { item in viewModel.navigate(to: item.url.deletingLastPathComponent()) },
                         onDelete: onDelete,
-                        onMoveDropped: { urls, directory in viewModel.moveDroppedItems(urls, into: directory) }
+                        onMoveDropped: { urls, directory in
+                            viewModel.moveDroppedItems(urls, into: directory)
+                            onFilesMoved?()
+                        }
                     )
                 }
             } else if viewModel.filteredItems.isEmpty && !viewModel.filterText.isEmpty {
@@ -212,7 +216,10 @@ struct BrowserView: View {
                         onSelect: viewModel.select,
                         onOpen: onOpen,
                         onDelete: onDelete,
-                        onMoveDropped: { urls, directory in viewModel.moveDroppedItems(urls, into: directory) },
+                        onMoveDropped: { urls, directory in
+                            viewModel.moveDroppedItems(urls, into: directory)
+                            onFilesMoved?()
+                        },
                         gitStatuses: viewModel.gitStatuses
                     )
                 case .list:
@@ -223,7 +230,10 @@ struct BrowserView: View {
                         currentURL: viewModel.currentURL,
                         onOpen: onOpen,
                         onDelete: onDelete,
-                        onMoveDropped: { urls, directory in viewModel.moveDroppedItems(urls, into: directory) }
+                        onMoveDropped: { urls, directory in
+                            viewModel.moveDroppedItems(urls, into: directory)
+                            onFilesMoved?()
+                        }
                     )
                 case .details:
                     DetailsListView(
@@ -233,7 +243,10 @@ struct BrowserView: View {
                         currentURL: viewModel.currentURL,
                         onOpen: onOpen,
                         onDelete: onDelete,
-                        onMoveDropped: { urls, directory in viewModel.moveDroppedItems(urls, into: directory) }
+                        onMoveDropped: { urls, directory in
+                            viewModel.moveDroppedItems(urls, into: directory)
+                            onFilesMoved?()
+                        }
                     )
                 }
             }

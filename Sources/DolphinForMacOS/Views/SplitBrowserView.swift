@@ -19,7 +19,8 @@ struct SplitBrowserView: View {
     }
 
     private func paneView(viewModel: BrowserViewModel, index: Int) -> some View {
-        BrowserView(viewModel: viewModel)
+        let otherPane = index == 0 ? tab.secondary : tab.primary
+        return BrowserView(viewModel: viewModel, onFilesMoved: { otherPane?.refresh() })
             .border(tab.focusedPaneIndex == index ? Color.accentColor : Color.clear, width: 2)
             .contentShape(Rectangle())
             .simultaneousGesture(TapGesture().onEnded { onFocusPane(index) })
