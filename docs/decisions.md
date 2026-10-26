@@ -573,3 +573,27 @@ resolución:
 107/107 tests en verde tras el fix. Listo para mergear a main — cierra
 el roadmap original de 14 slices (con drag & drop explícitamente
 diferido, documentado arriba en la entrada del slice 14).
+
+## 2026-10-26 — Slice 14b (deuda de accesibilidad): review y rulings
+
+Review de branch completo (fresh Opus, base 95a4782..e400308). Veredicto:
+"Ready to merge" — sin Critical ni Important. Minors (deferred, no se
+fixean en este pass):
+
+- `GitStatusBadge` se anuncia como elemento separado de VoiceOver, sin
+  agrupar con el nombre del archivo en `IconGridView`/`DetailsListView`
+  (ej: VoiceOver dice "Modificado" sin contexto). Candidato a
+  `.accessibilityElement(children: .combine)` en la fila completa en
+  una futura pasada.
+- El `Slider` de zoom tiene label pero no `.accessibilityValue`, así que
+  VoiceOver lee el rango 0.5...2.0 como porcentaje crudo en vez de un
+  valor de zoom legible.
+- Dudas abiertas que el reviewer marcó como no verificables sin GUI/
+  VoiceOver real: si el `.help` por segmento del `Picker` segmentado
+  realmente muestra tooltip (podría ser un no-op inofensivo en AppKit),
+  y si VoiceOver lee el `.accessibilityLabel` del segmento o el nombre
+  del SF Symbol. Si una revisión con VoiceOver real muestra que lee el
+  símbolo, el fallback documentado es `Label(...)` +
+  `.labelStyle(.iconOnly)` en vez de `Image` desnuda.
+
+108/108 tests en verde. Listo para mergear a main.
