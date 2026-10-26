@@ -194,4 +194,42 @@ final class BrowserViewModelTests: XCTestCase {
         vm.clearOperationError()
         XCTAssertNil(vm.operationError)
     }
+
+    func test_renameSelected_reselectsTheRenamedItem_notTheOldGhost() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.select(vm.items[0])
+        vm.renameSelected(to: "b.txt")
+        XCTAssertEqual(vm.selectedItem?.name, "b.txt")
+        XCTAssertEqual(vm.selectedItem?.url.lastPathComponent, "b.txt")
+    }
+
+    func test_refresh_clearsSelectionIfTheSelectedItemNoLongerExists() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.select(vm.items[0])
+        try FileManager.default.removeItem(at: tempDir.appendingPathComponent("a.txt"))
+        vm.refresh()
+        XCTAssertNil(vm.selectedItem)
+    }
+
+    func test_renameSelected_toHiddenName_isRejectedAsInvalid() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.select(vm.items[0])
+        vm.renameSelected(to: ".a.txt")
+        XCTAssertEqual(vm.operationError, .invalidName)
+        XCTAssertEqual(vm.items.map(\.name), ["a.txt"], "no debió renombrarse")
+    }
+
+    func test_delete_removesGivenItemRegardlessOfSelection() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        try "x".write(to: tempDir.appendingPathComponent("b.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        let itemB = vm.items.first { $0.name == "b.txt" }!
+        vm.select(vm.items.first { $0.name == "a.txt" })
+        vm.delete(itemB)
+        XCTAssertEqual(vm.items.map(\.name), ["a.txt"])
+        XCTAssertEqual(vm.selectedItem?.name, "a.txt", "borrar otro ítem no debe tocar la selección actual")
+    }
 }

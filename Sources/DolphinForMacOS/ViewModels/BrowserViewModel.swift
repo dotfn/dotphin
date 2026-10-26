@@ -85,6 +85,7 @@ final class BrowserViewModel {
         do {
             _ = try operations.rename(item, to: newName)
             refresh()
+            selectedItem = items.first { $0.name == newName }
         } catch let opError as FileOperationError {
             operationError = opError
         } catch {
@@ -94,9 +95,12 @@ final class BrowserViewModel {
 
     func deleteSelected() {
         guard let item = selectedItem else { return }
+        delete(item)
+    }
+
+    func delete(_ item: FileItem) {
         do {
             try operations.moveToTrash(item)
-            selectedItem = nil
             refresh()
         } catch let opError as FileOperationError {
             operationError = opError
@@ -131,5 +135,6 @@ final class BrowserViewModel {
             items = []
             self.error = .other(error.localizedDescription)
         }
+        selectedItem = selectedItem.flatMap { current in items.first { $0.id == current.id } }
     }
 }

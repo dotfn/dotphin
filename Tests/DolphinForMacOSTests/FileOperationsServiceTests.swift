@@ -68,4 +68,11 @@ final class FileOperationsServiceTests: XCTestCase {
             XCTAssertEqual(error as? FileOperationError, .nameAlreadyExists(tempDir.appendingPathComponent("Dup")))
         }
     }
+
+    func test_rename_toHiddenName_throwsInvalidName() throws {
+        let item = try makeFile("a.txt")
+        XCTAssertThrowsError(try FileOperationsService().rename(item, to: ".a.txt")) { error in
+            XCTAssertEqual(error as? FileOperationError, .invalidName)
+        }
+    }
 }

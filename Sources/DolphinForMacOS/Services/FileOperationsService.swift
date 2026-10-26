@@ -8,7 +8,7 @@ enum FileOperationError: Error, Equatable {
 
 struct FileOperationsService {
     private func validate(_ name: String) throws {
-        if name.trimmingCharacters(in: .whitespaces).isEmpty || name.contains("/") {
+        if name.trimmingCharacters(in: .whitespaces).isEmpty || name.contains("/") || name.hasPrefix(".") {
             throw FileOperationError.invalidName
         }
     }
