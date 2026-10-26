@@ -3,12 +3,20 @@ import SwiftUI
 struct BrowserView: View {
     let viewModel: BrowserViewModel
 
+    @State private var showsInfoPanel = false
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 BreadcrumbView(url: viewModel.currentURL, onNavigate: viewModel.navigate)
 
                 Spacer()
+
+                Button {
+                    showsInfoPanel.toggle()
+                } label: {
+                    Image(systemName: "sidebar.right")
+                }
 
                 if viewModel.viewProperties.mode == .icons {
                     Slider(
@@ -65,13 +73,32 @@ struct BrowserView: View {
                 }
                 switch viewModel.viewProperties.mode {
                 case .icons:
-                    IconGridView(items: viewModel.items, zoomLevel: viewModel.viewProperties.zoomLevel, onOpen: onOpen)
+                    IconGridView(
+                        items: viewModel.items,
+                        zoomLevel: viewModel.viewProperties.zoomLevel,
+                        selectedItem: viewModel.selectedItem,
+                        onSelect: viewModel.select,
+                        onOpen: onOpen
+                    )
                 case .list:
-                    FileListView(items: viewModel.items, onOpen: onOpen)
+                    FileListView(
+                        items: viewModel.items,
+                        selectedItem: viewModel.selectedItem,
+                        onSelect: viewModel.select,
+                        onOpen: onOpen
+                    )
                 case .details:
-                    DetailsListView(items: viewModel.items, onOpen: onOpen)
+                    DetailsListView(
+                        items: viewModel.items,
+                        selectedItem: viewModel.selectedItem,
+                        onSelect: viewModel.select,
+                        onOpen: onOpen
+                    )
                 }
             }
+        }
+        .inspector(isPresented: $showsInfoPanel) {
+            InfoPanelView(item: viewModel.selectedItem)
         }
     }
 

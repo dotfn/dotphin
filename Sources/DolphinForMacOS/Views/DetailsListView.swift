@@ -2,25 +2,29 @@ import SwiftUI
 
 struct DetailsListView: View {
     let items: [FileItem]
+    let selectedItem: FileItem?
+    let onSelect: (FileItem) -> Void
     let onOpen: (FileItem) -> Void
-
-    private static let sizeFormatter: ByteCountFormatter = {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter
-    }()
 
     var body: some View {
         Table(items) {
             TableColumn("Nombre") { item in
                 Label(item.name, systemImage: item.isDirectory ? "folder.fill" : "doc.fill")
-                    .onTapGesture(count: 2) { onOpen(item) }
+                    .padding(.vertical, 2)
+                    .background(
+                        item.id == selectedItem?.id ? Color.accentColor.opacity(0.15) : Color.clear
+                    )
+                    .gesture(
+                        TapGesture(count: 2)
+                            .onEnded { onOpen(item) }
+                            .exclusively(before: TapGesture(count: 1).onEnded { onSelect(item) })
+                    )
             }
             TableColumn("Tamaño") { item in
-                Text(item.isDirectory ? "" : Self.sizeFormatter.string(fromByteCount: item.size ?? 0))
+                Text(FileMetadataFormatter().metadata(for: item).sizeText)
             }
             TableColumn("Modificado") { item in
-                Text(item.modificationDate?.formatted(date: .abbreviated, time: .shortened) ?? "")
+                Text(FileMetadataFormatter().metadata(for: item).modifiedText)
             }
         }
     }

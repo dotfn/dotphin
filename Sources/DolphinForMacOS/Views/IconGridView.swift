@@ -3,6 +3,8 @@ import SwiftUI
 struct IconGridView: View {
     let items: [FileItem]
     let zoomLevel: Double
+    let selectedItem: FileItem?
+    let onSelect: (FileItem) -> Void
     let onOpen: (FileItem) -> Void
 
     private var columns: [GridItem] {
@@ -23,9 +25,15 @@ struct IconGridView: View {
                             .multilineTextAlignment(.center)
                     }
                     .frame(width: 80 * zoomLevel)
-                    .onTapGesture(count: 2) {
-                        onOpen(item)
-                    }
+                    .padding(4)
+                    .background(
+                        item.id == selectedItem?.id ? Color.accentColor.opacity(0.15) : Color.clear
+                    )
+                    .gesture(
+                        TapGesture(count: 2)
+                            .onEnded { onOpen(item) }
+                            .exclusively(before: TapGesture(count: 1).onEnded { onSelect(item) })
+                    )
                 }
             }
             .padding()
