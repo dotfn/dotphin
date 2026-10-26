@@ -4,7 +4,7 @@ import SwiftUI
 struct DolphinForMacOSApp: App {
     var body: some Scene {
         WindowGroup {
-            Text("DolphinForMacOS")
+            ContentView()
         }
     }
 }
