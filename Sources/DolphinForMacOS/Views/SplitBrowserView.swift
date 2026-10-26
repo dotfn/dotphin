@@ -1,0 +1,25 @@
+import SwiftUI
+
+struct SplitBrowserView: View {
+    let tab: Tab
+    let onFocusPane: (Int) -> Void
+
+    var body: some View {
+        if tab.isSplit {
+            HSplitView {
+                paneView(viewModel: tab.primary, index: 0)
+                paneView(viewModel: tab.secondary!, index: 1)
+            }
+        } else {
+            paneView(viewModel: tab.primary, index: 0)
+        }
+    }
+
+    private func paneView(viewModel: BrowserViewModel, index: Int) -> some View {
+        BrowserView(viewModel: viewModel)
+            .border(tab.focusedPaneIndex == index ? Color.accentColor : Color.clear, width: 2)
+            .onTapGesture {
+                onFocusPane(index)
+            }
+    }
+}
