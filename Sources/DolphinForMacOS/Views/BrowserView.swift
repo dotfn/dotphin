@@ -7,7 +7,16 @@ struct BrowserView: View {
     @State private var showsDeleteConfirmation = false
     @State private var showsRenamePrompt = false
     @State private var showsNewFolderPrompt = false
+    @State private var showsEmptyTrashConfirmation = false
     @State private var nameInput = ""
+
+    private var trashURL: URL? {
+        try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+    }
+
+    private var isBrowsingTrash: Bool {
+        trashURL?.standardizedFileURL.path == viewModel.currentURL.standardizedFileURL.path
+    }
 
     private var selectedID: Binding<FileItem.ID?> {
         Binding(
@@ -48,6 +57,21 @@ struct BrowserView: View {
                     Image(systemName: "trash")
                 }
                 .disabled(viewModel.selectedItem == nil)
+
+                if isBrowsingTrash {
+                    Button {
+                        viewModel.restoreSelected()
+                    } label: {
+                        Image(systemName: "arrow.uturn.backward")
+                    }
+                    .disabled(viewModel.selectedItem == nil)
+
+                    Button {
+                        showsEmptyTrashConfirmation = true
+                    } label: {
+                        Image(systemName: "trash.slash")
+                    }
+                }
 
                 if viewModel.viewProperties.mode == .icons {
                     Slider(
@@ -206,6 +230,12 @@ struct BrowserView: View {
             TextField("Nombre", text: $nameInput)
             Button("Crear") { viewModel.createFolder(named: nameInput) }
             Button("Cancelar", role: .cancel) {}
+        }
+        .alert("¿Vaciar la papelera?", isPresented: $showsEmptyTrashConfirmation) {
+            Button("Vaciar", role: .destructive) { viewModel.emptyTrash() }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("Esto borra el contenido de la papelera de forma permanente. No se puede deshacer.")
         }
         .alert(
             "No se pudo completar la operación",
