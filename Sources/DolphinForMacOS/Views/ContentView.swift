@@ -8,7 +8,7 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            PlacesSidebarView(places: places) { place in
+            PlacesSidebarView(places: places, currentURL: viewModel.currentURL) { place in
                 viewModel.navigate(to: place.url)
             }
         } detail: {

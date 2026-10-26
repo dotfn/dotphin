@@ -55,6 +55,30 @@ final class DirectoryReaderTests: XCTestCase {
         XCTAssertEqual(linkItem?.isSymbolicLink, true)
     }
 
+    func test_contentsOfSymlinkToFolder_reportsAsDirectory_sameAnItemCanBeOpened() throws {
+        let target = tempDir.appendingPathComponent("realFolder")
+        try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+        let link = tempDir.appendingPathComponent("linkToFolder")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
+        let reader = DirectoryReader()
+        let items = try reader.contents(of: tempDir)
+        let linkItem = items.first { $0.name == "linkToFolder" }
+        XCTAssertEqual(linkItem?.isDirectory, true, "un symlink a una carpeta debe poder abrirse como carpeta")
+    }
+
+    func test_contentsOfDanglingSymlink_doesNotThrow_reportsNotDirectory() throws {
+        let link = tempDir.appendingPathComponent("brokenLink")
+        try FileManager.default.createSymbolicLink(
+            at: link,
+            withDestinationURL: tempDir.appendingPathComponent("doesNotExist")
+        )
+        let reader = DirectoryReader()
+        let items = try reader.contents(of: tempDir)
+        let linkItem = items.first { $0.name == "brokenLink" }
+        XCTAssertEqual(linkItem?.isSymbolicLink, true)
+        XCTAssertEqual(linkItem?.isDirectory, false)
+    }
+
     func test_contentsOfNonExistentDirectory_throwsNotFound() {
         let reader = DirectoryReader()
         let missing = tempDir.appendingPathComponent("doesNotExist")

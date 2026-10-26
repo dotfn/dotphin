@@ -33,11 +33,20 @@ struct DirectoryReader {
             .filter { showsHiddenFiles || !$0.lastPathComponent.hasPrefix(".") }
             .map { itemURL -> FileItem in
                 let values = try itemURL.resourceValues(forKeys: keys)
+                let isSymbolicLink = values.isSymbolicLink ?? false
+                var isDirectory = values.isDirectory ?? false
+                if isSymbolicLink {
+                    // A symlink's own resourceValues report isDirectory against the
+                    // link, not its target — resolve it so a link to a folder can be
+                    // opened like one. A dangling link falls back to false.
+                    let resolved = itemURL.resolvingSymlinksInPath()
+                    isDirectory = (try? resolved.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
+                }
                 return FileItem(
                     url: itemURL,
                     name: itemURL.lastPathComponent,
-                    isDirectory: values.isDirectory ?? false,
-                    isSymbolicLink: values.isSymbolicLink ?? false,
+                    isDirectory: isDirectory,
+                    isSymbolicLink: isSymbolicLink,
                     size: values.fileSize.map(Int64.init),
                     modificationDate: values.contentModificationDate
                 )
