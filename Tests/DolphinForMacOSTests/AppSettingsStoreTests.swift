@@ -76,4 +76,19 @@ final class AppSettingsStoreTests: XCTestCase {
 
         XCTAssertEqual(settings.startupURL, FileManager.default.homeDirectoryForCurrentUser)
     }
+
+    func test_settings_decodingOldBlobMissingNewKeys_keepsOldValuesAndDefaultsTheRest() {
+        let oldBlob = """
+        {"defaultViewMode":"details","showsHiddenFiles":true}
+        """.data(using: .utf8)!
+        defaults.set(oldBlob, forKey: "appSettings")
+
+        let store = AppSettingsStore(defaults: defaults)
+        let settings = store.settings()
+
+        XCTAssertEqual(settings.defaultViewMode, .details, "un valor guardado antes de este slice no debe perderse")
+        XCTAssertEqual(settings.showsHiddenFiles, true, "un valor guardado antes de este slice no debe perderse")
+        XCTAssertEqual(settings.startupLocation, .home, "una clave nueva ausente debe usar su default, no romper el decode entero")
+        XCTAssertNil(settings.customStartupPath)
+    }
 }
