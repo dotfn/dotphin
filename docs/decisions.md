@@ -413,3 +413,33 @@ El resto queda diferido:
   archivos, ~67KB, termina en 1s) en vez de un test permanente, por el
   costo de generar ese fixture en cada corrida de la suite.
 
+## 2026-10-26 — Slice 11: hallazgos de la revisión final de rama
+
+Revisión final (Opus, fresh context) sobre volúmenes externos. Dos
+"Important" arreglados en el momento (ver commit `fix: el error de
+expulsión llega al usuario, y el disco de arranque no ofrece
+Expulsar`): el mensaje de error del sistema no llegaba al usuario
+(faltaba `LocalizedError`), y "Expulsar" aparecía sobre el disco de
+arranque. El resto queda diferido:
+
+- Expulsar corre síncrono en el main thread — un volumen de red lento
+  puede trabar la ventana unos segundos. Mismo tipo de concesión ya
+  aceptada para la consulta de espacio libre del slice 5.
+- El alert de error de expulsión se dispara desde dentro del botón del
+  alert de confirmación — en teoría SwiftUI encola el segundo alert
+  después de que cierra el primero, pero no se verificó a mano (ni se
+  puede, sin una imagen de disco de prueba montada en este entorno).
+  Revisar al hacer la verificación manual pendiente del slice.
+- "Información" sobre un volumen que se desmontó en el ínterin muestra
+  "—" en los tres campos en vez de un mensaje explícito tipo "el
+  volumen ya no está disponible".
+- La info del volumen se vuelve a leer en cada re-render mientras el
+  alert está abierto — barato para un volumen local, podría trabar con
+  un volumen de red colgado (mismo tipo de concesión del slice 5).
+- `pendingEject` no se limpia después de cerrarse el alert (inocuo,
+  la presentación depende de `showsEjectConfirmation`, no de
+  `pendingEject != nil`).
+- El volumen sigue en la sidebar después de expulsarlo con éxito hasta
+  que se reinicia la app (ya aceptado — no hay observación de
+  mount/unmount en vivo, decisión del slice 1/5).
+
