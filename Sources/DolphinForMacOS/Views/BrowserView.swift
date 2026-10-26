@@ -9,6 +9,7 @@ struct BrowserView: View {
     @State private var showsNewFolderPrompt = false
     @State private var showsEmptyTrashConfirmation = false
     @State private var nameInput = ""
+    @State private var terminalError: String?
 
     private var isBrowsingTrash: Bool {
         viewModel.isBrowsingTrash
@@ -30,6 +31,16 @@ struct BrowserView: View {
                 BreadcrumbView(url: viewModel.currentURL, onNavigate: viewModel.navigate)
 
                 Spacer()
+
+                Button {
+                    do {
+                        try TerminalLauncher().openTerminal(at: viewModel.currentURL)
+                    } catch {
+                        terminalError = error.localizedDescription
+                    }
+                } label: {
+                    Image(systemName: "terminal")
+                }
 
                 Button {
                     nameInput = "Nueva carpeta"
@@ -247,6 +258,17 @@ struct BrowserView: View {
             Button("OK") { viewModel.clearOperationError() }
         } message: {
             Text(operationErrorMessage)
+        }
+        .alert(
+            "No se pudo abrir la Terminal",
+            isPresented: Binding(
+                get: { terminalError != nil },
+                set: { if !$0 { terminalError = nil } }
+            )
+        ) {
+            Button("OK") { terminalError = nil }
+        } message: {
+            Text(terminalError ?? "")
         }
     }
 
