@@ -141,3 +141,50 @@ entre pestañas por falta de `.id`). El resto queda diferido:
 - Sin tooltips/accesibilidad en los botones de ícono (cerrar, nueva
   pestaña, split).
 
+## 2026-10-26 — Slice 4: hallazgos de la revisión final de rama
+
+Revisión final (Opus, fresh context) sobre selección + panel de
+información. Dos "Important" arreglados en el momento (el inspector
+seguía a un panel fijo en vez del enfocado, y perdía su estado
+abierto/cerrado al splitear o cambiar de tab — ambos se resolvían
+subiendo el estado de `BrowserView` a `ContentView`).
+
+- **Ruling: selección por gesto custom en vez de `List`/`Table`
+  `selection:` nativo.** El revisor recomendó migrar a selección nativa
+  (`List(items, selection:)`/`Table(items, selection:)` +
+  `contextMenu(forSelectionType:primaryAction:)`) ya en este slice,
+  porque es la base correcta para el menú contextual del slice 6 y
+  resuelve de una vez el retraso del tap exclusivo y el área de click
+  angosta (ya logueada en slices 1-3). No se hizo en este fix pass:
+  es un cambio de forma, no un bug puntual, y tocar las 3 vistas de
+  listado ahora + rehacer el plan ya escrito del slice 6 alrededor de
+  esto es más alcance del que un fix pass de revisión debería asumir.
+  Queda como candidato fuerte para hacerse *como parte* del slice 6
+  (menú contextual), no después. Costo si sigue así: la selección
+  tarda ~el intervalo de doble-click del sistema en reaccionar, y en
+  modo lista/detalles solo el ícono+texto de la fila es clickeable (el
+  resaltado es de fila completa, así que lo que se ve no coincide con
+  lo que se puede clickear).
+- Doble-click sobre un archivo (no carpeta) no selecciona nada — el
+  `exclusively` suprime el select en favor de un `onOpen` que es no-op
+  para archivos. Queda sin arreglar hasta la migración a selección
+  nativa de arriba.
+- No hay forma de deseleccionar clickeando un espacio vacío (lo nativo
+  lo da gratis).
+- `FileMetadataFormatter` crea un `ByteCountFormatter` nuevo por llamada
+  en vez de cachearlo (regresión menor de performance vs. el `static
+  let` que tenía `DetailsListView` antes de este slice) — no se
+  cachea porque un `static let` de un tipo no-Sendable crasheaba el
+  compilador en un `struct` plano usado desde tests (ver ledger del
+  Task 2); en una `View` (como lo tenía `DetailsListView`) sí compila,
+  así que el riesgo es específico al contexto de uso, no al tipo.
+- Un archivo (no carpeta) con `size == nil` muestra "Zero KB" en vez de
+  un placeholder — el mismo problema que el plan quería evitar para
+  carpetas, pero no cubierto por sus tests (que solo prueban carpetas
+  sin tamaño). Candidato: `item.size.map(formatter.string(fromByteCount:)) ?? "—"`.
+- El ícono por tipo (carpeta/documento) está duplicado entre
+  `InfoPanelView`, `IconGridView` y `FileListView` — candidato a una
+  propiedad `FileItem.symbolName` compartida.
+- Botón del panel de información (`sidebar.right`) sin tooltip/label de
+  accesibilidad — mismo gap que los botones de pestañas del slice 3.
+
