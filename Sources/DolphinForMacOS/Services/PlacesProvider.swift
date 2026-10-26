@@ -19,7 +19,7 @@ struct PlacesProvider {
     }
 
     func mountedVolumes() -> [PlaceItem] {
-        let keys: [URLResourceKey] = [.volumeNameKey, .volumeIsInternalKey]
+        let keys: [URLResourceKey] = [.volumeNameKey, .volumeIsInternalKey, .volumeIsEjectableKey, .volumeIsRemovableKey]
         let volumes = FileManager.default.mountedVolumeURLs(
             includingResourceValuesForKeys: keys,
             options: [.skipHiddenVolumes]
@@ -29,11 +29,13 @@ struct PlacesProvider {
             let values = try? url.resourceValues(forKeys: Set(keys))
             let isInternal = values?.volumeIsInternal ?? false
             let name = values?.volumeName ?? url.lastPathComponent
+            let isEjectable = (values?.volumeIsEjectable ?? false) || (values?.volumeIsRemovable ?? false)
             return PlaceItem(
                 url: url,
                 name: name,
                 systemImage: isInternal ? "internaldrive" : "externaldrive",
-                kind: .volume
+                kind: .volume,
+                isEjectable: isEjectable
             )
         }
     }

@@ -10,6 +10,7 @@ struct PlaceItem: Identifiable, Hashable {
     let name: String
     let systemImage: String
     let kind: PlaceKind
+    var isEjectable: Bool = true
 
     var id: URL { url }
 }

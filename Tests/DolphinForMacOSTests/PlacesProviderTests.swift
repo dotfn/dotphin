@@ -20,6 +20,12 @@ final class PlacesProviderTests: XCTestCase {
         XCTAssertFalse(volumes.isEmpty, "debe incluir al menos el volumen de arranque")
     }
 
+    func test_mountedVolumes_bootVolumeIsNotEjectable() {
+        let provider = PlacesProvider()
+        let bootVolume = provider.mountedVolumes().first { $0.url.path == "/" }
+        XCTAssertEqual(bootVolume?.isEjectable, false, "el disco de arranque no debe ofrecer Expulsar")
+    }
+
     func test_allPlaces_isBookmarksThenVolumes() {
         let provider = PlacesProvider()
         let all = provider.allPlaces()

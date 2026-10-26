@@ -32,9 +32,11 @@ struct PlacesSidebarView: View {
                     Button("Información") {
                         infoTarget = place
                     }
-                    Button("Expulsar") {
-                        pendingEject = place
-                        showsEjectConfirmation = true
+                    if place.isEjectable {
+                        Button("Expulsar") {
+                            pendingEject = place
+                            showsEjectConfirmation = true
+                        }
                     }
                 }
             }

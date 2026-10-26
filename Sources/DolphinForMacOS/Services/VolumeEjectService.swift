@@ -1,8 +1,14 @@
 import AppKit
 import Foundation
 
-enum VolumeEjectError: Error {
+enum VolumeEjectError: LocalizedError {
     case failed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .failed(let message): return message
+        }
+    }
 }
 
 struct VolumeEjectService {
