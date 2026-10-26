@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var tabsViewModel = TabsViewModel(
-        startingAt: FileManager.default.homeDirectoryForCurrentUser
+        startingAt: AppSettingsStore().settings().startupURL
     )
     @State private var showsInfoPanel = false
     private let places = PlacesProvider().allPlaces()
