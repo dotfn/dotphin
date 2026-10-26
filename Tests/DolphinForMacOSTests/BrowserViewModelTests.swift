@@ -134,4 +134,20 @@ final class BrowserViewModelTests: XCTestCase {
         vm.navigate(to: sub)
         XCTAssertEqual(vm.filterText, "")
     }
+
+    func test_settingFilter_clearsSelectionIfItHidesTheSelectedItem() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.select(vm.items[0])
+        vm.filterText = "zzz"
+        XCTAssertNil(vm.selectedItem)
+    }
+
+    func test_settingFilter_keepsSelectionIfStillVisible() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.select(vm.items[0])
+        vm.filterText = "a"
+        XCTAssertNotNil(vm.selectedItem)
+    }
 }

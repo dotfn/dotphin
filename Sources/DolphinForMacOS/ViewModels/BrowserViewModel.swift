@@ -8,7 +8,13 @@ final class BrowserViewModel {
     private(set) var error: DirectoryReadError?
     private(set) var viewProperties: ViewProperties
     private(set) var selectedItem: FileItem?
-    var filterText: String = ""
+    var filterText: String = "" {
+        didSet {
+            if let selectedItem, !filteredItems.contains(selectedItem) {
+                self.selectedItem = nil
+            }
+        }
+    }
 
     var filteredItems: [FileItem] {
         guard !filterText.isEmpty else { return items }
