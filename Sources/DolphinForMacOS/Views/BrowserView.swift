@@ -158,7 +158,7 @@ struct BrowserView: View {
                     FileListView(
                         items: viewModel.searchResults,
                         selectedID: selectedID,
-                        gitStatuses: viewModel.gitStatuses,
+                        gitStatuses: [:], // los resultados vienen de carpetas distintas; gitStatuses es solo de currentURL
                         onOpen: { item in viewModel.navigate(to: item.url.deletingLastPathComponent()) },
                         onDelete: onDelete
                     )
