@@ -62,6 +62,27 @@ struct FileOperationsService {
         return destination
     }
 
+    func move(_ sourceURL: URL, toDirectory destinationDirectory: URL) throws -> URL {
+        let destination = destinationDirectory.appendingPathComponent(sourceURL.lastPathComponent)
+        let sourcePath = sourceURL.standardizedFileURL.path
+        let destinationPath = destination.standardizedFileURL.path
+        guard destinationPath != sourcePath else {
+            return sourceURL
+        }
+        guard !destinationDirectory.standardizedFileURL.path.hasPrefix(sourcePath + "/") else {
+            throw FileOperationError.other("No se puede mover una carpeta dentro de sí misma.")
+        }
+        guard !FileManager.default.fileExists(atPath: destinationPath) else {
+            throw FileOperationError.nameAlreadyExists(destination)
+        }
+        do {
+            try FileManager.default.moveItem(at: sourceURL, to: destination)
+        } catch {
+            throw FileOperationError.other(error.localizedDescription)
+        }
+        return destination
+    }
+
     func emptyTrash(at trashURL: URL) throws {
         let contents: [URL]
         do {

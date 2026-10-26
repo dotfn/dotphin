@@ -158,4 +158,50 @@ final class FileOperationsServiceTests: XCTestCase {
 
         XCTAssertThrowsError(try FileOperationsService().emptyTrash(at: locked))
     }
+
+    func test_move_relocatesFileIntoDestinationDirectory() throws {
+        let source = tempDir.appendingPathComponent("a.txt")
+        try "x".write(to: source, atomically: true, encoding: .utf8)
+        let destDir = tempDir.appendingPathComponent("dest", isDirectory: true)
+        try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+
+        let result = try FileOperationsService().move(source, toDirectory: destDir)
+
+        XCTAssertEqual(result, destDir.appendingPathComponent("a.txt"))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: source.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: result.path))
+    }
+
+    func test_move_droppedOnOwnContainingDirectory_isNoOp() throws {
+        let source = tempDir.appendingPathComponent("a.txt")
+        try "x".write(to: source, atomically: true, encoding: .utf8)
+
+        let result = try FileOperationsService().move(source, toDirectory: tempDir)
+
+        XCTAssertEqual(result, source)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+    }
+
+    func test_move_intoOwnDescendant_throws() throws {
+        let folder = tempDir.appendingPathComponent("folder", isDirectory: true)
+        let sub = folder.appendingPathComponent("sub", isDirectory: true)
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+
+        XCTAssertThrowsError(try FileOperationsService().move(folder, toDirectory: sub))
+    }
+
+    func test_move_whenDestinationNameExists_throwsNameAlreadyExists() throws {
+        let source = tempDir.appendingPathComponent("a.txt")
+        try "x".write(to: source, atomically: true, encoding: .utf8)
+        let destDir = tempDir.appendingPathComponent("dest", isDirectory: true)
+        try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+        try "y".write(to: destDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+
+        XCTAssertThrowsError(try FileOperationsService().move(source, toDirectory: destDir)) { error in
+            guard case FileOperationError.nameAlreadyExists = error else {
+                XCTFail("esperaba nameAlreadyExists, fue \(error)")
+                return
+            }
+        }
+    }
 }
