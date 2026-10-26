@@ -147,6 +147,30 @@ final class BrowserViewModel {
         operationError = nil
     }
 
+    func emptyTrash() {
+        do {
+            try operations.emptyTrash(at: currentURL)
+            refresh()
+        } catch let opError as FileOperationError {
+            operationError = opError
+        } catch {
+            operationError = .other(error.localizedDescription)
+        }
+    }
+
+    func restoreSelected() {
+        guard let item = selectedItem else { return }
+        do {
+            _ = try operations.restore(item, to: FileManager.default.homeDirectoryForCurrentUser)
+            selectedItem = nil
+            refresh()
+        } catch let opError as FileOperationError {
+            operationError = opError
+        } catch {
+            operationError = .other(error.localizedDescription)
+        }
+    }
+
     private func load(_ url: URL) {
         do {
             items = try reader.contents(of: url, sortField: viewProperties.sortField, ascending: viewProperties.ascending)

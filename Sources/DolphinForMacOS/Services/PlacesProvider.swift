@@ -7,12 +7,14 @@ struct PlacesProvider {
         let desktop = fm.urls(for: .desktopDirectory, in: .userDomainMask).first ?? home.appendingPathComponent("Desktop")
         let documents = fm.urls(for: .documentDirectory, in: .userDomainMask).first ?? home.appendingPathComponent("Documents")
         let downloads = fm.urls(for: .downloadsDirectory, in: .userDomainMask).first ?? home.appendingPathComponent("Downloads")
+        let trash = (try? fm.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false)) ?? home.appendingPathComponent(".Trash")
 
         return [
             PlaceItem(url: home, name: "Home", systemImage: "house", kind: .bookmark),
             PlaceItem(url: desktop, name: "Desktop", systemImage: "desktopcomputer", kind: .bookmark),
             PlaceItem(url: documents, name: "Documents", systemImage: "doc.text", kind: .bookmark),
             PlaceItem(url: downloads, name: "Downloads", systemImage: "arrow.down.circle", kind: .bookmark),
+            PlaceItem(url: trash, name: "Trash", systemImage: "trash", kind: .bookmark),
         ]
     }
 

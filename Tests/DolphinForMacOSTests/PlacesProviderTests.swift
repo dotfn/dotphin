@@ -2,10 +2,10 @@ import XCTest
 @testable import DolphinForMacOS
 
 final class PlacesProviderTests: XCTestCase {
-    func test_staticBookmarks_returnsHomeDesktopDocumentsDownloadsInOrder() {
+    func test_staticBookmarks_returnsHomeDesktopDocumentsDownloadsTrashInOrder() {
         let provider = PlacesProvider()
         let names = provider.staticBookmarks().map(\.name)
-        XCTAssertEqual(names, ["Home", "Desktop", "Documents", "Downloads"])
+        XCTAssertEqual(names, ["Home", "Desktop", "Documents", "Downloads", "Trash"])
     }
 
     func test_staticBookmarks_homeURLMatchesFileManager() {

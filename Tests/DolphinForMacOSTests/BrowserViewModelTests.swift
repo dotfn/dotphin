@@ -273,4 +273,24 @@ final class BrowserViewModelTests: XCTestCase {
         vm.delete(found)
         XCTAssertEqual(vm.searchResults, [], "el resultado borrado no debe seguir apareciendo en la búsqueda")
     }
+
+    func test_emptyTrash_removesItemsAndRefreshes() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.emptyTrash()
+        XCTAssertEqual(vm.items, [])
+        XCTAssertNil(vm.operationError)
+    }
+
+    func test_restoreSelected_movesToHomeAndClearsSelection() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.select(vm.items[0])
+        vm.restoreSelected()
+        XCTAssertNil(vm.selectedItem)
+        XCTAssertEqual(vm.items, [])
+        let restoredPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("a.txt").path
+        XCTAssertTrue(FileManager.default.fileExists(atPath: restoredPath))
+        try? FileManager.default.removeItem(atPath: restoredPath)
+    }
 }
