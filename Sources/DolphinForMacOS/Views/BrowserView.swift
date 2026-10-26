@@ -101,6 +101,8 @@ struct BrowserView: View {
                         in: 0.5...2.0
                     )
                     .frame(width: 100)
+                    .help("Zoom")
+                    .accessibilityLabel("Zoom")
                 }
 
                 Menu {
