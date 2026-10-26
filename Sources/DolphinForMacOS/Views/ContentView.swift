@@ -9,11 +9,22 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            PlacesSidebarView(
-                places: places,
-                currentURL: tabsViewModel.selectedTab?.focused.currentURL ?? FileManager.default.homeDirectoryForCurrentUser
-            ) { place in
-                tabsViewModel.selectedTab?.focused.navigate(to: place.url)
+            VStack(spacing: 0) {
+                PlacesSidebarView(
+                    places: places,
+                    currentURL: tabsViewModel.selectedTab?.focused.currentURL ?? FileManager.default.homeDirectoryForCurrentUser
+                ) { place in
+                    tabsViewModel.selectedTab?.focused.navigate(to: place.url)
+                }
+                .frame(maxHeight: 200)
+
+                Divider()
+
+                List {
+                    FolderTreeRow(url: FileManager.default.homeDirectoryForCurrentUser) { url in
+                        tabsViewModel.selectedTab?.focused.navigate(to: url)
+                    }
+                }
             }
         } detail: {
             VStack(spacing: 0) {
