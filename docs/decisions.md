@@ -443,3 +443,45 @@ arranque. El resto queda diferido:
   que se reinicia la app (ya aceptado — no hay observación de
   mount/unmount en vivo, decisión del slice 1/5).
 
+## 2026-10-26 — Slice 12: spike de dispositivos móviles — conclusión: no se implementa
+
+Tal como pedía el roadmap ("empieza con un spike de investigación de
+alcance real antes de comprometer diseño"), este slice es el spike en
+sí — no hay código que mergear. Investigación:
+
+**iPhone.** La única superficie pública para que una app de terceros en
+macOS acceda a contenido de un iPhone es `ImageCaptureCore`
+(`ICDeviceBrowser`/`ICCameraDevice`) — lo mismo que usa Image
+Capture.app. Está acotada a fotos/videos (estilo DCIM), no es un
+filesystem general. `ICCameraItem` es un modelo de objetos aparte, no
+basado en `URL`/`FileManager` — no encaja con `FileItem`/
+`DirectoryReader`/`BrowserViewModel`, la arquitectura entera de esta
+app, sin un camino paralelo de UI (otro modelo de datos, otro flujo de
+carga, descubrimiento de dispositivo asíncrono vía delegate, y el
+usuario tiene que "confiar" en la computadora desde el teléfono — un
+flujo que no existe en ningún otro lado de la app). Lo que Finder
+muestra bajo "Archivos" para apps de iOS con `UIFileSharingEnabled` usa
+una ruta distinta (`MobileDevice.framework`/`AMDevice`) que no es
+pública — es la misma API no documentada que usa `libimobiledevice`
+(ingeniería inversa). Usarla significa frameworks privados, lo que va
+en contra de la postura de este proyecto (Direct Distribution con
+APIs públicas, nada que arriesgue notarización o que dependa de una
+API que Apple puede cerrar en cualquier punto).
+
+**Android.** macOS no tiene ningún framework nativo de MTP (a
+diferencia de Windows). La única forma de hablar MTP es manejar el
+stack USB vía IOKit directamente e implementar el protocolo
+PTP/MTP desde cero, o traer una librería de terceros (p. ej. libmtp).
+Ambas opciones violan la regla del proyecto de "sin dependencias
+nuevas, preferir nativo" — y la primera es, en sí misma, un proyecto
+del tamaño de esta app entera, no "unas líneas más".
+
+**Decisión: slice 12 queda diferido indefinidamente, sin código.** No
+es un recorte de alcance por pereza — está respaldado por
+restricciones reales de la plataforma, la misma categoría de
+restricción que el documento de diseño ya anticipaba en su sección de
+Riesgos antes de escribir una sola línea de código. Si en el futuro
+Apple publica una API soportada para esto, o si "ver la cámara de
+fotos del iPhone" sin edición de archivos alcanza como alcance
+reducido, se puede reabrir como un slice nuevo con su propio
+diseño — no como una extensión de `BrowserViewModel`.

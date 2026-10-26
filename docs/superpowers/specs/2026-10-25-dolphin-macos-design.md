@@ -190,7 +190,14 @@ toman. Esto se resuelve con:
 10. Overlays de control de versiones (git).
 11. Soporte más profundo de volúmenes externos (expulsar, info de disco).
 12. Dispositivos móviles — empieza con un spike de investigación de alcance
-    real (ver Riesgos) antes de comprometer diseño.
+    real (ver Riesgos) antes de comprometer diseño. **Hecho
+    (2026-10-26): spike completo, sin código.** Conclusión en
+    `docs/decisions.md` — ni iPhone (solo fotos vía ImageCaptureCore, un
+    modelo de datos aparte de `FileItem`; "Archivos" de Finder usa APIs
+    privadas) ni Android (sin framework de MTP nativo en macOS) encajan
+    en la arquitectura de esta app sin APIs privadas o una dependencia
+    de terceros. Diferido indefinidamente, no es un bug ni una feature
+    pendiente.
 13. Terminal embebido — decisión de enfoque en el momento, ver Riesgos.
 14. Pasada de pulido: adopción de Liquid Glass, accesibilidad, Quick Look,
     drag & drop entre paneles y con Finder.
