@@ -80,12 +80,30 @@ struct BrowserView: View {
 
             Divider()
 
-            FilterBarView(text: Binding(
-                get: { viewModel.filterText },
-                set: { viewModel.filterText = $0 }
-            ))
+            HStack {
+                FilterBarView(text: Binding(
+                    get: { viewModel.filterText },
+                    set: { viewModel.filterText = $0 }
+                ))
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField("Buscar en subcarpetas...", text: Binding(
+                        get: { viewModel.searchQuery },
+                        set: { viewModel.searchQuery = $0 }
+                    ))
+                    .textFieldStyle(.plain)
+                    .onChange(of: viewModel.searchQuery) { _, _ in viewModel.performSearch() }
+                }
+                .padding(6)
+            }
 
             Divider()
+
+            let onDelete: (FileItem) -> Void = { item in
+                pendingDelete = item
+                showsDeleteConfirmation = true
+            }
 
             if let error = viewModel.error {
                 switch error {
@@ -100,6 +118,19 @@ struct BrowserView: View {
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+            } else if !viewModel.searchQuery.isEmpty {
+                if viewModel.searchResults.isEmpty {
+                    Text("Sin resultados")
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    FileListView(
+                        items: viewModel.searchResults,
+                        selectedID: selectedID,
+                        onOpen: { item in viewModel.navigate(to: item.url.deletingLastPathComponent()) },
+                        onDelete: onDelete
+                    )
+                }
             } else if viewModel.filteredItems.isEmpty && !viewModel.filterText.isEmpty {
                 Text("Sin resultados")
                     .foregroundStyle(.secondary)
@@ -109,10 +140,6 @@ struct BrowserView: View {
                     if item.isDirectory {
                         viewModel.navigate(to: item.url)
                     }
-                }
-                let onDelete: (FileItem) -> Void = { item in
-                    pendingDelete = item
-                    showsDeleteConfirmation = true
                 }
                 switch viewModel.viewProperties.mode {
                 case .icons:

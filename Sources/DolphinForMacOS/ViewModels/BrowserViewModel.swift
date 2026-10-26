@@ -23,20 +23,26 @@ final class BrowserViewModel {
 
     private(set) var operationError: FileOperationError?
 
+    var searchQuery: String = ""
+    private(set) var searchResults: [FileItem] = []
+
     private let reader: DirectoryReader
     private let store: ViewPropertiesStore
     private let operations: FileOperationsService
+    private let search: SearchService
 
     init(
         startingAt url: URL,
         reader: DirectoryReader = DirectoryReader(),
         store: ViewPropertiesStore = ViewPropertiesStore(),
-        operations: FileOperationsService = FileOperationsService()
+        operations: FileOperationsService = FileOperationsService(),
+        search: SearchService = SearchService()
     ) {
         self.currentURL = url
         self.reader = reader
         self.store = store
         self.operations = operations
+        self.search = search
         self.viewProperties = store.properties(for: url)
         load(url)
     }
@@ -46,7 +52,17 @@ final class BrowserViewModel {
         viewProperties = store.properties(for: url)
         selectedItem = nil
         filterText = ""
+        searchQuery = ""
+        searchResults = []
         load(url)
+    }
+
+    func performSearch() {
+        guard !searchQuery.isEmpty else {
+            searchResults = []
+            return
+        }
+        searchResults = search.search(for: searchQuery, in: currentURL)
     }
 
     func select(_ item: FileItem?) {

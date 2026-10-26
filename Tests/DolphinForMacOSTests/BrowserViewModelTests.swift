@@ -232,4 +232,25 @@ final class BrowserViewModelTests: XCTestCase {
         XCTAssertEqual(vm.items.map(\.name), ["a.txt"])
         XCTAssertEqual(vm.selectedItem?.name, "a.txt", "borrar otro ítem no debe tocar la selección actual")
     }
+
+    func test_performSearch_findsNestedMatch() throws {
+        let sub = tempDir.appendingPathComponent("sub", isDirectory: true)
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        try "x".write(to: sub.appendingPathComponent("Report.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.searchQuery = "report"
+        vm.performSearch()
+        XCTAssertEqual(vm.searchResults.map(\.name), ["Report.txt"])
+    }
+
+    func test_navigate_clearsSearch() throws {
+        let sub = tempDir.appendingPathComponent("sub", isDirectory: true)
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.searchQuery = "algo"
+        vm.performSearch()
+        vm.navigate(to: sub)
+        XCTAssertEqual(vm.searchQuery, "")
+        XCTAssertEqual(vm.searchResults, [])
+    }
 }
