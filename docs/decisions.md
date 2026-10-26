@@ -485,3 +485,37 @@ Apple publica una API soportada para esto, o si "ver la cámara de
 fotos del iPhone" sin edición de archivos alcanza como alcance
 reducido, se puede reabrir como un slice nuevo con su propio
 diseño — no como una extensión de `BrowserViewModel`.
+
+## 2026-10-26 — Slice 13 (terminal): review y rulings
+
+Review de branch completo (fresh Opus, base a80042f..49b1c74). Veredicto:
+"Ready to merge con fixes". Hallazgos y resolución:
+
+- **Important (fixed):** `TerminalLauncher.openTerminal` solo lanzaba si
+  `/usr/bin/open` no podía ejecutarse — si `open` arrancaba pero fallaba
+  (Terminal.app ausente, o la carpeta actual fue borrada/no existe), el
+  proceso salía con código distinto de 0 y stderr tenía el mensaje real,
+  pero la función devolvía éxito igual y el usuario no veía ninguna
+  alerta. Esto rompía exactamente el caso que el plan pedía cubrir. Fix:
+  leer stderr (antes de `waitUntilExit`, por la lección del slice 10) y
+  chequear `terminationStatus` antes de retornar sin error.
+- **Minor (fixed):** el botón de terminal no tenía `.help`. Se agregó —
+  mismo patrón que el resto de los íconos del toolbar, varios de los
+  cuales siguen sin tooltip; ver el barrido de accesibilidad planeado
+  para el slice 14.
+- **Minor (fixed por la corrección de arriba):** "no hay test del path de
+  error" — el nuevo test (`test_openTerminal_throwsWhenPathDoesNotExist`)
+  cubre esto apuntando a una carpeta inexistente, que falla dentro de
+  `open` antes de intentar abrir una ventana real — no rompe el
+  precedente de no lanzar una Terminal real en los tests.
+- **Ruling:** la corrección del texto del plan original que decía
+  `try?` para la llamada — la implementación real usa `do`/`catch` desde
+  el principio (correcto, el plan tenía un error); no requiere ninguna
+  acción de código, solo se deja constancia aquí.
+- Todo lo demás señalado por el reviewer como "declined to judge"
+  (sin test de lanzamiento real, sin click-through de GUI, `open -a
+  Terminal` en vez de emulador embebido, sin soporte de terminal
+  alternativa) son límites de alcance ya aceptados en el spec/plan, no
+  hallazgos nuevos.
+
+105/105 tests en verde tras el fix. Listo para mergear a main.
