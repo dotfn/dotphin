@@ -26,7 +26,14 @@ struct InfoPanelView: View {
                     .task(id: item.url) {
                         thumbnail = nil
                         guard !item.isDirectory else { return }
-                        thumbnail = await ThumbnailLoader().thumbnail(for: item.url, size: CGSize(width: 128, height: 128))
+                        let image = await ThumbnailLoader().thumbnail(for: item.url, size: CGSize(width: 128, height: 128))
+                        // El continuation de QLThumbnailGenerator no tiene punto de
+                        // cancelación cooperativa: si el ítem seleccionado cambió
+                        // mientras esto cargaba, este Task ya está cancelado pero
+                        // puede reanudar igual — sin este guard, el thumbnail viejo
+                        // pisa el del ítem nuevo.
+                        guard !Task.isCancelled else { return }
+                        thumbnail = image
                     }
                     Text(item.name)
                         .font(.headline)
