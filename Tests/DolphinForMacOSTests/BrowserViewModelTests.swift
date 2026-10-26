@@ -103,4 +103,35 @@ final class BrowserViewModelTests: XCTestCase {
         vm.navigate(to: sub)
         XCTAssertNil(vm.selectedItem)
     }
+
+    func test_filteredItems_withEmptyFilter_returnsAllItems() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        try "x".write(to: tempDir.appendingPathComponent("b.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        XCTAssertEqual(vm.filteredItems.count, 2)
+    }
+
+    func test_filteredItems_matchesCaseInsensitiveSubstring() throws {
+        try "x".write(to: tempDir.appendingPathComponent("Report.txt"), atomically: true, encoding: .utf8)
+        try "x".write(to: tempDir.appendingPathComponent("notes.md"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.filterText = "report"
+        XCTAssertEqual(vm.filteredItems.map(\.name), ["Report.txt"])
+    }
+
+    func test_filteredItems_noMatch_returnsEmpty() throws {
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.filterText = "zzz"
+        XCTAssertEqual(vm.filteredItems, [])
+    }
+
+    func test_navigate_clearsFilterText() throws {
+        let sub = tempDir.appendingPathComponent("sub", isDirectory: true)
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.filterText = "algo"
+        vm.navigate(to: sub)
+        XCTAssertEqual(vm.filterText, "")
+    }
 }

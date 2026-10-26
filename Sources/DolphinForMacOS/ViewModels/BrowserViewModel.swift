@@ -8,6 +8,12 @@ final class BrowserViewModel {
     private(set) var error: DirectoryReadError?
     private(set) var viewProperties: ViewProperties
     private(set) var selectedItem: FileItem?
+    var filterText: String = ""
+
+    var filteredItems: [FileItem] {
+        guard !filterText.isEmpty else { return items }
+        return items.filter { $0.name.localizedCaseInsensitiveContains(filterText) }
+    }
 
     private let reader: DirectoryReader
     private let store: ViewPropertiesStore
@@ -24,6 +30,7 @@ final class BrowserViewModel {
         currentURL = url
         viewProperties = store.properties(for: url)
         selectedItem = nil
+        filterText = ""
         load(url)
     }
 
