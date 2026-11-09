@@ -30,7 +30,7 @@ struct DiskImageMountService {
         process.arguments = ["attach", url.path]
         let errorPipe = Pipe()
         process.standardError = errorPipe
-        process.standardOutput = Pipe()
+        process.standardOutput = FileHandle.nullDevice
         do {
             try process.run()
         } catch {
@@ -40,10 +40,20 @@ struct DiskImageMountService {
         let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
         guard process.terminationStatus == 0 else {
-            let message = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let message = Self.userFacingError(from: String(data: errorData, encoding: .utf8) ?? "")
             throw DiskImageMountError.failed(
-                message?.isEmpty == false ? message! : "hdiutil terminó con código \(process.terminationStatus)."
+                message.isEmpty ? "hdiutil terminó con código \(process.terminationStatus)." : message
             )
         }
+    }
+
+    /// hdiutil on macOS 27 always prefixes stderr with a deprecation notice; drop it so the
+    /// user sees the actual failure.
+    static func userFacingError(from stderr: String) -> String {
+        stderr
+            .split(whereSeparator: \.isNewline)
+            .filter { !$0.lowercased().contains("deprecat") }
+            .joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

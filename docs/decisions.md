@@ -749,3 +749,65 @@ Important real confirmado. Hallazgos y resolución:
   preguntas fuera del diff de este slice, no hallazgos nuevos.
 
 121/121 tests en verde tras el fix. Listo para mergear a main.
+
+## 2026-11-09 — Funcionalidad no documentada que entró con el commit de rename
+
+El gap-analysis contra KDE Dolphin encontró que el commit `4716ba4`
+("rename: Dolphin for macOS -> Dotphin") no fue solo un rename: trajo
+sin entradas en este log gran parte de lo que hoy cubre
+`DolphinFullParityTests.swift` (22 categorías: agrupado, selección por
+patrón, búsquedas guardadas, checksums, comparación, git stage/commit,
+terminal embebido con buffer propio, plantillas fijas de "Crear nuevo",
+permisos editables, etc.). No se reconstruye retroactivamente; se deja
+asentado para que nadie asuma que este log describe todo lo que existe.
+Consecuencia práctica: antes de declarar un hueco de paridad, leer el
+código (el primer análisis de este slice sobreestimó 3 de 4 huecos por
+confiar en grep y en este log).
+
+## 2026-11-09 — Slice 18 (permisos recursivos, plantillas, montar imagen, deuda de slice 15): review y rulings
+
+Alcance real (confirmado con el usuario tras corregir el análisis): permisos
+recursivos, plantillas de `~/Templates`, acción explícita "Montar imagen de
+disco", y los 3 Minor diferidos del review de slice 15. Protocolos remotos
+(smb/sftp/ftp) quedan fuera por decisión del usuario, por ahora.
+
+Review de branch completo (fresh agent, base fc30f96..fc8cb1f, con sondas
+reales: matriz de symlinks, chmod sobre árboles reales, `hdiutil attach`
+real sobre un dmg de 200 MB, y ruteo de drag/drop de `Table` en un
+`NSHostingView` offscreen). Veredicto: "Ready with fixes". Resolución:
+
+- **Critical (fixed):** el chmod recursivo seguía symlinks — un enlace
+  dentro de la carpeta a un archivo de afuera (ej. `~/.ssh/id_rsa`) recibía
+  el modo nuevo. Ahora se saltean symlinks. Test de regresión.
+- **Important (fixed):** el chmod recursivo quedaba a medias y reportaba
+  éxito: el enumerator no tenía `errorHandler` y cada carpeta se cambiaba
+  antes de entrar, así que quitar "x" dejaba el resto del árbol intacto con
+  0 fallos. Ahora se lista todo primero, se aplica de lo más profundo hacia
+  arriba con la raíz al final, y lo que no se pudo listar cuenta como
+  fallo. Tests: quitar x llega al fondo; subcarpeta ilegible = fallo.
+- **Important (fixed):** el fix D2 (`resolvingSymlinksInPath()`) también
+  resolvía el último componente, así que mover un SYMLINK se evaluaba como
+  su destino (falsos "dentro de sí misma", no-ops silenciosos que en
+  cortar/pegar vaciaban el portapapeles sin mover nada). Ahora solo se
+  resuelven las carpetas padre. Tests con los 2 casos reproducidos.
+- **Important (fixed):** `hdiutil attach` verifica la imagen antes de
+  montar (3,1 s medidos con 200 MB) y corría en el main actor. Ahora corre
+  en `Task.detached`; stdout va a `/dev/null` (era un `Pipe()` sin drenar,
+  la misma clase de deadlock que el slice 10).
+- **Minor (fixed):** el aviso de deprecación que hdiutil escribe siempre en
+  stderr en macOS 27 se filtra del mensaje al usuario.
+- **Minor (fixed):** si la plantilla desaparece entre abrir el menú y
+  pulsar Crear, se muestra un error en vez de crear en silencio un archivo
+  con el contenido por defecto de esa extensión.
+- **D3 (pendiente de GUI, posible regresión):** la sonda del reviewer
+  indica que con `TableRow.dropDestination` el outline view registra
+  `public.file-url` y tapa el `.dropDestination` a nivel de `Table` —
+  soltar en el área vacía DEBAJO de las filas podría no hacer nada (antes
+  movía a la carpeta actual). Soltar sobre filas (carpeta → dentro; archivo
+  → carpeta actual) sí funciona según la sonda. No se "arregla" a ciegas;
+  no se mergea a main hasta que el usuario verifique a mano: click fuera de
+  "Nombre" selecciona, doble click abre, menú contextual en fila vs. vacío,
+  arrastrar desde otra columna, arrastrar varias filas, soltar debajo de
+  las filas, soltar entre filas.
+
+194/194 tests en verde tras los fixes.

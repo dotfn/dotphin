@@ -14,6 +14,17 @@ final class DiskImageMountServiceTests: XCTestCase {
         }
     }
 
+    func test_userFacingError_dropsHdiutilDeprecationNotice() {
+        let stderr = """
+        hdiutil: attach is deprecated, use 'diskutil image attach' instead
+        hdiutil: attach failed - No such file or directory
+        """
+        XCTAssertEqual(
+            DiskImageMountService.userFacingError(from: stderr),
+            "hdiutil: attach failed - No such file or directory"
+        )
+    }
+
     func test_mount_whenNotADiskImage_throwsWithoutShellingOut() {
         let notAnImage = URL(fileURLWithPath: "/tmp/plain.txt")
         XCTAssertThrowsError(try DiskImageMountService().mount(notAnImage)) { error in

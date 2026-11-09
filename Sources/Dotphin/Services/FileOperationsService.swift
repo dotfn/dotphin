@@ -240,10 +240,11 @@ struct FileOperationsService {
 
     func move(_ sourceURL: URL, toDirectory destinationDirectory: URL) throws -> URL {
         let destination = destinationDirectory.appendingPathComponent(sourceURL.lastPathComponent)
-        // resolvingSymlinksInPath (not standardizedFileURL) so a symlink alias like /tmp -> /private/tmp
-        // doesn't make "drop folder onto itself via its own alias" slip past these no-op guards.
-        let sourcePath = sourceURL.resolvingSymlinksInPath().path
-        let destinationPath = destination.resolvingSymlinksInPath().path
+        // Symlinks in the parent folders are resolved so an alias (e.g. /tmp -> /private/tmp, or
+        // dropping a folder onto its own symlink) can't slip past these guards, but the leaf is
+        // kept as-is: a symlink being moved is the link itself, never its target.
+        let sourcePath = Self.resolvingParentSymlinks(of: sourceURL)
+        let destinationPath = Self.resolvingParentSymlinks(of: destination)
         guard destinationPath != sourcePath else {
             return sourceURL
         }
@@ -263,6 +264,13 @@ struct FileOperationsService {
             throw FileOperationError.other(error.localizedDescription)
         }
         return destination
+    }
+
+    private static func resolvingParentSymlinks(of url: URL) -> String {
+        url.deletingLastPathComponent()
+            .resolvingSymlinksInPath()
+            .appendingPathComponent(url.lastPathComponent)
+            .path
     }
 
     func emptyTrash(at trashURL: URL) throws {

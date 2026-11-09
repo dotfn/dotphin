@@ -372,7 +372,8 @@ final class BrowserViewModelTests: XCTestCase {
         )
     }
 
-    func test_mountDiskImage_whenImageDoesNotExist_reportsErrorWithoutCrashing() {
+    @MainActor
+    func test_mountDiskImage_whenImageDoesNotExist_reportsErrorWithoutCrashing() async {
         let vm = BrowserViewModel(startingAt: tempDir)
         let missingImage = FileItem(
             url: tempDir.appendingPathComponent("\(UUID().uuidString).iso"),
@@ -383,7 +384,7 @@ final class BrowserViewModelTests: XCTestCase {
             modificationDate: nil
         )
 
-        vm.mountDiskImage(missingImage)
+        await vm.mountDiskImage(missingImage)
 
         XCTAssertNotNil(vm.operationError)
         XCTAssertFalse((vm.operationError?.message ?? "").isEmpty)

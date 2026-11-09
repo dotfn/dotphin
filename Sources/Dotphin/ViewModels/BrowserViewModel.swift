@@ -1007,15 +1007,30 @@ final class BrowserViewModel {
     /// Mounts a `.iso`/`.dmg`/`.cdr`/`.img` via `hdiutil` (Dolphin's explicit "Montar" action).
     /// On success, refreshes the Places sidebar's volume list the same way adding/removing
     /// a bookmark does, so the newly-mounted volume shows up without relaunching the app.
-    func mountDiskImage(_ item: FileItem) {
-        do {
-            try DiskImageMountService().mount(item.url)
+    /// `hdiutil` verifies the image before mounting (seconds for large images), so it runs
+    /// off the main actor; only the result comes back here.
+    @MainActor
+    func mountDiskImage(_ item: FileItem) async {
+        let url = item.url
+        let failure: String? = await Task.detached(priority: .userInitiated) {
+            do {
+                try DiskImageMountService().mount(url)
+                return nil
+            } catch {
+                return (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            }
+        }.value
+        if let failure {
+            operationError = .other(failure)
+        } else {
             NotificationCenter.default.post(name: .placesBookmarksDidChange, object: nil)
-        } catch let mountError as DiskImageMountError {
-            operationError = .other(mountError.errorDescription ?? "No se pudo montar la imagen de disco.")
-        } catch {
-            operationError = .other(error.localizedDescription)
         }
+    }
+
+    /// Lets the view report a failure that happened before reaching the view model
+    /// (e.g. a template file that vanished between opening the menu and pressing Crear).
+    func reportOperationError(_ message: String) {
+        operationError = .other(message)
     }
 
     /// Creates a symbolic link in `currentURL` pointing to `targetPath` (`DolphinNewFileMenu`).

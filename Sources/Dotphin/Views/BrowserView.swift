@@ -130,7 +130,7 @@ struct BrowserView: View {
                 },
                 onNewFilePrompt: promptNewFile(named:),
                 onNewFileFromTemplatePrompt: promptNewFile(fromTemplate:),
-                onMountDiskImage: viewModel.mountDiskImage,
+                onMountDiskImage: mountDiskImage(_:),
                 onNewSymbolicLinkPrompt: {
                     newItemNameInput = "Nuevo enlace"
                     symlinkTargetInput = viewModel.selectedItem?.url.path ?? ""
@@ -813,13 +813,21 @@ struct BrowserView: View {
         showsNewFilePrompt = true
     }
 
+    private func mountDiskImage(_ item: FileItem) {
+        Task { await viewModel.mountDiskImage(item) }
+    }
+
     private func createFileFromPrompt() {
-        if let templateURL = pendingTemplateSourceURL {
-            viewModel.createFile(named: newItemNameInput, contents: try? Data(contentsOf: templateURL))
-            pendingTemplateSourceURL = nil
-        } else {
+        guard let templateURL = pendingTemplateSourceURL else {
             viewModel.createFile(named: newItemNameInput)
+            return
         }
+        pendingTemplateSourceURL = nil
+        guard let contents = try? Data(contentsOf: templateURL) else {
+            viewModel.reportOperationError("No se pudo leer la plantilla «\(templateURL.lastPathComponent)».")
+            return
+        }
+        viewModel.createFile(named: newItemNameInput, contents: contents)
     }
 
     private var operationErrorMessage: String {
