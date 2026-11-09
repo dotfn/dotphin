@@ -2,10 +2,18 @@
 import PackageDescription
 
 let package = Package(
-    name: "DolphinForMacOS",
+    name: "Dotphin",
     platforms: [.macOS(.v27)],
     targets: [
-        .executableTarget(name: "DolphinForMacOS", path: "Sources/DolphinForMacOS"),
-        .testTarget(name: "DolphinForMacOSTests", dependencies: ["DolphinForMacOS"], path: "Tests/DolphinForMacOSTests"),
+        .executableTarget(
+            name: "Dotphin",
+            path: "Sources/Dotphin",
+            resources: [
+                .copy("Resources/AppIcon.icns"),
+                .copy("Resources/AppIcon.icon"),
+                .process("Resources/Assets.xcassets"),
+            ]
+        ),
+        .testTarget(name: "DotphinTests", dependencies: ["Dotphin"], path: "Tests/DotphinTests"),
     ]
 )

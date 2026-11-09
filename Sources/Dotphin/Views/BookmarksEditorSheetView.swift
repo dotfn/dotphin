@@ -1,0 +1,165 @@
+import AppKit
+import SwiftUI
+
+/// KDE Dolphin's `edit_bookmarks` dialog (`src/dolphinbookmarkhandler.cpp`):
+/// Allows adding, renaming, reordering, removing, or opening custom bookmarks in tabs.
+struct BookmarksEditorSheetView: View {
+    @Environment(\.dismiss) private var dismiss
+    var onOpenAllInTabs: (([URL]) -> Void)? = nil
+
+    @State private var bookmarks: [PlaceItem] = PlacesProvider().customBookmarks()
+    @State private var selectedURL: URL? = nil
+    @State private var renameDraft: String = ""
+
+    private let provider = PlacesProvider()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Editar marcadores", systemImage: "bookmark.square.fill")
+                    .font(.headline)
+                Spacer()
+                if !bookmarks.isEmpty, let onOpenAllInTabs {
+                    Button {
+                        onOpenAllInTabs(bookmarks.map(\.url))
+                        dismiss()
+                    } label: {
+                        Label("Abrir todos en pestañas", systemImage: "plus.square.on.square")
+                    }
+                    .controlSize(.small)
+                }
+            }
+
+            if bookmarks.isEmpty {
+                ContentUnavailableView(
+                    "Sin marcadores personalizados",
+                    systemImage: "bookmark",
+                    description: Text("Añade carpetas a tus marcadores con ⌘B o el botón «Añadir carpeta…».")
+                )
+                .frame(maxWidth: .infinity, minHeight: 200)
+            } else {
+                List(selection: $selectedURL) {
+                    ForEach(Array(bookmarks.enumerated()), id: \.element.url) { idx, item in
+                        HStack(spacing: 10) {
+                            Image(systemName: item.systemImage)
+                                .foregroundStyle(Color.accentColor)
+                                .frame(width: 18)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.name)
+                                    .font(.system(size: 13, weight: .medium))
+                                Text(item.url.path)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
+                            Spacer()
+                            HStack(spacing: 4) {
+                                Button {
+                                    provider.moveBookmark(from: idx, to: idx - 1)
+                                    reload()
+                                } label: {
+                                    Image(systemName: "chevron.up")
+                                }
+                                .buttonStyle(.borderless)
+                                .disabled(idx == 0)
+                                .help("Subir marcador")
+
+                                Button {
+                                    provider.moveBookmark(from: idx, to: idx + 1)
+                                    reload()
+                                } label: {
+                                    Image(systemName: "chevron.down")
+                                }
+                                .buttonStyle(.borderless)
+                                .disabled(idx == bookmarks.count - 1)
+                                .help("Bajar marcador")
+
+                                Button(role: .destructive) {
+                                    provider.removeBookmark(for: item.url)
+                                    reload()
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .foregroundStyle(.red)
+                                }
+                                .buttonStyle(.borderless)
+                                .help("Eliminar marcador")
+                            }
+                        }
+                        .padding(.vertical, 2)
+                        .tag(item.url)
+                    }
+                }
+                .listStyle(.inset(alternatesRowBackgrounds: true))
+                .frame(minHeight: 200)
+            }
+
+            if let selectedURL,
+               let selectedItem = bookmarks.first(where: { $0.url == selectedURL }) {
+                HStack(spacing: 8) {
+                    Text("Nombre:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("Nombre del marcador", text: $renameDraft)
+                        .textFieldStyle(.roundedBorder)
+                        .controlSize(.small)
+                        .onSubmit {
+                            provider.renameBookmark(for: selectedItem.url, to: renameDraft)
+                            reload()
+                        }
+                    Button("Guardar nombre") {
+                        provider.renameBookmark(for: selectedItem.url, to: renameDraft)
+                        reload()
+                    }
+                    .controlSize(.small)
+                    .disabled(renameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+
+            Divider()
+
+            HStack {
+                Button {
+                    chooseFolderToAdd()
+                } label: {
+                    Label("Añadir carpeta…", systemImage: "plus")
+                }
+
+                Spacer()
+
+                Button("Cerrar") {
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(16)
+        .frame(width: 520, height: 380)
+        .onChange(of: selectedURL) { _, newURL in
+            if let newURL, let item = bookmarks.first(where: { $0.url == newURL }) {
+                renameDraft = item.name
+            } else {
+                renameDraft = ""
+            }
+        }
+    }
+
+    private func reload() {
+        bookmarks = provider.customBookmarks()
+        if let selectedURL, !bookmarks.contains(where: { $0.url == selectedURL }) {
+            self.selectedURL = nil
+        }
+    }
+
+    private func chooseFolderToAdd() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = true
+        panel.prompt = "Añadir a Marcadores"
+        if panel.runModal() == .OK {
+            provider.addBookmarks(for: panel.urls)
+            reload()
+        }
+    }
+}

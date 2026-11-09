@@ -1,0 +1,163 @@
+import Foundation
+
+struct FileItemGroup: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let items: [FileItem]
+}
+
+extension Array where Element == FileItem {
+    func sorted(
+        by field: SortField,
+        ascending: Bool,
+        foldersFirst: Bool = true,
+        hiddenLast: Bool = false,
+        sortingChoice: SortingChoice = .natural
+    ) -> [FileItem] {
+        sorted { lhs, rhs in
+            if hiddenLast && lhs.isHiddenItem != rhs.isHiddenItem {
+                return !lhs.isHiddenItem
+            }
+            if foldersFirst && lhs.isDirectory != rhs.isDirectory {
+                return lhs.isDirectory
+            }
+            let (a, b) = ascending ? (lhs, rhs) : (rhs, lhs)
+            switch field {
+            case .name:
+                return sortingChoice.compare(a.name, b.name) == .orderedAscending
+            case .size:
+                let aSize = a.size ?? 0
+                let bSize = b.size ?? 0
+                if aSize != bSize { return aSize < bSize }
+                return sortingChoice.compare(lhs.name, rhs.name) == .orderedAscending
+            case .modificationDate:
+                let aDate = a.modificationDate ?? .distantPast
+                let bDate = b.modificationDate ?? .distantPast
+                if aDate != bDate { return aDate < bDate }
+                return sortingChoice.compare(lhs.name, rhs.name) == .orderedAscending
+            case .creationDate:
+                let aDate = a.creationDate ?? a.modificationDate ?? .distantPast
+                let bDate = b.creationDate ?? b.modificationDate ?? .distantPast
+                if aDate != bDate { return aDate < bDate }
+                return sortingChoice.compare(lhs.name, rhs.name) == .orderedAscending
+            case .type:
+                let aKind = Self.kindLabel(for: a)
+                let bKind = Self.kindLabel(for: b)
+                let cmp = sortingChoice.compare(aKind, bKind)
+                if cmp != .orderedSame { return cmp == .orderedAscending }
+                return sortingChoice.compare(lhs.name, rhs.name) == .orderedAscending
+            case .extensionType:
+                let aExt = a.fileExtension
+                let bExt = b.fileExtension
+                let cmp = sortingChoice.compare(aExt, bExt)
+                if cmp != .orderedSame { return cmp == .orderedAscending }
+                return sortingChoice.compare(lhs.name, rhs.name) == .orderedAscending
+            }
+        }
+    }
+
+    /// Groups already-sorted items into Dolphin-style sections (`KFileItemModel::groups()`).
+    func grouped(
+        by field: SortField,
+        foldersFirst: Bool = true,
+        referenceDate: Date = Date()
+    ) -> [FileItemGroup] {
+        guard !isEmpty else { return [] }
+        var orderedTitles: [String] = []
+        var buckets: [String: [FileItem]] = [:]
+
+        for item in self {
+            let groupTitle = Self.groupTitle(
+                for: item,
+                field: field,
+                foldersFirst: foldersFirst,
+                referenceDate: referenceDate
+            )
+            if buckets[groupTitle] == nil {
+                orderedTitles.append(groupTitle)
+                buckets[groupTitle] = []
+            }
+            buckets[groupTitle]?.append(item)
+        }
+
+        return orderedTitles.map { title in
+            FileItemGroup(id: title, title: title, items: buckets[title] ?? [])
+        }
+    }
+
+    private static func kindLabel(for item: FileItem) -> String {
+        if item.isDirectory {
+            return "Carpeta"
+        }
+        let ext = item.url.pathExtension
+        return ext.isEmpty ? "Documento" : ext.uppercased()
+    }
+
+    private static func groupTitle(
+        for item: FileItem,
+        field: SortField,
+        foldersFirst: Bool,
+        referenceDate: Date
+    ) -> String {
+        switch field {
+        case .name:
+            guard let first = item.name.trimmingCharacters(in: CharacterSet(charactersIn: ".")).first else {
+                return "#"
+            }
+            let upper = String(first).uppercased()
+            if let scalar = upper.unicodeScalars.first, CharacterSet.letters.contains(scalar) {
+                return upper
+            }
+            return "#"
+
+        case .size:
+            if foldersFirst && item.isDirectory {
+                return "Carpetas"
+            }
+            let bytes = item.size ?? 0
+            if bytes == 0 {
+                return "Vacío (0 B)"
+            } else if bytes < 1_048_576 {
+                return "Pequeño (< 1 MB)"
+            } else if bytes < 104_857_600 {
+                return "Mediano (1 MB – 100 MB)"
+            } else if bytes < 1_073_741_824 {
+                return "Grande (100 MB – 1 GB)"
+            } else {
+                return "Enorme (> 1 GB)"
+            }
+
+        case .modificationDate, .creationDate:
+            let rawDate = (field == .creationDate) ? (item.creationDate ?? item.modificationDate) : item.modificationDate
+            guard let date = rawDate else {
+                return "Fecha desconocida"
+            }
+            let calendar = Calendar.current
+            if calendar.isDate(date, inSameDayAs: referenceDate) {
+                return "Hoy"
+            }
+            if let yesterday = calendar.date(byAdding: .day, value: -1, to: referenceDate),
+               calendar.isDate(date, inSameDayAs: yesterday) {
+                return "Ayer"
+            }
+            if calendar.isDate(date, equalTo: referenceDate, toGranularity: .weekOfYear) {
+                return "Esta semana"
+            }
+            if calendar.isDate(date, equalTo: referenceDate, toGranularity: .month) {
+                return "Este mes"
+            }
+            if calendar.isDate(date, equalTo: referenceDate, toGranularity: .year) {
+                return "Este año"
+            }
+            return "Anteriores"
+
+        case .type:
+            return kindLabel(for: item)
+
+        case .extensionType:
+            if item.isDirectory { return "Carpetas" }
+            let ext = item.fileExtension
+            return ext.isEmpty ? "Sin extensión" : ".\(ext)"
+        }
+    }
+}
