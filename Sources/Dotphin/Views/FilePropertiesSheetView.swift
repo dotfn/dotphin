@@ -39,6 +39,7 @@ struct FilePropertiesSheetView: View {
     @State private var isSymbolicLink: Bool = false
     @State private var symlinkDestination: String?
     @State private var permissionError: String?
+    @State private var applyPermissionsRecursively = false
     @State private var checksums: FileChecksums?
     @State private var isComputingChecksums: Bool = false
     @State private var verificationInput: String = ""
@@ -215,6 +216,16 @@ struct FilePropertiesSheetView: View {
                     }
                     .font(.caption)
 
+                    if isDirectory {
+                        Toggle("Aplicar a subcarpetas y su contenido", isOn: $applyPermissionsRecursively)
+                            .font(.caption)
+                        if applyPermissionsRecursively {
+                            Text("Se aplicará el mismo modo a todo el contenido, incluyendo el bit de ejecución en archivos.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
                     if let permissionError {
                         Text(permissionError)
                             .font(.caption)
@@ -361,9 +372,36 @@ struct FilePropertiesSheetView: View {
             try FileManager.default.setAttributes([.posixPermissions: updated], ofItemAtPath: url.path)
             posixPermissions = updated
             permissionError = nil
+            if isDirectory && applyPermissionsRecursively {
+                let failures = Self.applyPermissionsRecursively(updated, under: url)
+                if !failures.isEmpty {
+                    permissionError = "No se pudo aplicar a \(failures.count) elemento(s) dentro de la carpeta."
+                }
+            }
         } catch {
             permissionError = error.localizedDescription
         }
+    }
+
+    /// Applies `mode` to every descendant of `url` (files and folders alike — this mirrors
+    /// the exact POSIX mode, including the execute bit on regular files, unlike Finder's
+    /// simplified "Apply to enclosed items").
+    /// Returns the URLs that failed, if any, instead of throwing — partial application
+    /// (e.g. an item without write permission) still applies everywhere it can.
+    @discardableResult
+    nonisolated static func applyPermissionsRecursively(_ mode: Int, under url: URL) -> [URL] {
+        guard let enumerator = FileManager.default.enumerator(at: url, includingPropertiesForKeys: nil) else {
+            return []
+        }
+        var failures: [URL] = []
+        for case let childURL as URL in enumerator {
+            do {
+                try FileManager.default.setAttributes([.posixPermissions: mode], ofItemAtPath: childURL.path)
+            } catch {
+                failures.append(childURL)
+            }
+        }
+        return failures
     }
 
     nonisolated static func symbolicPermissions(_ mode: Int) -> String {

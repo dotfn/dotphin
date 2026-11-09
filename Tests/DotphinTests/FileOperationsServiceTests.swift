@@ -192,6 +192,28 @@ final class FileOperationsServiceTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: folder.path))
     }
 
+    func test_move_folderDroppedOntoItself_viaSymlinkAlias_isNoOp() throws {
+        let folder = tempDir.appendingPathComponent("realFolder", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let aliasLink = tempDir.appendingPathComponent("aliasLink")
+        try FileManager.default.createSymbolicLink(at: aliasLink, withDestinationURL: folder)
+
+        let result = try FileOperationsService().move(folder, toDirectory: aliasLink)
+
+        XCTAssertEqual(result, folder)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: folder.path))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path), [])
+    }
+
+    func test_fileOperationError_message_describesEachCase() {
+        XCTAssertEqual(FileOperationError.invalidName.message, "El nombre no es válido.")
+        XCTAssertEqual(
+            FileOperationError.nameAlreadyExists(tempDir).message,
+            "Ya existe un ítem con ese nombre."
+        )
+        XCTAssertEqual(FileOperationError.other("motivo específico").message, "motivo específico")
+    }
+
     func test_move_intoOwnDescendant_throws() throws {
         let folder = tempDir.appendingPathComponent("folder", isDirectory: true)
         let sub = folder.appendingPathComponent("sub", isDirectory: true)

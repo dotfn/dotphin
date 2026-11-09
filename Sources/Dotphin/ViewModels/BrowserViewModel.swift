@@ -1004,6 +1004,20 @@ final class BrowserViewModel {
         }
     }
 
+    /// Mounts a `.iso`/`.dmg`/`.cdr`/`.img` via `hdiutil` (Dolphin's explicit "Montar" action).
+    /// On success, refreshes the Places sidebar's volume list the same way adding/removing
+    /// a bookmark does, so the newly-mounted volume shows up without relaunching the app.
+    func mountDiskImage(_ item: FileItem) {
+        do {
+            try DiskImageMountService().mount(item.url)
+            NotificationCenter.default.post(name: .placesBookmarksDidChange, object: nil)
+        } catch let mountError as DiskImageMountError {
+            operationError = .other(mountError.errorDescription ?? "No se pudo montar la imagen de disco.")
+        } catch {
+            operationError = .other(error.localizedDescription)
+        }
+    }
+
     /// Creates a symbolic link in `currentURL` pointing to `targetPath` (`DolphinNewFileMenu`).
     func createSymbolicLink(named linkName: String, pointingTo targetPath: String) {
         do {
@@ -1171,13 +1185,15 @@ final class BrowserViewModel {
                 if destination != url {
                     batch.append(.moved(from: url, to: destination))
                 }
+            } catch let error as FileOperationError {
+                failures.append("\(url.lastPathComponent): \(error.message)")
             } catch {
-                failures.append(url.lastPathComponent)
+                failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
             }
         }
         history.record(batch)
         if !failures.isEmpty {
-            operationError = .other("No se pudieron mover: \(failures.joined(separator: ", "))")
+            operationError = .other("No se pudieron mover: \(failures.joined(separator: "; "))")
         }
     }
 

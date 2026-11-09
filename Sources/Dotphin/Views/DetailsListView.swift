@@ -62,7 +62,7 @@ struct DetailsListView: View {
 
     var body: some View {
         let contentSettings = AppSettingsStore().settings()
-        Table(flattenedRows, selection: $selection) {
+        Table(of: ExpandableDetailRow.self, selection: $selection) {
             TableColumn("Nombre") { row in
                 let item = row.item
                 HStack(spacing: 6) {
@@ -113,11 +113,6 @@ struct DetailsListView: View {
                 .opacity(item.isHiddenItem ? 0.62 : 1.0)
                 .contentShape(Rectangle())
                 .help(FileMetadataFormatter().hoverTooltip(for: item))
-                .draggable(item.url)
-                .dropDestination(for: URL.self) { urls, _ in
-                    onMoveDropped(urls, item.isDirectory ? item.url : currentURL)
-                    return true
-                }
             }
 
             if visibleColumns.contains(.type) {
@@ -213,6 +208,14 @@ struct DetailsListView: View {
                     }
                 }
                 .width(min: 68, ideal: 95, max: 135)
+            }
+        } rows: {
+            ForEach(flattenedRows) { row in
+                TableRow(row)
+                    .draggable(row.item.url)
+                    .dropDestination(for: URL.self) { urls in
+                        onMoveDropped(urls, row.item.isDirectory ? row.item.url : currentURL)
+                    }
             }
         }
         .alternatingRowBackgrounds(.enabled)

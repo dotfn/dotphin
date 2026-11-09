@@ -125,4 +125,25 @@ final class MultiSelectionTests: XCTestCase {
         let size = FilePropertiesSheetView.computeTotalSize(of: tempDir)
         XCTAssertEqual(size, 4) // 4 files of 1 byte each
     }
+
+    func test_applyPermissionsRecursively_appliesModeToEveryDescendant() throws {
+        let root = tempDir.appendingPathComponent("permRoot", isDirectory: true)
+        let sub = root.appendingPathComponent("sub", isDirectory: true)
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        let fileInRoot = root.appendingPathComponent("a.txt")
+        let fileInSub = sub.appendingPathComponent("b.txt")
+        try "x".write(to: fileInRoot, atomically: true, encoding: .utf8)
+        try "y".write(to: fileInSub, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: fileInRoot.path)
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: fileInSub.path)
+
+        let failures = FilePropertiesSheetView.applyPermissionsRecursively(0o755, under: root)
+
+        XCTAssertEqual(failures, [])
+        for path in [sub.path, fileInRoot.path, fileInSub.path] {
+            let attrs = try FileManager.default.attributesOfItem(atPath: path)
+            let perms = (attrs[.posixPermissions] as? NSNumber)?.intValue ?? 0
+            XCTAssertEqual(perms & 0o777, 0o755, "no se aplicó el modo recursivamente a \(path)")
+        }
+    }
 }

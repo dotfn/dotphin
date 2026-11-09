@@ -4,6 +4,17 @@ enum FileOperationError: Error, Equatable {
     case nameAlreadyExists(URL)
     case invalidName
     case other(String)
+
+    var message: String {
+        switch self {
+        case .nameAlreadyExists:
+            return "Ya existe un ítem con ese nombre."
+        case .invalidName:
+            return "El nombre no es válido."
+        case .other(let message):
+            return message
+        }
+    }
 }
 
 struct FileOperationsService {
@@ -229,12 +240,14 @@ struct FileOperationsService {
 
     func move(_ sourceURL: URL, toDirectory destinationDirectory: URL) throws -> URL {
         let destination = destinationDirectory.appendingPathComponent(sourceURL.lastPathComponent)
-        let sourcePath = sourceURL.standardizedFileURL.path
-        let destinationPath = destination.standardizedFileURL.path
+        // resolvingSymlinksInPath (not standardizedFileURL) so a symlink alias like /tmp -> /private/tmp
+        // doesn't make "drop folder onto itself via its own alias" slip past these no-op guards.
+        let sourcePath = sourceURL.resolvingSymlinksInPath().path
+        let destinationPath = destination.resolvingSymlinksInPath().path
         guard destinationPath != sourcePath else {
             return sourceURL
         }
-        let destinationDirectoryPath = destinationDirectory.standardizedFileURL.path
+        let destinationDirectoryPath = destinationDirectory.resolvingSymlinksInPath().path
         guard destinationDirectoryPath != sourcePath else {
             return sourceURL
         }
