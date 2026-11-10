@@ -138,4 +138,38 @@ final class BackgroundTransferTests: XCTestCase {
         XCTAssertEqual(text("b.txt", in: destDir), "B")
         XCTAssertEqual(text("b.txt", in: second), "B")
     }
+
+    // MARK: Carpeta en vivo (slice 20)
+
+    func test_liveDirectory_picksUpFilesCreatedOutsideTheApp_andFollowsNavigation() async throws {
+        let vm = makeViewModel(at: sourceDir)
+        vm.watchesCurrentDirectory = true
+        try await Task.sleep(for: .milliseconds(500))
+
+        try "x".write(to: sourceDir.appendingPathComponent("externo.txt"), atomically: true, encoding: .utf8)
+        try await waitUntil { vm.items.contains { $0.name == "externo.txt" } }
+
+        // Al navegar, el observador sigue a la carpeta nueva.
+        vm.navigate(to: destDir)
+        try await Task.sleep(for: .milliseconds(500))
+        try "y".write(to: destDir.appendingPathComponent("otro.txt"), atomically: true, encoding: .utf8)
+        try await waitUntil { vm.items.contains { $0.name == "otro.txt" } }
+    }
+
+    func test_withoutLiveDirectory_nothingChangesUntilRefresh() async throws {
+        let vm = makeViewModel(at: sourceDir)
+        try "x".write(to: sourceDir.appendingPathComponent("externo.txt"), atomically: true, encoding: .utf8)
+        try await Task.sleep(for: .milliseconds(800))
+        XCTAssertFalse(vm.items.contains { $0.name == "externo.txt" })
+        vm.refresh()
+        XCTAssertTrue(vm.items.contains { $0.name == "externo.txt" })
+    }
+
+    private func waitUntil(_ condition: () -> Bool) async throws {
+        for _ in 0..<250 {
+            if condition() { return }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        XCTFail("la condición no se cumplió a tiempo")
+    }
 }

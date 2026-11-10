@@ -89,6 +89,18 @@ struct ContentView: View {
             places = PlacesProvider().allPlaces()
             savedSearches = PlacesProvider().savedSearches()
         }
+        // Discos conectados, expulsados o renombrados: el panel Lugares se
+        // actualiza solo (antes era una foto del momento del arranque).
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didMountNotification)) { _ in
+            places = PlacesProvider().allPlaces()
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didRenameVolumeNotification)) { _ in
+            places = PlacesProvider().allPlaces()
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didUnmountNotification)) { _ in
+            places = PlacesProvider().allPlaces()
+            leaveUnmountedVolumes()
+        }
     }
 
     private var detailColumn: some View {
@@ -205,6 +217,18 @@ struct ContentView: View {
                 Button("Añadir a selección") { focusedViewModel?.selectItems(matchingPattern: patternInput, additive: true) }
                 Button("Cancelar", role: .cancel) {}
             }
+    }
+
+    /// Los paneles que estaban dentro de un disco que se expulsó vuelven a la
+    /// carpeta personal en vez de quedar mostrando un error.
+    private func leaveUnmountedVolumes() {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        for tab in tabsViewModel.tabs {
+            for pane in [tab.primary, tab.secondary].compactMap({ $0 })
+            where !FileManager.default.fileExists(atPath: pane.currentURL.path) {
+                pane.navigate(to: home)
+            }
+        }
     }
 
     /// `commands` es estable (un objeto por ventana); acá solo se le refrescan

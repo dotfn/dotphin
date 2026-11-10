@@ -266,8 +266,16 @@ final class BrowserViewModel {
     /// nombre repetido. Sin ella: copiar conserva ambos y mover informa error.
     @ObservationIgnored var presentsConflictPrompts = false
     @ObservationIgnored private var transferTask: Task<Void, Never>?
+    /// Lo prende la vista que muestra este panel: la carpeta actual se
+    /// vuelve a leer sola cuando cambia en disco (FSEvents).
+    @ObservationIgnored var watchesCurrentDirectory = false {
+        didSet { updateDirectoryWatcher() }
+    }
+    @ObservationIgnored private let directoryWatcher = DirectoryWatcher()
     @ObservationIgnored private let transfers = FileTransferService()
-    /// Para refrescar los otros paneles que muestran una carpeta afectada.
+    /// Para refrescar al instante los otros paneles que muestran una carpeta
+    /// afectada por una operación propia (el observador de carpetas cubre los
+    /// cambios que vienen de afuera, con una pequeña demora).
     private static let liveViewModels = NSHashTable<BrowserViewModel>.weakObjects()
 
     var searchQuery: String = "" {
@@ -1603,6 +1611,25 @@ final class BrowserViewModel {
     private func load(_ url: URL) {
         DebugEventLog.measure("carga", "load(\(url.lastPathComponent))") { loadNow(url) }
         DebugEventLog.log("carga", "\(items.count) ítems en \(url.lastPathComponent)")
+        updateDirectoryWatcher()
+    }
+
+    /// Mantiene el observador apuntando a la carpeta que se está mostrando.
+    private func updateDirectoryWatcher() {
+        guard watchesCurrentDirectory else {
+            directoryWatcher.stop()
+            return
+        }
+        guard directoryWatcher.watchedURL != currentURL else { return }
+        directoryWatcher.watch(currentURL) { [weak self] in
+            self?.directoryChangedOnDisk()
+        }
+    }
+
+    /// Otra app (o esta) tocó la carpeta: se relee. No relanza la búsqueda.
+    private func directoryChangedOnDisk() {
+        DebugEventLog.log("carga", "cambio en disco en \(currentURL.lastPathComponent)")
+        load(currentURL)
     }
 
     private func loadNow(_ url: URL) {

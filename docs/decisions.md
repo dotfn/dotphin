@@ -955,3 +955,21 @@ actor, continuación para esperar la respuesta del usuario).
   queda esperando.
 - Tests que llamaban a estas operaciones ahora esperan con
   `waitForBackgroundWork()`. 227 tests en verde.
+
+## 2026-11-09 — Slice 20: carpetas y volúmenes en vivo
+
+- `DirectoryWatcher` (FSEvents, como Finder): `BrowserViewModel` vuelve a
+  leer la carpeta actual cuando cambia en disco, venga el cambio de esta
+  app o de otra. Solo cambios directos de la carpeta, no de sus
+  subcarpetas. Se prende con `watchesCurrentDirectory`, que activa la vista
+  (los view models sueltos de los tests no abren streams).
+- Trampa encontrada: FSEvents informa rutas reales (`/private/var/…`) y
+  `resolvingSymlinksInPath()` le quita justamente el `/private`. Hay que
+  comparar contra `realpath`.
+- El aviso de disco relee la carpeta pero no relanza una búsqueda activa.
+- **Lugares**: se actualiza al montar, expulsar o renombrar un volumen
+  (`NSWorkspace` notifica). Los paneles que estaban dentro de un disco
+  expulsado vuelven a la carpeta personal. Cierra la deuda del slice 1.
+- Queda pendiente (deuda previa): la lectura del directorio sigue siendo
+  síncrona en el main actor; con el observador ahora se relee más seguido.
+  233 tests en verde.

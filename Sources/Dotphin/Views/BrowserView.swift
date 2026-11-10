@@ -411,6 +411,7 @@ struct BrowserView: View {
             viewModel.undoManager = undoManager
             // Esta vista puede mostrar el diálogo de nombres repetidos.
             viewModel.presentsConflictPrompts = true
+            viewModel.watchesCurrentDirectory = true
         }
         .modifier(FileConflictDialogModifier(transfer: viewModel.activeTransfer))
         .onChange(of: undoManager) { _, newValue in
