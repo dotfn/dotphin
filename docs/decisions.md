@@ -749,3 +749,111 @@ Important real confirmado. Hallazgos y resolución:
   preguntas fuera del diff de este slice, no hallazgos nuevos.
 
 121/121 tests en verde tras el fix. Listo para mergear a main.
+
+## 2026-11-09 — Rendimiento: trabajo pesado fuera del main actor + arrastre múltiple en Lista
+
+Rama `fix/rendimiento-y-seleccion-lista`. Consultado axiom-concurrency
+(`@concurrent` para forzar segundo plano, cancelación cooperativa) y
+axiom-swiftui 26-ref (`dragContainer`) antes de escribir el código.
+
+- `BrowserViewModel` y `TabsViewModel` pasan a `@MainActor` (antes sin
+  aislamiento): requisito para lanzar `Task`s que escriben estado sin
+  carreras. Los tests que los usan quedan también `@MainActor`.
+- **Búsqueda** (`performSearch`): ahora es una `Task` cancelable que corre
+  `SearchService.results` (`@concurrent`). Cada llamada cancela la anterior
+  y el recorrido chequea `Task.isCancelled` por entrada. Antes, alcance
+  "en todas partes" o modo contenido congelaba la app hasta terminar.
+  `isSearching` muestra progreso en vez de "sin resultados" mientras corre.
+  Los tests esperan con `waitForBackgroundWork()`.
+- **Navegación** (`load`): `git status` + rama pasan a segundo plano
+  (`GitStatusProvider.snapshot`, `@concurrent`); el resultado se descarta
+  si mientras tanto se navegó. Detectar el repo sigue síncrono (caminata
+  por `.git`, sin proceso). **No se movió** la lectura del directorio:
+  buena parte de los tests y la UI asumen `items` listo tras `navigate`; queda como deuda.
+- **Tamaño de carpetas** en Lista/Detalles: nueva `DirectorySizeText` con
+  `.task(id:)`; el `body` solo lee el caché. Bug corregido: el modo
+  "tamaño del contenido" sumaba solo el primer nivel, ahora es recursivo.
+  El tooltip de carpetas ya no cuenta ítems en el `body` (usa el caché y
+  no cachea el tooltip incompleto).
+- `filteredItems` se memoiza por (versión de `items`, texto, modo, facetas).
+- `setSelection` resolvía symlinks de todos los ítems en cada clic (un
+  syscall por ítem); ahora solo si llega un ID desconocido.
+- **Lista**: `.draggable(url)` por fila → `.draggable(containerItemID:)`
+  + `.dragContainer(for: URL.self, itemID: \.self)` +
+  `.dragContainerSelection`, para que arrastrar una fila seleccionada
+  arrastre toda la selección. **Sin verificación de GUI todavía**: este
+  entorno no tiene permisos de Accesibilidad / Grabación de pantalla.
+
+## 2026-11-09 — Lista y Detalles sobre `NSTableView` nativo (selección y arrastre como Finder)
+
+Consultado axiom-macos (`appkit-interop`: coordinator con binding fresco en
+cada update, sin `NSHostingView` por celda) antes de escribir el código.
+
+- **Lista** (`FileTableView`) y **Detalles** (`DetailsTableView`, nuevo)
+  dejan `List`/`Table` de SwiftUI. Con `.draggable` en la celda, el clic
+  sobre el nombre no seleccionaba de inmediato, no viajaba toda la
+  selección y el arrastre se confundía con selección. Ahora clic/⌘/⇧,
+  arrastre múltiple y drop por fila son los de AppKit.
+- `FileNSTableView.canDragRows`: el arrastre de archivos solo arranca sobre
+  ícono + nombre; desde el resto de la fila arrastrar extiende la
+  selección (equivalente al recuadro de Finder en vista de lista).
+- Detalles: los encabezados de columna ahora ordenan (`onChangeSort`, que
+  antes se pasaba pero no se usaba). Los grupos pasan a filas de
+  encabezado, igual que en Lista. `DetailsListView` conserva su firma y el
+  estado de carpetas expandidas.
+- Selección y arrastre confirmados a mano por el usuario.
+
+## 2026-11-09 — Chequeo de "no nativo": teclado, menús, grillas, divisores y toolbar
+
+Misma rama. Consultado axiom-macos (`appkit-interop`, `menus-and-commands`:
+focused values en vez de notificaciones; `swiftui-differences`: inspector,
+toolbars) antes de escribir el código. Se reemplazó todo lo que forzaba a
+mano algo que AppKit/SwiftUI ya resuelven:
+
+- **Teclado**: se eliminó el monitor global de `keyDown`
+  (`QuickLookKeyMonitorView`). Espacio/Intro/Esc van en el `keyDown` de
+  `FileNSTableView` / `FileNSCollectionView`; flechas, ⇧+flechas y búsqueda
+  al tipear son las de AppKit (`typeSelectStringFor`). Con Quick Look al
+  frente, las flechas se reenvían a la vista de archivos.
+- **Menú Edición**: vuelve a ser el estándar (se quitaron los
+  `CommandGroup(replacing: .undoRedo / .pasteboard)` y los `NSApp.sendAction`
+  condicionados a "hay un campo de texto"). Cortar/Copiar/Pegar/Eliminar/
+  Seleccionar todo llegan por responder chain a `AppDelegate`, que actúa
+  sobre el panel activo de la ventana clave. Deshacer/Rehacer usan el
+  `UndoManager` de la ventana (`BrowserViewModel.record` registra cada lote).
+- **Comandos de menú**: 33 notificaciones globales → `WindowCommands`, un
+  objeto por ventana publicado con `focusedSceneValue`. Con varias ventanas,
+  cada comando actúa solo en la activa.
+- **Renombrar**: edición en línea (Intro / F2 / menú contextual), nombre
+  sin extensión seleccionado, Esc cancela, clic afuera confirma. Se fueron
+  los `alert` con `TextField`.
+- **Quick Look**: anima desde el rect real del ícono
+  (`QuickLookSourceProviding`). La extensión de `NSWindow` que acepta el
+  control del panel queda como respaldo para cuando el foco está en el
+  panel lateral.
+- **Iconos y Compacta**: `FileCollectionView` (`NSCollectionView`) con
+  recuadro de selección, arrastre de toda la selección y drop sobre
+  carpetas. Las celdas siguen siendo las de SwiftUI dentro de un
+  `NSHostingView` por celda (se crea una vez, cambia `rootView`).
+- **Divisores**: `HSplitView` (vista dividida y panel de información) y
+  `VSplitView` (terminal). **`.inspector` descartado**: junto a la barra de
+  ubicación entraba en bucle de "Update Constraints" al redimensionar
+  (reproducido en test). De paso se corrigió la barra de ubicación, que
+  tenía el mismo problema latente (`ScrollView` horizontal con `fixedSize`
+  → `ViewThatFits`). Se pierden: doble clic en el divisor para 50/50 y el
+  botón de expandir la terminal (no hay API para fijar la posición).
+- **Toolbar**: `BrowserToolbar` con `.toolbar(id:)` + `.searchable`. El
+  sistema agrupa, desborda y personaliza. Se borraron
+  `CustomizableToolbarView`, `ToolbarConfigurationSheetView`, la pestaña de
+  Ajustes y `WindowToolbarEnforcer`. **Quedan sin uso** (pero con tests):
+  `ToolbarLayoutEngine` y los campos `toolbar*` de `AppSettings`.
+- **Ajustes**: `AppSettingsModel` (`@Observable`, compartido) en vez de
+  copias `@State` + decodificar `UserDefaults` en cada `body`.
+- **Terminal externa**: `NSWorkspace.open` en vez de `/usr/bin/open`.
+
+Verificación: `FileViewInteractionTests` monta las vistas en una ventana
+real y las maneja con eventos sintéticos (flechas, Intro, renombrar,
+deshacer, modo selección, doble clic). Lo que no se puede probar así: la
+selección por clic y el recuadro de `NSCollectionView` (dependen del estado
+real del mouse), el arrastre, y el aspecto de la toolbar nativa.
+192 tests en verde.
