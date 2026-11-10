@@ -1,6 +1,8 @@
 import AppKit
 import SwiftUI
 
+/// Vista "Lista". La tabla en sí es `FileTableView` (`NSTableView` nativo);
+/// acá solo se arman los menús contextuales, que siguen siendo los de SwiftUI.
 struct FileListView: View {
     let items: [FileItem]
     var groups: [FileItemGroup] = []
@@ -21,107 +23,78 @@ struct FileListView: View {
     let onMoveDropped: ([URL], URL) -> Void
     var contextMenuActions: BrowserContextMenuActions? = nil
 
-    private var iconDimension: CGFloat {
-        max(16, 18 * zoomLevel)
+    var body: some View {
+        FileTableView(
+            items: items,
+            groups: groups,
+            showInGroups: showInGroups,
+            zoomLevel: zoomLevel,
+            selection: $selection,
+            gitStatuses: gitStatuses,
+            directorySizeMode: AppSettingsModel.shared.settings.directorySizeMode,
+            currentURL: currentURL,
+            onOpen: onOpen,
+            onMoveDropped: onMoveDropped,
+            menuForItems: { targetItems in
+                makeFileItemsMenu(
+                    for: targetItems,
+                    actions: contextMenuActions,
+                    onRename: onRename,
+                    onBatchRename: onBatchRename,
+                    onDelete: onDelete,
+                    onDeleteSelection: onDeleteSelection
+                )
+            }
+        )
     }
+}
+
+/// Menú contextual de las vistas de archivos de AppKit: los mismos menús de
+/// SwiftUI, convertidos a `NSMenu` con `NSHostingMenu`. Sin ítems = fondo.
+@MainActor
+func makeFileItemsMenu(
+    for targetItems: [FileItem],
+    actions: BrowserContextMenuActions?,
+    onRename: ((FileItem) -> Void)?,
+    onBatchRename: (() -> Void)?,
+    onDelete: @escaping (FileItem) -> Void,
+    onDeleteSelection: @escaping () -> Void
+) -> NSMenu? {
+    if let actions {
+        if targetItems.isEmpty {
+            return NSHostingMenu(rootView: DotphinViewportContextMenu(actions: actions))
+        }
+        return NSHostingMenu(rootView: DotphinItemContextMenu(targetItems: targetItems, actions: actions))
+    }
+    guard !targetItems.isEmpty else { return nil }
+    return NSHostingMenu(rootView: FallbackItemMenu(
+        targetItems: targetItems,
+        onRename: onRename,
+        onBatchRename: onBatchRename,
+        onDelete: onDelete,
+        onDeleteSelection: onDeleteSelection
+    ))
+}
+
+/// Menú mínimo para cuando no hay `BrowserContextMenuActions`.
+private struct FallbackItemMenu: View {
+    let targetItems: [FileItem]
+    let onRename: ((FileItem) -> Void)?
+    let onBatchRename: (() -> Void)?
+    let onDelete: (FileItem) -> Void
+    let onDeleteSelection: () -> Void
 
     var body: some View {
-        ScrollViewReader { scrollProxy in
-            List(selection: $selection) {
-                if showInGroups && !groups.isEmpty {
-                    ForEach(groups) { group in
-                        Section {
-                            ForEach(group.items) { item in
-                                rowView(for: item)
-                                    .id(item.id)
-                            }
-                        } header: {
-                            Text("\(group.title) (\(group.items.count))")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                } else {
-                    ForEach(items) { item in
-                        rowView(for: item)
-                            .id(item.id)
-                    }
-                }
+        if targetItems.count > 1 {
+            if let onBatchRename {
+                Button("Renombrar \(targetItems.count) ítems…") { onBatchRename() }
             }
-            .onChange(of: selection) { _, newIDs in
-                if newIDs.count == 1, let singleID = newIDs.first {
-                    scrollProxy.scrollTo(singleID)
-                }
+            Button("Eliminar \(targetItems.count) ítems", role: .destructive) { onDeleteSelection() }
+        } else if let item = targetItems.first {
+            if let onRename {
+                Button("Renombrar…") { onRename(item) }
             }
-        }
-        .listStyle(.inset(alternatesRowBackgrounds: true))
-        .dropDestination(for: URL.self) { urls, _ in
-            guard let currentURL else { return false }
-            onMoveDropped(urls, currentURL)
-            return true
-        }
-        .contextMenu(forSelectionType: FileItem.ID.self) { ids in
-            let targetItems = items.filter { ids.contains($0.id) }
-            if let actions = contextMenuActions {
-                if targetItems.isEmpty {
-                    DotphinViewportContextMenu(actions: actions)
-                } else {
-                    DotphinItemContextMenu(targetItems: targetItems, actions: actions)
-                }
-            } else if ids.count > 1 {
-                if let onBatchRename {
-                    Button("Renombrar \(ids.count) ítems…") { onBatchRename() }
-                }
-                Button("Eliminar \(ids.count) ítems", role: .destructive) { onDeleteSelection() }
-            } else if let id = ids.first, let item = items.first(where: { $0.id == id }) {
-                if let onRename {
-                    Button("Renombrar…") { onRename(item) }
-                }
-                Button("Eliminar", role: .destructive) { onDelete(item) }
-            }
-        } primaryAction: { ids in
-            if let id = ids.first, let item = items.first(where: { $0.id == id }) {
-                onOpen(item)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func rowView(for item: FileItem) -> some View {
-        let contentSettings = AppSettingsStore().settings()
-        let formatter = FileMetadataFormatter()
-        HStack(spacing: 8) {
-            Image(nsImage: ThumbnailLoader.icon(forFile: item.url.path))
-                .resizable()
-                .scaledToFit()
-                .frame(width: iconDimension, height: iconDimension)
-            Text(item.name)
-                .font(.system(size: 13))
-                .lineLimit(1)
-                .truncationMode(.middle)
-            if let nsColor = item.colorTag.nsColor {
-                Circle()
-                    .fill(Color(nsColor: nsColor))
-                    .frame(width: 8, height: 8)
-                    .help("Etiqueta: \(item.colorTag.title)")
-            }
-            GitStatusBadge(status: gitStatuses[item.name])
-            Spacer(minLength: 8)
-            Text(formatter.sizeDisplayText(for: item, directorySizeMode: contentSettings.directorySizeMode))
-                .font(.system(size: 11.5).monospacedDigit())
-                .foregroundStyle(.secondary)
-                .frame(minWidth: 58, alignment: .trailing)
-        }
-        .padding(.vertical, 1.5)
-        .opacity(item.isHiddenItem ? 0.58 : 1.0)
-        .contentShape(Rectangle())
-        .help(formatter.hoverTooltip(for: item))
-        .draggable(item.url)
-        .dropDestination(for: URL.self) { urls, _ in
-            let destination = item.isDirectory ? item.url : currentURL
-            guard let destination else { return false }
-            onMoveDropped(urls, destination)
-            return true
+            Button("Eliminar", role: .destructive) { onDelete(item) }
         }
     }
 }

@@ -144,6 +144,15 @@ struct GitStatusProvider {
                 )
             }
     }
+    /// Estados + rama fuera del main actor: `git status` lanza un proceso que en
+    /// repos grandes tarda cientos de ms y antes se esperaba en cada navegación.
+    @concurrent
+    func snapshot(in directory: URL) async -> (statuses: [String: GitFileStatus], branch: String?) {
+        let statuses = statuses(in: directory)
+        guard !Task.isCancelled else { return ([:], nil) }
+        return (statuses, currentBranch(in: directory))
+    }
+
     func statuses(in directory: URL) -> [String: GitFileStatus] {
         guard let repoRoot = Self.gitRepositoryRoot(for: directory) else { return [:] }
         guard let statusOutput = run(["status", "--porcelain=v1", "-z", "--", "."], in: directory) else { return [:] }

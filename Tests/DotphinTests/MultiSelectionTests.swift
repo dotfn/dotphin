@@ -1,6 +1,7 @@
 import XCTest
 @testable import Dotphin
 
+@MainActor
 final class MultiSelectionTests: XCTestCase {
     private var tempDir: URL!
     private var vm: BrowserViewModel!

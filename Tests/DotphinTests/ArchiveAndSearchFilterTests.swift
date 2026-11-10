@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 @testable import Dotphin
 
+@MainActor
 final class ArchiveAndSearchFilterTests: XCTestCase {
     private var tempDir: URL!
 

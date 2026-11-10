@@ -284,7 +284,7 @@ struct DotphinItemContextMenu: View {
             }
         }
 
-        if AppSettingsStore().settings().showPermanentDeleteCommand {
+        if AppSettingsModel.shared.settings.showPermanentDeleteCommand {
             Button(
                 targetItems.count > 1
                     ? "Eliminar permanentemente \(targetItems.count) ítems…"

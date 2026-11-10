@@ -85,6 +85,7 @@ extension NSWindow {
     }
 
     open override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        DebugEventLog.log("quicklook", "beginPreviewPanelControl desde \(type(of: self))")
         guard let panel else { return }
         MainActor.assumeIsolated {
             QuickLookPreviewController.shared.beginControl(of: panel)
@@ -115,6 +116,8 @@ final class QuickLookPreviewController: NSObject, QLPreviewPanelDataSource, QLPr
 
     var onNavigateSelectionInBrowser: ((FileItem) -> Void)?
     var onNavigateDirectionInBrowser: ((ArrowDirection) -> Void)?
+    /// Vista de archivos con foco: de ahí sale el rect del ícono para la animación.
+    weak var sourceProvider: (any QuickLookSourceProviding)?
 
     private var closeObserver: NSObjectProtocol?
 
@@ -217,12 +220,16 @@ final class QuickLookPreviewController: NSObject, QLPreviewPanelDataSource, QLPr
     }
 
     func present(items: [FileItem], startIndex: Int = 0) {
+        DebugEventLog.log("quicklook", "present(\(items.count) ítems, inicio=\(startIndex))")
         guard !items.isEmpty else { return }
         self.previewItems = items
         self.currentIndex = max(0, min(startIndex, items.count - 1))
         self.isVisible = true
 
-        guard let panel = QLPreviewPanel.shared() else { return }
+        guard let panel = QLPreviewPanel.shared() else {
+            DebugEventLog.log("quicklook", "QLPreviewPanel.shared() devolvió nil")
+            return
+        }
         observePanelCloseIfNeeded(panel)
         panel.dataSource = self
         panel.delegate = self
@@ -240,9 +247,11 @@ final class QuickLookPreviewController: NSObject, QLPreviewPanelDataSource, QLPr
             panel.currentPreviewItemIndex = currentIndex
         }
         panel.refreshCurrentPreviewItem()
+        DebugEventLog.log("quicklook", "panel visible=\(panel.isVisible) key=\(panel.isKeyWindow) dataSource=\(panel.dataSource === self) ítem=\(currentItem?.name ?? "nil")")
     }
 
     func close() {
+        DebugEventLog.log("quicklook", "close()")
         isVisible = false
         if QLPreviewPanel.sharedPreviewPanelExists(), let panel = QLPreviewPanel.shared() {
             if panel.dataSource === self {
@@ -354,10 +363,16 @@ final class QuickLookPreviewController: NSObject, QLPreviewPanelDataSource, QLPr
     nonisolated func previewPanel(_ panel: QLPreviewPanel!, handle event: NSEvent!) -> Bool {
         guard let event, event.type == .keyDown else { return false }
         let keyCode = event.keyCode
+        nonisolated(unsafe) let keyEvent = event
         return MainActor.assumeIsolated {
             switch keyCode {
             case 49, 53: // Spacebar or Escape
                 close()
+                return true
+            case 123...126 where !isMultiSelectionPreview && sourceProvider != nil:
+                // Las flechas las resuelve la vista de archivos con su propio
+                // teclado (lista o grilla); el panel sigue a la selección.
+                sourceProvider?.quickLookForwardKeyDown(keyEvent)
                 return true
             case 123: // Left arrow (←)
                 if let onNavigateDirectionInBrowser {
@@ -393,15 +408,12 @@ final class QuickLookPreviewController: NSObject, QLPreviewPanelDataSource, QLPr
         }
     }
 
+    /// Rect real del ícono en la vista de archivos (animación de zoom como
+    /// Finder). `.zero` = fundido estándar cuando el ítem no está a la vista.
     nonisolated func previewPanel(_ panel: QLPreviewPanel!, sourceFrameOnScreenFor item: (any QLPreviewItem)!) -> NSRect {
-        MainActor.assumeIsolated {
-            guard let referenceWindow = NSApplication.shared.windows.first(where: { !($0 is NSPanel) && $0.isVisible })
-                ?? NSApplication.shared.mainWindow
-                ?? NSApplication.shared.keyWindow else {
-                return .zero
-            }
-            let frame = referenceWindow.frame
-            return NSRect(x: frame.midX - 32, y: frame.midY - 32, width: 64, height: 64)
+        guard let url = item?.previewItemURL else { return .zero }
+        return MainActor.assumeIsolated {
+            sourceProvider?.quickLookSourceFrame(for: url) ?? .zero
         }
     }
 }

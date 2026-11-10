@@ -9,11 +9,11 @@ struct BrowserView: View {
     var onOpenInSplitView: ((URL) -> Void)? = nil
     var onOpenTerminal: ((URL) -> Void)? = nil
 
+    @Environment(\.undoManager) private var undoManager
+    @Environment(\.fileViewInteraction) private var paneInteraction
     @State private var pendingDelete: FileItem?
     @State private var showsDeleteConfirmation = false
     @State private var showsDeleteSelectionConfirmation = false
-    @State private var showsRenamePrompt = false
-    @State private var renameInput = ""
     @State private var showsBatchRenameSheet = false
     @State private var showsNewFolderPrompt = false
     @State private var showsMoveToNewFolderPrompt = false
@@ -39,8 +39,32 @@ struct BrowserView: View {
         )
     }
 
+    /// Teclado y edición en línea de las vistas de archivos de AppKit. Parte de
+    /// lo que publica el panel (`onActivate`) y le suma lo propio de esta vista.
+    private var fileViewInteraction: FileViewInteraction {
+        var interaction = paneInteraction
+        interaction.renamingItemID = viewModel.renamingItemID
+        interaction.onQuickLook = {
+            QuickLookPreviewController.shared.toggle(for: viewModel)
+        }
+        interaction.onRequestRename = {
+            if viewModel.selectedItems.count > 1 {
+                showsBatchRenameSheet = true
+            } else if let item = viewModel.selectedItem {
+                viewModel.renamingItemID = item.id
+            }
+        }
+        interaction.onTypeAhead = { characters in
+            _ = viewModel.selectItemByTypeAhead(characters)
+        }
+        interaction.onEndRename = { id, newName in
+            viewModel.endRenaming(id, newName: newName)
+        }
+        return interaction
+    }
+
     var body: some View {
-        let currentSettings = AppSettingsStore().settings()
+        let currentSettings = AppSettingsModel.shared.settings
         VStack(spacing: 0) {
             if !viewModel.isCurrentDirectoryWritable && !viewModel.isBrowsingTrash && viewModel.error == nil {
                 readOnlyDirectoryBanner
@@ -92,8 +116,7 @@ struct BrowserView: View {
             }
             let onRename: (FileItem) -> Void = { item in
                 viewModel.select(item)
-                renameInput = item.name
-                showsRenamePrompt = true
+                viewModel.renamingItemID = item.id
             }
             let onBatchRename: () -> Void = {
                 showsBatchRenameSheet = true
@@ -142,7 +165,7 @@ struct BrowserView: View {
                 onDeleteSelection: onDeleteSelection,
                 onDeletePermanently: { targets in
                     guard !targets.isEmpty else { return }
-                    if AppSettingsStore().settings().confirmPermanentDelete {
+                    if AppSettingsModel.shared.settings.confirmPermanentDelete {
                         pendingPermanentDeleteItems = targets
                         showsPermanentDeleteConfirmation = true
                     } else {
@@ -182,7 +205,10 @@ struct BrowserView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             } else if !viewModel.searchQuery.isEmpty {
-                if viewModel.searchResults.isEmpty {
+                if viewModel.searchResults.isEmpty && viewModel.isSearching {
+                    ProgressView("Buscando «\(viewModel.searchQuery)»…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if viewModel.searchResults.isEmpty {
                     ContentUnavailableView.search(text: viewModel.searchQuery)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -216,23 +242,17 @@ struct BrowserView: View {
             } else {
                 switch viewModel.viewProperties.mode {
                 case .icons:
-                    IconGridView(
+                    FileGridView(
+                        style: .icons,
                         items: viewModel.filteredItems,
                         groups: viewModel.groupedFilteredItems,
                         showInGroups: viewModel.viewProperties.showInGroups,
                         showPreviews: viewModel.viewProperties.showPreviews,
                         isSelectionModeActive: viewModel.isSelectionModeActive,
                         zoomLevel: viewModel.viewProperties.zoomLevel,
-                        selectedIDs: viewModel.selectedIDs,
+                        selection: selection,
+                        gitStatuses: viewModel.gitStatuses,
                         currentURL: viewModel.currentURL,
-                        onSelect: { item, modifier in
-                            switch modifier {
-                            case .none: viewModel.select(item)
-                            case .toggle: viewModel.toggleSelection(item)
-                            case .range: viewModel.extendSelection(to: item)
-                            }
-                        },
-                        onClearSelection: { viewModel.setSelection([]) },
                         onOpen: onOpen,
                         onRename: onRename,
                         onBatchRename: onBatchRename,
@@ -242,30 +262,20 @@ struct BrowserView: View {
                             viewModel.moveDroppedItems(urls, into: directory)
                             onFilesMoved?()
                         },
-                        gitStatuses: viewModel.gitStatuses,
-                        contextMenuActions: menuActions,
-                        onColumnCountChange: { count in
-                            viewModel.gridColumnsCount = count
-                        }
+                        contextMenuActions: menuActions
                     )
                     .transition(.opacity)
                 case .compact:
-                    CompactGridView(
+                    FileGridView(
+                        style: .compact,
                         items: viewModel.filteredItems,
                         groups: viewModel.groupedFilteredItems,
                         showInGroups: viewModel.viewProperties.showInGroups,
-                        zoomLevel: viewModel.viewProperties.zoomLevel,
-                        selectedIDs: viewModel.selectedIDs,
-                        currentURL: viewModel.currentURL,
                         isSelectionModeActive: viewModel.isSelectionModeActive,
-                        onSelect: { item, modifier in
-                            switch modifier {
-                            case .none: viewModel.select(item)
-                            case .toggle: viewModel.toggleSelection(item)
-                            case .range: viewModel.extendSelection(to: item)
-                            }
-                        },
-                        onClearSelection: { viewModel.setSelection([]) },
+                        zoomLevel: viewModel.viewProperties.zoomLevel,
+                        selection: selection,
+                        gitStatuses: viewModel.gitStatuses,
+                        currentURL: viewModel.currentURL,
                         onOpen: onOpen,
                         onRename: onRename,
                         onBatchRename: onBatchRename,
@@ -275,11 +285,7 @@ struct BrowserView: View {
                             viewModel.moveDroppedItems(urls, into: directory)
                             onFilesMoved?()
                         },
-                        gitStatuses: viewModel.gitStatuses,
-                        contextMenuActions: menuActions,
-                        onColumnCountChange: { count in
-                            viewModel.gridColumnsCount = count
-                        }
+                        contextMenuActions: menuActions
                     )
                     .transition(.opacity)
                 case .list:
@@ -340,8 +346,7 @@ struct BrowserView: View {
                         if viewModel.selectedItems.count > 1 {
                             showsBatchRenameSheet = true
                         } else if let item = viewModel.selectedItem {
-                            renameInput = item.name
-                            showsRenamePrompt = true
+                            viewModel.renamingItemID = item.id
                         }
                     },
                     onMoveToNewFolder: {
@@ -395,6 +400,16 @@ struct BrowserView: View {
         .animation(.snappy(duration: 0.18), value: viewModel.hasActiveFacets)
         .animation(.snappy(duration: 0.16), value: viewModel.typeAheadBuffer.isEmpty)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .environment(\.fileViewInteraction, fileViewInteraction)
+        .onChange(of: ObjectIdentifier(viewModel), initial: true) { _, _ in
+            viewModel.undoManager = undoManager
+        }
+        .onChange(of: undoManager) { _, newValue in
+            viewModel.undoManager = newValue
+        }
+        .onChange(of: viewModel.selectedIDs) { _, _ in
+            QuickLookPreviewController.shared.updateIfVisible(for: viewModel)
+        }
         .overlay(alignment: .bottomTrailing) {
             if !viewModel.typeAheadBuffer.isEmpty {
                 HStack(spacing: 5) {
@@ -427,7 +442,7 @@ struct BrowserView: View {
             ViewPropertiesDialogSheetView(
                 folderURL: viewModel.currentURL,
                 draft: viewModel.viewProperties,
-                globalShowsHiddenFiles: AppSettingsStore().settings().showsHiddenFiles
+                globalShowsHiddenFiles: AppSettingsModel.shared.settings.showsHiddenFiles
             ) { updated, scope, useAsDefault in
                 viewModel.applyViewProperties(updated, scope: scope, useAsDefault: useAsDefault)
             }
@@ -522,11 +537,6 @@ struct BrowserView: View {
             }
         } message: {
             Text("Esta acción borrará los elementos del disco sin pasar por la Papelera y no se puede deshacer.")
-        }
-        .alert("Renombrar", isPresented: $showsRenamePrompt) {
-            TextField("Nombre", text: $renameInput)
-            Button("Renombrar") { viewModel.renameSelected(to: renameInput) }
-            Button("Cancelar", role: .cancel) {}
         }
         .alert(
             "¿Eliminar este ítem?",

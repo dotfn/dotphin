@@ -3,6 +3,7 @@ import SwiftUI
 import XCTest
 @testable import Dotphin
 
+@MainActor
 final class DolphinFullParityTests: XCTestCase {
     private var tempDir: URL!
     private var suiteName: String!
@@ -261,15 +262,19 @@ final class DolphinFullParityTests: XCTestCase {
         RunLoop.main.run(until: Date().addingTimeInterval(0.2))
 
         // Resize window across small/large sizes while split & info panel are active
-        NotificationCenter.default.post(name: .addTabShortcut, object: nil)
+        WindowCommands.commands(for: window)?.perform(.addTab)
         window.contentView?.layoutSubtreeIfNeeded()
         RunLoop.main.run(until: Date().addingTimeInterval(0.1))
 
-        NotificationCenter.default.post(name: .toggleSplitShortcut, object: nil)
+        WindowCommands.commands(for: window)?.perform(.toggleSplit)
         window.contentView?.layoutSubtreeIfNeeded()
         RunLoop.main.run(until: Date().addingTimeInterval(0.1))
 
-        NotificationCenter.default.post(name: .toggleInfoPanelShortcut, object: nil)
+        WindowCommands.commands(for: window)?.perform(.toggleInfoPanel)
+        window.contentView?.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+
+        WindowCommands.commands(for: window)?.perform(.toggleEmbeddedTerminal)
         window.contentView?.layoutSubtreeIfNeeded()
         RunLoop.main.run(until: Date().addingTimeInterval(0.1))
 
@@ -279,19 +284,19 @@ final class DolphinFullParityTests: XCTestCase {
             RunLoop.main.run(until: Date().addingTimeInterval(0.08))
         }
 
-        NotificationCenter.default.post(name: .toggleTabOverview, object: nil)
+        WindowCommands.commands(for: window)?.perform(.toggleTabOverview)
         window.contentView?.layoutSubtreeIfNeeded()
         RunLoop.main.run(until: Date().addingTimeInterval(0.1))
 
-        NotificationCenter.default.post(name: .toggleTabOverview, object: nil)
+        WindowCommands.commands(for: window)?.perform(.toggleTabOverview)
         window.contentView?.layoutSubtreeIfNeeded()
         RunLoop.main.run(until: Date().addingTimeInterval(0.1))
 
-        NotificationCenter.default.post(name: .closeTabShortcut, object: nil)
+        WindowCommands.commands(for: window)?.perform(.closeTab)
         window.contentView?.layoutSubtreeIfNeeded()
         RunLoop.main.run(until: Date().addingTimeInterval(0.08))
 
-        NotificationCenter.default.post(name: .reopenClosedTabShortcut, object: nil)
+        WindowCommands.commands(for: window)?.perform(.reopenClosedTab)
         window.contentView?.layoutSubtreeIfNeeded()
         RunLoop.main.run(until: Date().addingTimeInterval(0.08))
 
@@ -570,7 +575,7 @@ final class DolphinFullParityTests: XCTestCase {
 
     // MARK: - 14. Saved Searches, Color Tag Search Facet & Open Containing Folder
 
-    func test_savedSearchesAndColorTagFacetSearch_andOpenContainingFolder() throws {
+    func test_savedSearchesAndColorTagFacetSearch_andOpenContainingFolder() async throws {
         let sub = tempDir.appendingPathComponent("Nested", isDirectory: true)
         try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
         let taggedFile = sub.appendingPathComponent("tagged_doc.swift")
@@ -593,6 +598,7 @@ final class DolphinFullParityTests: XCTestCase {
         vm.searchTypeFilter = .code
         vm.searchColorTagFilter = .red
         vm.performSearch()
+        await vm.waitForBackgroundWork()
         XCTAssertEqual(vm.searchResults.map(\.name), ["tagged_doc.swift"])
 
         let saved = try XCTUnwrap(vm.saveCurrentSearch(named: "Código Rojo", using: provider))
@@ -606,6 +612,7 @@ final class DolphinFullParityTests: XCTestCase {
         XCTAssertEqual(vm.searchQuery, "tagged")
         XCTAssertEqual(vm.searchTypeFilter, .code)
         XCTAssertEqual(vm.searchColorTagFilter, .red)
+        await vm.waitForBackgroundWork()
 
         let resultItem = try XCTUnwrap(vm.searchResults.first)
         vm.openContainingFolder(of: resultItem)

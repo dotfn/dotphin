@@ -355,17 +355,6 @@ private struct NewTabOverviewCard: View {
     }
 }
 
-extension Notification.Name {
-    static let toggleTabOverview = Notification.Name("Dotphin.toggleTabOverview")
-}
-
-@MainActor
-enum NativeTabOverviewController {
-    static func toggle(in targetWindow: NSWindow? = nil) {
-        NotificationCenter.default.post(name: .toggleTabOverview, object: targetWindow)
-    }
-}
-
 struct TrackpadTouchSample: Sendable {
     let id: Int
     let position: CGPoint

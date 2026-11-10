@@ -554,7 +554,7 @@ final class EmbeddedTerminalSession {
 }
 
 /// KDE Dolphin-style integrated bottom terminal panel (`F4`), with live directory synchronization,
-/// command history (`↑` / `↓`), interrupt (`Ctrl+C`), clear, interactive height resizing,
+/// command history (`↑` / `↓`), interrupt (`Ctrl+C`), clear,
 /// and a quick button to open macOS Terminal.app.
 struct EmbeddedTerminalPanelView: View {
     nonisolated static let minHeight: CGFloat = 110
@@ -564,7 +564,6 @@ struct EmbeddedTerminalPanelView: View {
 
     let session: EmbeddedTerminalSession
     let currentDirectory: URL
-    @Binding var panelHeight: CGFloat
     var onDirectoryChanged: ((URL) -> Void)? = nil
     let onOpenExternalTerminal: () -> Void
     let onClose: () -> Void
@@ -572,34 +571,24 @@ struct EmbeddedTerminalPanelView: View {
     @State private var commandInput: String = ""
     @State private var commandHistory: [String] = []
     @State private var historyIndex: Int? = nil
-    @State private var dragStartHeight: CGFloat? = nil
-    @State private var isHoveringResizeBar: Bool = false
     @FocusState private var isInputFocused: Bool
 
     init(
         session: EmbeddedTerminalSession,
         currentDirectory: URL,
-        panelHeight: Binding<CGFloat> = .constant(Self.defaultHeight),
         onDirectoryChanged: ((URL) -> Void)? = nil,
         onOpenExternalTerminal: @escaping () -> Void,
         onClose: @escaping () -> Void
     ) {
         self.session = session
         self.currentDirectory = currentDirectory
-        self._panelHeight = panelHeight
         self.onDirectoryChanged = onDirectoryChanged
         self.onOpenExternalTerminal = onOpenExternalTerminal
         self.onClose = onClose
     }
 
-    private var isExpandedHeight: Bool {
-        panelHeight >= 340
-    }
-
     var body: some View {
         VStack(spacing: 0) {
-            resizeHandleBar
-
             headerBar
 
             Divider()
@@ -632,75 +621,20 @@ struct EmbeddedTerminalPanelView: View {
         .onAppear {
             session.onDirectoryChanged = onDirectoryChanged
             session.startIfNeeded(initialDirectory: currentDirectory)
-            let approxRows = UInt16(max(6, Int((panelHeight - 64) / 15)))
-            session.updateWindowSize(rows: approxRows)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                isInputFocused = true
-            }
+        }
+        .task {
+            isInputFocused = true
         }
         .onChange(of: currentDirectory) { _, newURL in
             session.syncDirectory(to: newURL)
         }
-        .onChange(of: panelHeight) { _, newHeight in
+        // La altura la maneja el `VSplitView` que contiene al panel.
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.height
+        } action: { newHeight in
             let approxRows = UInt16(max(6, Int((newHeight - 64) / 15)))
             session.updateWindowSize(rows: approxRows)
         }
-    }
-
-    private var verticalResizeGesture: some Gesture {
-        DragGesture(minimumDistance: 1, coordinateSpace: .global)
-            .onChanged { value in
-                let start = dragStartHeight ?? panelHeight
-                if dragStartHeight == nil {
-                    dragStartHeight = start
-                }
-                let proposed = start - value.translation.height
-                panelHeight = min(Self.maxHeight, max(Self.minHeight, proposed))
-            }
-            .onEnded { _ in
-                dragStartHeight = nil
-            }
-    }
-
-    private func toggleExpandedHeight() {
-        withAnimation(.snappy(duration: 0.18)) {
-            panelHeight = isExpandedHeight ? Self.defaultHeight : Self.expandedHeight
-        }
-    }
-
-    private var resizeHandleBar: some View {
-        ZStack {
-            Rectangle()
-                .fill(isHoveringResizeBar || dragStartHeight != nil ? Color.accentColor.opacity(0.14) : Color.clear)
-                .frame(height: 7)
-
-            VStack(spacing: 0) {
-                Rectangle()
-                    .fill(isHoveringResizeBar || dragStartHeight != nil ? Color.accentColor.opacity(0.65) : Color(nsColor: .separatorColor))
-                    .frame(height: 1)
-                Spacer(minLength: 0)
-            }
-
-            Capsule()
-                .fill(isHoveringResizeBar || dragStartHeight != nil ? Color.accentColor : Color.secondary.opacity(0.45))
-                .frame(width: 36, height: 3.5)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 7)
-        .contentShape(Rectangle())
-        .help("Arrastra hacia arriba o abajo para redimensionar la terminal (doble clic para expandir/restaurar)")
-        .onHover { hovering in
-            isHoveringResizeBar = hovering
-            if hovering {
-                NSCursor.resizeUpDown.set()
-            } else {
-                NSCursor.arrow.set()
-            }
-        }
-        .onTapGesture(count: 2) {
-            toggleExpandedHeight()
-        }
-        .gesture(verticalResizeGesture)
     }
 
     private var headerBar: some View {
@@ -768,17 +702,6 @@ struct EmbeddedTerminalPanelView: View {
             .buttonStyle(.plain)
             .help("Limpiar salida de la terminal")
 
-            Button {
-                toggleExpandedHeight()
-            } label: {
-                Image(systemName: isExpandedHeight ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 22, height: 22)
-            }
-            .buttonStyle(.plain)
-            .help(isExpandedHeight ? "Restaurar altura de la terminal" : "Expandir altura de la terminal")
-
             Button(action: onOpenExternalTerminal) {
                 Image(systemName: "arrow.up.forward.app")
                     .font(.system(size: 11))
@@ -799,8 +722,6 @@ struct EmbeddedTerminalPanelView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
-        .contentShape(Rectangle())
-        .gesture(verticalResizeGesture)
     }
 
     private var inputBar: some View {

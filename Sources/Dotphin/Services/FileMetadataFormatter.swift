@@ -59,8 +59,7 @@ struct FileMetadataFormatter {
         if directorySizeMode == .none {
             return "—"
         }
-        let modStamp = item.modificationDate?.timeIntervalSince1970 ?? 0
-        let cacheKey = "\(item.url.path)|\(modStamp)|\(directorySizeMode.rawValue)" as NSString
+        let cacheKey = Self.directorySizeCacheKey(for: item, mode: directorySizeMode)
         if let cached = Self.directorySizeCache.object(forKey: cacheKey) {
             return cached as String
         }
@@ -75,16 +74,20 @@ struct FileMetadataFormatter {
             let visibleCount = entries.filter { !$0.hasPrefix(".") }.count
             computed = visibleCount == 1 ? "1 ítem" : "\(visibleCount) ítems"
         case .contentSize:
-            guard let urls = try? FileManager.default.contentsOfDirectory(
+            // Recursivo, como Dolphin: antes solo sumaba los archivos del primer
+            // nivel y una carpeta con todo dentro de subcarpetas mostraba casi 0.
+            let keys: [URLResourceKey] = [.fileSizeKey, .isDirectoryKey]
+            guard let enumerator = FileManager.default.enumerator(
                 at: item.url,
-                includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey],
+                includingPropertiesForKeys: keys,
                 options: [.skipsHiddenFiles]
             ) else {
                 return "—"
             }
             var totalBytes: Int64 = 0
-            for child in urls {
-                if let vals = try? child.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey]),
+            for case let child as URL in enumerator {
+                if Task.isCancelled { return "—" }
+                if let vals = try? child.resourceValues(forKeys: Set(keys)),
                    vals.isDirectory != true,
                    let sz = vals.fileSize {
                     totalBytes += Int64(sz)
@@ -94,6 +97,25 @@ struct FileMetadataFormatter {
         }
         Self.directorySizeCache.setObject(computed as NSString, forKey: cacheKey)
         return computed
+    }
+
+    /// Solo lo ya calculado, sin tocar el disco: para el `body` de las vistas,
+    /// que no puede bloquearse listando carpetas fila por fila.
+    func cachedSizeDisplayText(for item: FileItem, directorySizeMode: DirectorySizeMode) -> String? {
+        if !item.isDirectory || directorySizeMode == .none {
+            return sizeDisplayText(for: item, directorySizeMode: directorySizeMode)
+        }
+        return Self.directorySizeCache.object(forKey: Self.directorySizeCacheKey(for: item, mode: directorySizeMode)) as String?
+    }
+
+    @concurrent
+    func computedSizeDisplayText(for item: FileItem, directorySizeMode: DirectorySizeMode) async -> String {
+        sizeDisplayText(for: item, directorySizeMode: directorySizeMode)
+    }
+
+    private static func directorySizeCacheKey(for item: FileItem, mode: DirectorySizeMode) -> NSString {
+        let modStamp = item.modificationDate?.timeIntervalSince1970 ?? 0
+        return "\(item.url.path)|\(modStamp)|\(mode.rawValue)" as NSString
     }
 
     /// Formats POSIX permissions according to KDE Dolphin's `UsePermissionsFormat` (`SymbolicFormat`, `NumericFormat`, `CombinedFormat`).
@@ -149,10 +171,16 @@ struct FileMetadataFormatter {
         }
         let base = metadata(for: item)
         var lines: [String] = [item.name, "Tipo: \(base.kind)"]
+        var isComplete = true
         if item.isDirectory {
-            let countText = sizeDisplayText(for: item, directorySizeMode: .contentCount)
-            if countText != "—" {
-                lines.append("Contenido: \(countText)")
+            // Solo si ya se calculó: el tooltip se arma en el `body` de cada fila.
+            // Sin el conteo no se cachea, para que aparezca cuando esté listo.
+            if let countText = cachedSizeDisplayText(for: item, directorySizeMode: .contentCount) {
+                if countText != "—" {
+                    lines.append("Contenido: \(countText)")
+                }
+            } else {
+                isComplete = false
             }
         } else {
             lines.append("Tamaño: \(base.sizeText)")
@@ -165,7 +193,9 @@ struct FileMetadataFormatter {
             lines.append("Destino del enlace: \(target.path)")
         }
         let joined = lines.joined(separator: "\n")
-        Self.tooltipCache.setObject(joined as NSString, forKey: cacheKey)
+        if isComplete {
+            Self.tooltipCache.setObject(joined as NSString, forKey: cacheKey)
+        }
         return joined
     }
 }

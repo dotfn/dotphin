@@ -32,11 +32,13 @@ struct DirectoryReader {
         ]
         let urls: [URL]
         do {
-            urls = try FileManager.default.contentsOfDirectory(
-                at: url,
-                includingPropertiesForKeys: Array(keys),
-                options: []
-            )
+            urls = try DebugEventLog.measure("carga", "    contentsOfDirectory") {
+                try FileManager.default.contentsOfDirectory(
+                    at: url,
+                    includingPropertiesForKeys: Array(keys),
+                    options: []
+                )
+            }
         } catch let error as NSError {
             switch error.code {
             case NSFileReadNoPermissionError:
@@ -48,9 +50,9 @@ struct DirectoryReader {
             }
         }
 
-        let dotHiddenNames = DotHiddenService().hiddenEntries(in: url)
+        let dotHiddenNames = DebugEventLog.measure("carga", "    .hidden") { DotHiddenService().hiddenEntries(in: url) }
 
-        let items = try urls
+        let items = try DebugEventLog.measure("carga", "    resourceValues de \(urls.count) entradas") { try urls
             .filter { itemURL in
                 let name = itemURL.lastPathComponent
                 let isHidden = name.hasPrefix(".") || dotHiddenNames.contains(name)
@@ -78,13 +80,16 @@ struct DirectoryReader {
                     isHiddenInDotHidden: dotHiddenNames.contains(name)
                 )
             }
+        }
 
-        return items.sorted(
-            by: sortField,
-            ascending: ascending,
-            foldersFirst: foldersFirst,
-            hiddenLast: hiddenLast,
-            sortingChoice: sortingChoice
-        )
+        return DebugEventLog.measure("carga", "    ordenar") {
+            items.sorted(
+                by: sortField,
+                ascending: ascending,
+                foldersFirst: foldersFirst,
+                hiddenLast: hiddenLast,
+                sortingChoice: sortingChoice
+            )
+        }
     }
 }

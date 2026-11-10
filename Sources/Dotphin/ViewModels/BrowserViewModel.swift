@@ -27,10 +27,13 @@ enum FilterPatternMode: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
+@MainActor
 @Observable
 final class BrowserViewModel {
     private(set) var currentURL: URL
-    private(set) var items: [FileItem] = []
+    private(set) var items: [FileItem] = [] {
+        didSet { itemsVersion &+= 1 }
+    }
     private(set) var error: DirectoryReadError?
     private(set) var viewProperties: ViewProperties
     private(set) var selectedIDs: Set<FileItem.ID> = []
@@ -148,7 +151,44 @@ final class BrowserViewModel {
         }
     }
 
+    private struct FilterCacheKey: Equatable {
+        let itemsVersion: Int
+        let filterText: String
+        let filterMode: FilterPatternMode
+        let isCaseSensitive: Bool
+        let typeFilter: SearchTypeFilter
+        let dateFilter: SearchDateFilter
+        let sizeFilter: SearchSizeFilter
+        let colorTagFilter: FinderColorTag
+    }
+
+    @ObservationIgnored private var itemsVersion = 0
+    @ObservationIgnored private var filteredItemsCache: (key: FilterCacheKey, items: [FileItem])?
+
+    /// Se lee varias veces por redibujado (vistas + didSets); con regex y miles de
+    /// ítems filtrar cada vez se notaba. Se recalcula solo si cambian ítems o filtros.
+    /// Las propiedades se leen igual al armar la clave, así Observation sigue registrándolas.
     var filteredItems: [FileItem] {
+        let key = FilterCacheKey(
+            itemsVersion: itemsVersion,
+            filterText: filterText,
+            filterMode: filterMode,
+            isCaseSensitive: isFilterCaseSensitive,
+            typeFilter: searchTypeFilter,
+            dateFilter: searchDateFilter,
+            sizeFilter: searchSizeFilter,
+            colorTagFilter: searchColorTagFilter
+        )
+        _ = items
+        if let cached = filteredItemsCache, cached.key == key {
+            return cached.items
+        }
+        let computed = computeFilteredItems()
+        filteredItemsCache = (key, computed)
+        return computed
+    }
+
+    private func computeFilteredItems() -> [FileItem] {
         if filterText.isEmpty && !hasActiveFacets {
             return items
         }
@@ -227,6 +267,12 @@ final class BrowserViewModel {
         }
     }
     private(set) var searchResults: [FileItem] = []
+    /// `true` mientras la búsqueda en segundo plano no terminó; la vista muestra
+    /// progreso en vez de "sin resultados" en ese intervalo.
+    private(set) var isSearching: Bool = false
+    @ObservationIgnored private var searchTask: Task<Void, Never>?
+    @ObservationIgnored private var gitTask: Task<Void, Never>?
+    @ObservationIgnored private var gitStatusesURL: URL?
 
     private(set) var gitStatuses: [String: GitFileStatus] = [:]
     private(set) var isGitRepository: Bool = false
@@ -237,7 +283,12 @@ final class BrowserViewModel {
     /// Type-ahead selection buffer (`KItemListController::typeAheadUsed` in `src/views/dolphinview.cpp`).
     private(set) var typeAheadBuffer: String = ""
     @ObservationIgnored private var lastTypeAheadTimestamp: Date = .distantPast
-    @ObservationIgnored private var typeAheadResetWorkItem: DispatchWorkItem?
+    @ObservationIgnored private var typeAheadResetTask: Task<Void, Never>?
+    /// Ítem que la vista de archivos está renombrando en línea.
+    var renamingItemID: FileItem.ID?
+    /// `UndoManager` de la ventana: ahí se registran las operaciones de archivo
+    /// para que Deshacer/Rehacer sean los del menú Edición estándar.
+    @ObservationIgnored weak var undoManager: UndoManager?
     private(set) var backStack: [URL] = []
     private(set) var forwardStack: [URL] = []
     private(set) var history = FileOperationHistory()
@@ -336,27 +387,58 @@ final class BrowserViewModel {
         searchDateFilter = .any
         searchSizeFilter = .any
         searchColorTagFilter = .none
-        searchResults = []
+        cancelSearch()
         load(url)
     }
 
+    private func cancelSearch() {
+        searchTask?.cancel()
+        searchTask = nil
+        isSearching = false
+        searchResults = []
+    }
+
+    /// Lanza la búsqueda en segundo plano, cancelando la anterior: cambiar un
+    /// filtro mientras corre ya no encola recorridos completos uno detrás de otro.
     func performSearch() {
+        searchTask?.cancel()
         guard !searchQuery.isEmpty else {
+            searchTask = nil
+            isSearching = false
             searchResults = []
             return
         }
         let rootURL = searchLocationScope == .everywhere
             ? FileManager.default.homeDirectoryForCurrentUser
             : currentURL
-        searchResults = search.search(
-            for: searchQuery,
-            in: rootURL,
-            typeFilter: searchTypeFilter,
-            dateFilter: searchDateFilter,
-            sizeFilter: searchSizeFilter,
-            colorTagFilter: searchColorTagFilter,
-            matchMode: searchMatchMode
-        )
+        let query = searchQuery
+        let typeFilter = searchTypeFilter
+        let dateFilter = searchDateFilter
+        let sizeFilter = searchSizeFilter
+        let colorTagFilter = searchColorTagFilter
+        let matchMode = searchMatchMode
+        let search = search
+        isSearching = true
+        searchTask = Task { [weak self] in
+            let results = await search.results(
+                for: query,
+                in: rootURL,
+                typeFilter: typeFilter,
+                dateFilter: dateFilter,
+                sizeFilter: sizeFilter,
+                colorTagFilter: colorTagFilter,
+                matchMode: matchMode
+            )
+            guard !Task.isCancelled, let self else { return }
+            self.searchResults = results
+            self.isSearching = false
+        }
+    }
+
+    /// Espera a que terminen la búsqueda y la carga de git en curso (para tests).
+    func waitForBackgroundWork() async {
+        await searchTask?.value
+        await gitTask?.value
     }
 
     func resetSearchAndFilters() {
@@ -368,7 +450,7 @@ final class BrowserViewModel {
         searchColorTagFilter = .none
         searchLocationScope = .fromHere
         searchMatchMode = .filename
-        searchResults = []
+        cancelSearch()
     }
 
     /// Saves the current search configuration into the Places sidebar (`Search::Bar::slotSaveSearch`).
@@ -430,16 +512,27 @@ final class BrowserViewModel {
     }
 
     func select(_ item: FileItem?) {
+        DebugEventLog.log("selección", "select(\(item?.name ?? "nil"))")
         selectedIDs = item.map { [$0.id] } ?? []
         selectionAnchor = item?.id
         selectionCursor = item?.id
     }
 
     func setSelection(_ ids: Set<FileItem.ID>) {
-        let resolvedLookup = Dictionary(
-            uniqueKeysWithValues: items.map { ($0.id.resolvingSymlinksInPath(), $0.id) }
-        )
-        let normalized = Set(ids.map { resolvedLookup[$0.resolvingSymlinksInPath()] ?? $0 })
+        DebugEventLog.log("selección", "setSelection(\(DebugEventLog.names(ids))) antes=\(DebugEventLog.names(selectedIDs)) runloop=\(DebugEventLog.runLoopModeDescription) evento=\(NSApp?.currentEvent.map { String(describing: $0.type) } ?? "nil")")
+        // Lo normal es que los IDs vengan tal cual de la lista: entonces no hace
+        // falta resolver symlinks (una llamada al disco por ítem, en cada clic).
+        let knownIDs = Set(items.map(\.id)).union(searchResults.map(\.id))
+        let normalized: Set<FileItem.ID>
+        if ids.isSubset(of: knownIDs) {
+            normalized = ids
+        } else {
+            let resolvedLookup = Dictionary(
+                items.map { ($0.id.resolvingSymlinksInPath(), $0.id) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            normalized = Set(ids.map { knownIDs.contains($0) ? $0 : (resolvedLookup[$0.resolvingSymlinksInPath()] ?? $0) })
+        }
         selectedIDs = normalized
         if normalized.count == 1 {
             selectionAnchor = normalized.first
@@ -448,6 +541,7 @@ final class BrowserViewModel {
     }
 
     func deselectAll() {
+        DebugEventLog.log("selección", "deselectAll()")
         selectedIDs = []
         selectionAnchor = nil
         selectionCursor = nil
@@ -619,12 +713,12 @@ final class BrowserViewModel {
         }
         lastTypeAheadTimestamp = now
 
-        typeAheadResetWorkItem?.cancel()
-        let work = DispatchWorkItem { [weak self] in
+        typeAheadResetTask?.cancel()
+        typeAheadResetTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1.15))
+            guard !Task.isCancelled else { return }
             self?.typeAheadBuffer = ""
         }
-        typeAheadResetWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.15, execute: work)
 
         let visible = searchQuery.isEmpty ? filteredItems : searchResults
         guard !visible.isEmpty else { return nil }
@@ -646,12 +740,13 @@ final class BrowserViewModel {
     }
 
     func clearTypeAheadBuffer() {
-        typeAheadResetWorkItem?.cancel()
+        typeAheadResetTask?.cancel()
         typeAheadBuffer = ""
         lastTypeAheadTimestamp = .distantPast
     }
 
     func toggleSelection(_ item: FileItem) {
+        DebugEventLog.log("selección", "toggleSelection(\(item.name))")
         if selectedIDs.contains(item.id) {
             selectedIDs.remove(item.id)
         } else {
@@ -662,6 +757,7 @@ final class BrowserViewModel {
 
     /// Shift-click: select the contiguous range between the anchor and `item` in the visible order.
     func extendSelection(to item: FileItem) {
+        DebugEventLog.log("selección", "extendSelection(to: \(item.name)) ancla=\(selectionAnchor?.lastPathComponent ?? "nil")")
         let visible = filteredItems
         guard let anchor = selectionAnchor,
               let from = visible.firstIndex(where: { $0.id == anchor }),
@@ -819,11 +915,22 @@ final class BrowserViewModel {
         refresh()
     }
 
+    /// Cierra la edición en línea; `newName == nil` = cancelada.
+    func endRenaming(_ id: FileItem.ID, newName: String?) {
+        renamingItemID = nil
+        guard let newName,
+              let item = items.first(where: { $0.id == id }) ?? searchResults.first(where: { $0.id == id }),
+              !newName.isEmpty, newName != item.name
+        else { return }
+        select(item)
+        renameSelected(to: newName)
+    }
+
     func renameSelected(to newName: String) {
         guard let item = selectedItem else { return }
         do {
             let destination = try operations.rename(item, to: newName)
-            history.record([.moved(from: item.url, to: destination)])
+            record([.moved(from: item.url, to: destination)])
             refresh()
             if let renamed = items.first(where: { $0.name == newName }) { select(renamed) } else { selectedIDs = [] }
         } catch let opError as FileOperationError {
@@ -857,7 +964,7 @@ final class BrowserViewModel {
                 failures.append(entry.item.name)
             }
         }
-        history.record(batch)
+        record(batch)
         refresh()
         selectedIDs = newSelectedURLs.intersection(Set(items.map(\.id)))
         if !failures.isEmpty {
@@ -884,7 +991,7 @@ final class BrowserViewModel {
                     failures.append(item.name)
                 }
             }
-            history.record(batch)
+            record(batch)
             refresh()
             if let folderItem = items.first(where: { $0.name == createdFolder.lastPathComponent }) {
                 select(folderItem)
@@ -943,7 +1050,7 @@ final class BrowserViewModel {
     func delete(_ item: FileItem) {
         do {
             if let trashed = try operations.moveToTrash(item) {
-                history.record([.trashed(original: item.url, trashed: trashed)])
+                record([.trashed(original: item.url, trashed: trashed)])
             }
             refresh()
         } catch let opError as FileOperationError {
@@ -956,7 +1063,7 @@ final class BrowserViewModel {
     func createFolder(named name: String) {
         do {
             let created = try operations.createFolder(in: currentURL, named: name)
-            history.record([.createdFolder(created)])
+            record([.createdFolder(created)])
             refresh()
             if let item = items.first(where: { $0.url.standardizedFileURL == created.standardizedFileURL }) {
                 select(item)
@@ -992,7 +1099,7 @@ final class BrowserViewModel {
             if name.lowercased().hasSuffix(".sh") {
                 try? FileManager.default.setAttributes([.posixPermissions: NSNumber(value: Int16(0o755))], ofItemAtPath: created.path)
             }
-            history.record([.createdFile(created, resolvedContents)])
+            record([.createdFile(created, resolvedContents)])
             refresh()
             if let item = items.first(where: { $0.url.standardizedFileURL == created.standardizedFileURL }) {
                 select(item)
@@ -1008,7 +1115,7 @@ final class BrowserViewModel {
     func createSymbolicLink(named linkName: String, pointingTo targetPath: String) {
         do {
             let created = try operations.createSymbolicLink(in: currentURL, named: linkName, pointingTo: targetPath)
-            history.record([.createdFolder(created)])
+            record([.createdFolder(created)])
             refresh()
             if let item = items.first(where: { $0.url.standardizedFileURL == created.standardizedFileURL }) {
                 select(item)
@@ -1036,7 +1143,7 @@ final class BrowserViewModel {
                 failures.append(item.name)
             }
         }
-        history.record(batch)
+        record(batch)
         refresh()
         selectedIDs = createdURLs.intersection(Set(items.map(\.id)))
         if !failures.isEmpty {
@@ -1078,7 +1185,7 @@ final class BrowserViewModel {
                 failures.append(item.name)
             }
         }
-        history.record(batch)
+        record(batch)
         refresh()
         selectedIDs = createdURLs.intersection(Set(items.map(\.id)))
         if !failures.isEmpty {
@@ -1100,7 +1207,7 @@ final class BrowserViewModel {
                 failures.append(item.name)
             }
         }
-        history.record(batch)
+        record(batch)
         refresh()
         if !failures.isEmpty {
             operationError = .other("No se pudieron copiar al otro panel: \(failures.joined(separator: ", "))")
@@ -1124,7 +1231,7 @@ final class BrowserViewModel {
                 in: currentURL,
                 archiveName: archiveName
             )
-            history.record([.createdFolder(archiveURL)])
+            record([.createdFolder(archiveURL)])
             refresh()
             if let createdItem = items.first(where: { $0.url.standardizedFileURL == archiveURL.standardizedFileURL }) {
                 select(createdItem)
@@ -1140,7 +1247,7 @@ final class BrowserViewModel {
     func extractArchive(_ item: FileItem) {
         do {
             let extractedFolder = try ArchiveService().extract(item.url, in: currentURL)
-            history.record([.createdFolder(extractedFolder)])
+            record([.createdFolder(extractedFolder)])
             refresh()
             if let createdItem = items.first(where: { $0.url.standardizedFileURL == extractedFolder.standardizedFileURL }) {
                 select(createdItem)
@@ -1162,6 +1269,7 @@ final class BrowserViewModel {
     }
 
     func moveDroppedItems(_ urls: [URL], into directory: URL) {
+        DebugEventLog.log("drop", "moveDroppedItems(\(DebugEventLog.names(urls)) → \(directory.lastPathComponent))")
         defer { refresh() }
         var failures: [String] = []
         var batch: [FileOperationRecord] = []
@@ -1175,7 +1283,8 @@ final class BrowserViewModel {
                 failures.append(url.lastPathComponent)
             }
         }
-        history.record(batch)
+        record(batch)
+        DebugEventLog.log("drop", "movidos=\(batch.count) fallaron=\(failures.isEmpty ? "∅" : failures.joined(separator: ", "))")
         if !failures.isEmpty {
             operationError = .other("No se pudieron mover: \(failures.joined(separator: ", "))")
         }
@@ -1221,7 +1330,7 @@ final class BrowserViewModel {
                 failures.append(item.name)
             }
         }
-        history.record(batch)
+        record(batch)
         if !failures.isEmpty {
             operationError = .other("No se pudieron eliminar: \(failures.joined(separator: ", "))")
         }
@@ -1253,7 +1362,7 @@ final class BrowserViewModel {
                 failures.append(url.lastPathComponent)
             }
         }
-        history.record(batch)
+        record(batch)
         if mode == .cut && failures.isEmpty {
             clipboard.clear()
         }
@@ -1271,6 +1380,31 @@ final class BrowserViewModel {
     }
 
     // MARK: - Deshacer / Rehacer
+
+    /// Guarda el lote en el historial y lo registra en el `UndoManager` de la ventana.
+    private func record(_ batch: [FileOperationRecord]) {
+        guard !batch.isEmpty else { return }
+        history.record(batch)
+        registerUndo(named: FileOperationHistory.actionSummary(for: batch))
+    }
+
+    /// El mismo registro sirve para deshacer y rehacer: `UndoManager` apila en
+    /// la pila contraria lo que se registra mientras deshace o rehace.
+    private func registerUndo(named actionName: String) {
+        guard let undoManager else { return }
+        undoManager.registerUndo(withTarget: self) { viewModel in
+            MainActor.assumeIsolated {
+                guard let undoManager = viewModel.undoManager else { return }
+                if undoManager.isUndoing {
+                    viewModel.undo()
+                } else {
+                    viewModel.redo()
+                }
+                viewModel.registerUndo(named: actionName)
+            }
+        }
+        undoManager.setActionName(actionName)
+    }
 
     var canUndo: Bool { history.canUndo }
     var canRedo: Bool { history.canRedo }
@@ -1390,20 +1524,54 @@ final class BrowserViewModel {
         gitStatus.recentCommits(in: currentURL, limit: limit)
     }
 
+    /// Detectar el repo es una caminata barata por `.git`; `git status` y la rama
+    /// se piden en segundo plano y se descartan si mientras tanto se navegó a otro lado.
+    private func loadGitState(for url: URL) {
+        gitTask?.cancel()
+        let isSameFolder = gitStatusesURL?.standardizedFileURL.path == url.standardizedFileURL.path
+        isGitRepository = gitStatus.isGitRepository(in: url)
+        guard isGitRepository else {
+            gitTask = nil
+            gitStatusesURL = url
+            gitStatuses = [:]
+            gitBranchName = nil
+            return
+        }
+        if !isSameFolder {
+            gitStatuses = [:]
+        }
+        let provider = gitStatus
+        gitTask = Task { [weak self] in
+            let snapshot = await provider.snapshot(in: url)
+            guard !Task.isCancelled, let self else { return }
+            self.gitStatusesURL = url
+            self.gitStatuses = snapshot.statuses
+            self.gitBranchName = snapshot.branch
+        }
+    }
+
     private func load(_ url: URL) {
+        DebugEventLog.measure("carga", "load(\(url.lastPathComponent))") { loadNow(url) }
+        DebugEventLog.log("carga", "\(items.count) ítems en \(url.lastPathComponent)")
+    }
+
+    private func loadNow(_ url: URL) {
         var activeReader = reader
         activeReader.sortingChoice = AppSettingsStore().settings().sortingChoice
         if let overrideHidden = viewProperties.showsHiddenFilesOverride {
             activeReader.showsHiddenFiles = overrideHidden
         }
         do {
-            items = try activeReader.contents(
-                of: url,
-                sortField: viewProperties.sortField,
-                ascending: viewProperties.ascending,
-                foldersFirst: viewProperties.sortFoldersFirst,
-                hiddenLast: viewProperties.sortHiddenLast
-            )
+            let loaded = try DebugEventLog.measure("carga", "  leer directorio") {
+                try activeReader.contents(
+                    of: url,
+                    sortField: viewProperties.sortField,
+                    ascending: viewProperties.ascending,
+                    foldersFirst: viewProperties.sortFoldersFirst,
+                    hiddenLast: viewProperties.sortHiddenLast
+                )
+            }
+            DebugEventLog.measure("carga", "  asignar items (dispara SwiftUI)") { items = loaded }
             error = nil
         } catch let readError as DirectoryReadError {
             items = []
@@ -1413,10 +1581,8 @@ final class BrowserViewModel {
             self.error = .other(error.localizedDescription)
         }
         selectedIDs = selectedIDs.intersection(Set(items.map(\.id)))
-        isGitRepository = gitStatus.isGitRepository(in: url)
-        gitStatuses = isGitRepository ? gitStatus.statuses(in: url) : [:]
-        gitBranchName = isGitRepository ? gitStatus.currentBranch(in: url) : nil
-        availableCapacity = VolumeInfoProvider().availableCapacity(for: url)
-        isCurrentDirectoryWritable = FileManager.default.isWritableFile(atPath: url.path)
+        DebugEventLog.measure("carga", "  git") { loadGitState(for: url) }
+        availableCapacity = DebugEventLog.measure("carga", "  espacio del volumen") { VolumeInfoProvider().availableCapacity(for: url) }
+        isCurrentDirectoryWritable = DebugEventLog.measure("carga", "  permisos de escritura") { FileManager.default.isWritableFile(atPath: url.path) }
     }
 }

@@ -238,6 +238,30 @@ struct SavedSearchItem: Identifiable, Hashable, Codable, Sendable {
 }
 
 struct SearchService {
+    /// Misma búsqueda que `search(for:...)` pero fuera del main actor: recorrer
+    /// el home entero (alcance "en todas partes") o leer contenidos bloqueaba la UI.
+    /// Se corta en cuanto la tarea que la llamó se cancela.
+    @concurrent
+    func results(
+        for query: String,
+        in directory: URL,
+        typeFilter: SearchTypeFilter,
+        dateFilter: SearchDateFilter,
+        sizeFilter: SearchSizeFilter,
+        colorTagFilter: FinderColorTag,
+        matchMode: SearchMatchMode
+    ) async -> [FileItem] {
+        search(
+            for: query,
+            in: directory,
+            typeFilter: typeFilter,
+            dateFilter: dateFilter,
+            sizeFilter: sizeFilter,
+            colorTagFilter: colorTagFilter,
+            matchMode: matchMode
+        )
+    }
+
     func search(
         for query: String,
         in directory: URL,
@@ -269,6 +293,7 @@ struct SearchService {
 
         var results: [FileItem] = []
         for case let url as URL in enumerator {
+            if Task.isCancelled { return [] }
             guard let values = try? url.resourceValues(forKeys: Set(keys)) else { continue }
             let isDirectory = values.isDirectory ?? false
             let fileSize = values.fileSize.map(Int64.init)

@@ -19,6 +19,7 @@ struct TabSessionSnapshot: Codable, Equatable {
     let selectedIndex: Int
 }
 
+@MainActor
 @Observable
 final class TabsViewModel {
     private(set) var tabs: [Tab]

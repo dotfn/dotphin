@@ -1,10 +1,6 @@
 import AppKit
 import SwiftUI
 
-extension Notification.Name {
-    static let editLocationBar = Notification.Name("Dotphin.editLocationBar")
-}
-
 /// Dolphin's URL navigator: breadcrumb mode by default; click on empty space, the edit button, or ⌘L
 /// switches to an editable path field (Return navigates, Esc cancels, Tab completes).
 struct BreadcrumbView: View {
@@ -19,6 +15,8 @@ struct BreadcrumbView: View {
     @State private var hoveredAncestor: URL?
     @State private var isEditButtonHovered = false
     @FocusState private var isFieldFocused: Bool
+    @Environment(\.locationEditRequest) private var locationEditRequest
+    @Environment(\.isActiveBrowserPane) private var isActivePane
 
     private var ancestors: [URL] {
         var result: [URL] = [url]
@@ -47,8 +45,12 @@ struct BreadcrumbView: View {
         .onAppear {
             text = url.path
         }
-        .onReceive(NotificationCenter.default.publisher(for: .editLocationBar)) { _ in
-            beginEditing()
+        .onChange(of: isEditing) { _, editing in
+            // El campo ya existe cuando corre este onChange: el foco prende sin demoras.
+            if editing { isFieldFocused = true }
+        }
+        .onChange(of: locationEditRequest) { _, _ in
+            if isActivePane { beginEditing() }
         }
         .onChange(of: url) { _, newURL in
             text = newURL.path
@@ -111,78 +113,87 @@ struct BreadcrumbView: View {
         )
     }
 
-    private var crumbs: some View {
-        HStack(spacing: 4) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 2) {
-                    ForEach(Array(ancestors.enumerated()), id: \.element) { idx, ancestor in
-                        let isCurrent = ancestor == ancestors.last
-                        let isHovered = hoveredAncestor == ancestor
-                        let isRoot = ancestor.lastPathComponent.isEmpty || ancestor.path == "/"
-                        Button {
-                            onNavigate(ancestor)
-                        } label: {
-                            HStack(spacing: 5) {
-                                Image(nsImage: ThumbnailLoader.icon(forFile: ancestor.path))
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 15, height: 15)
-                                Text(isRoot ? (FileManager.default.displayName(atPath: "/").isEmpty ? "/" : FileManager.default.displayName(atPath: "/")) : ancestor.lastPathComponent)
-                                    .font(.system(size: 12.5, weight: isCurrent ? .semibold : .regular))
-                                    .foregroundStyle(isCurrent ? .primary : .secondary)
-                                    .lineLimit(1)
-                            }
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(
-                                isCurrent
-                                    ? Color.primary.opacity(0.10)
-                                    : (isHovered ? Color.primary.opacity(0.06) : Color.clear),
-                                in: RoundedRectangle(cornerRadius: 5)
-                            )
-                            .animation(.easeOut(duration: 0.14), value: isHovered)
-                        }
-                        .buttonStyle(.plain)
-                        .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .leading)))
-                        .onHover { hovering in
-                            hoveredAncestor = hovering ? ancestor : (hoveredAncestor == ancestor ? nil : hoveredAncestor)
-                        }
-                        .contextMenu {
-                            Button("Abrir") {
-                                onNavigate(ancestor)
-                            }
-                            if let onOpenInNewTab {
-                                Button("Abrir en una pestaña nueva") {
-                                    onOpenInNewTab(ancestor)
-                                }
-                            }
-                            if let onOpenInSplitView {
-                                Button("Abrir en vista dividida") {
-                                    onOpenInSplitView(ancestor)
-                                }
-                            }
-                            Divider()
-                            Button("Copiar ubicación") {
-                                NSPasteboard.general.clearContents()
-                                NSPasteboard.general.setString(ancestor.path, forType: .string)
-                            }
-                            Button("Añadir a Lugares") {
-                                PlacesProvider().addBookmark(for: ancestor)
-                            }
-                            Button("Mostrar en Finder") {
-                                NSWorkspace.shared.activateFileViewerSelecting([ancestor])
-                            }
-                        }
-
-                        if !isCurrent {
-                            let nextAncestor = (idx + 1 < ancestors.count) ? ancestors[idx + 1] : nil
-                            subfolderChevronMenu(for: ancestor, activeChild: nextAncestor)
+    private var crumbRow: some View {
+        HStack(spacing: 2) {
+            ForEach(Array(ancestors.enumerated()), id: \.element) { idx, ancestor in
+                let isCurrent = ancestor == ancestors.last
+                let isHovered = hoveredAncestor == ancestor
+                let isRoot = ancestor.lastPathComponent.isEmpty || ancestor.path == "/"
+                Button {
+                    onNavigate(ancestor)
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(nsImage: ThumbnailLoader.icon(forFile: ancestor.path))
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 15, height: 15)
+                        Text(isRoot ? (FileManager.default.displayName(atPath: "/").isEmpty ? "/" : FileManager.default.displayName(atPath: "/")) : ancestor.lastPathComponent)
+                            .font(.system(size: 12.5, weight: isCurrent ? .semibold : .regular))
+                            .foregroundStyle(isCurrent ? .primary : .secondary)
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(
+                        isCurrent
+                            ? Color.primary.opacity(0.10)
+                            : (isHovered ? Color.primary.opacity(0.06) : Color.clear),
+                        in: RoundedRectangle(cornerRadius: 5)
+                    )
+                    .animation(.easeOut(duration: 0.14), value: isHovered)
+                }
+                .buttonStyle(.plain)
+                .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .leading)))
+                .onHover { hovering in
+                    hoveredAncestor = hovering ? ancestor : (hoveredAncestor == ancestor ? nil : hoveredAncestor)
+                }
+                .contextMenu {
+                    Button("Abrir") {
+                        onNavigate(ancestor)
+                    }
+                    if let onOpenInNewTab {
+                        Button("Abrir en una pestaña nueva") {
+                            onOpenInNewTab(ancestor)
                         }
                     }
+                    if let onOpenInSplitView {
+                        Button("Abrir en vista dividida") {
+                            onOpenInSplitView(ancestor)
+                        }
+                    }
+                    Divider()
+                    Button("Copiar ubicación") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(ancestor.path, forType: .string)
+                    }
+                    Button("Añadir a Lugares") {
+                        PlacesProvider().addBookmark(for: ancestor)
+                    }
+                    Button("Mostrar en Finder") {
+                        NSWorkspace.shared.activateFileViewerSelecting([ancestor])
+                    }
                 }
-                .padding(.horizontal, 2)
+
+                if !isCurrent {
+                    let nextAncestor = (idx + 1 < ancestors.count) ? ancestors[idx + 1] : nil
+                    subfolderChevronMenu(for: ancestor, activeChild: nextAncestor)
+                }
             }
-            .fixedSize(horizontal: true, vertical: false)
+        }
+        .padding(.horizontal, 2)
+    }
+
+    private var crumbs: some View {
+        HStack(spacing: 4) {
+            // Si las migas entran, se muestran a su ancho natural; si no, se
+            // desplazan en horizontal. (Un `ScrollView` con `fixedSize` acá
+            // entraba en bucle de layout junto al inspector.)
+            ViewThatFits(in: .horizontal) {
+                crumbRow
+                ScrollView(.horizontal, showsIndicators: false) {
+                    crumbRow
+                }
+            }
 
             Color.clear
                 .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24)
@@ -250,7 +261,6 @@ struct BreadcrumbView: View {
         withAnimation(.snappy(duration: 0.18)) {
             isEditing = true
         }
-        DispatchQueue.main.async { isFieldFocused = true }
     }
 
     private func commit() {

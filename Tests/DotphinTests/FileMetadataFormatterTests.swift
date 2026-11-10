@@ -23,4 +23,20 @@ final class FileMetadataFormatterTests: XCTestCase {
         XCTAssertEqual(meta.kind, "Documento")
         XCTAssertEqual(meta.modifiedText, "—")
     }
+
+    func test_contentSize_includesFilesInSubfolders() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let nested = root.appendingPathComponent("a/b", isDirectory: true)
+        try FileManager.default.createDirectory(at: nested, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data(repeating: 0, count: 50_000).write(to: nested.appendingPathComponent("big.bin"))
+
+        let item = FileItem(url: root, name: root.lastPathComponent, isDirectory: true, isSymbolicLink: false, size: nil, modificationDate: Date())
+        let formatter = FileMetadataFormatter()
+        XCTAssertNil(formatter.cachedSizeDisplayText(for: item, directorySizeMode: .contentSize), "sin calcular no debe tocar el disco")
+
+        let text = await formatter.computedSizeDisplayText(for: item, directorySizeMode: .contentSize)
+        XCTAssertEqual(text, ByteCountFormatter.string(fromByteCount: 50_000, countStyle: .file), "el archivo de la subcarpeta debe contar")
+        XCTAssertEqual(formatter.cachedSizeDisplayText(for: item, directorySizeMode: .contentSize), text)
+    }
 }

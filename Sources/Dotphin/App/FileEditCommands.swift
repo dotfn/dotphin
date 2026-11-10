@@ -1,40 +1,6 @@
 import AppKit
 import SwiftUI
 
-extension Notification.Name {
-    static let renameSelectedFiles = Notification.Name("Dotphin.renameSelectedFiles")
-    static let createNewFolderShortcut = Notification.Name("Dotphin.createNewFolderShortcut")
-    static let moveToNewFolderShortcut = Notification.Name("Dotphin.moveToNewFolderShortcut")
-    static let selectByPatternShortcut = Notification.Name("Dotphin.selectByPatternShortcut")
-    static let deleteSelectedFilesShortcut = Notification.Name("Dotphin.deleteSelectedFilesShortcut")
-    static let permanentDeleteSelectedFilesShortcut = Notification.Name("Dotphin.permanentDeleteSelectedFilesShortcut")
-    static let quickLookSelectedFilesShortcut = Notification.Name("Dotphin.quickLookSelectedFilesShortcut")
-    static let showPropertiesShortcut = Notification.Name("Dotphin.showPropertiesShortcut")
-    static let showViewPropertiesDialogShortcut = Notification.Name("Dotphin.showViewPropertiesDialogShortcut")
-    static let showDiskUsageAnalyzerShortcut = Notification.Name("Dotphin.showDiskUsageAnalyzerShortcut")
-    static let addTabShortcut = Notification.Name("Dotphin.addTabShortcut")
-    static let duplicateTabShortcut = Notification.Name("Dotphin.duplicateTabShortcut")
-    static let closeTabShortcut = Notification.Name("Dotphin.closeTabShortcut")
-    static let closeOtherTabsShortcut = Notification.Name("Dotphin.closeOtherTabsShortcut")
-    static let reopenClosedTabShortcut = Notification.Name("Dotphin.reopenClosedTabShortcut")
-    static let selectNextTabShortcut = Notification.Name("Dotphin.selectNextTabShortcut")
-    static let selectPrevTabShortcut = Notification.Name("Dotphin.selectPrevTabShortcut")
-    static let toggleSplitShortcut = Notification.Name("Dotphin.toggleSplitShortcut")
-    static let focusOtherSplitPaneShortcut = Notification.Name("Dotphin.focusOtherSplitPaneShortcut")
-    static let moveSplitToTabsShortcut = Notification.Name("Dotphin.moveSplitToTabsShortcut")
-    static let swapSplitPanesShortcut = Notification.Name("Dotphin.swapSplitPanesShortcut")
-    static let copyToOtherSplitPaneShortcut = Notification.Name("Dotphin.copyToOtherSplitPaneShortcut")
-    static let moveToOtherSplitPaneShortcut = Notification.Name("Dotphin.moveToOtherSplitPaneShortcut")
-    static let compareFilesShortcut = Notification.Name("Dotphin.compareFilesShortcut")
-    static let toggleInfoPanelShortcut = Notification.Name("Dotphin.toggleInfoPanelShortcut")
-    static let toggleFilterBarShortcut = Notification.Name("Dotphin.toggleFilterBarShortcut")
-    static let toggleEmbeddedTerminalShortcut = Notification.Name("Dotphin.toggleEmbeddedTerminalShortcut")
-    static let openTerminalShortcut = Notification.Name("Dotphin.openTerminalShortcut")
-    static let bookmarkAllTabsShortcut = Notification.Name("Dotphin.bookmarkAllTabsShortcut")
-    static let editBookmarksShortcut = Notification.Name("Dotphin.editBookmarksShortcut")
-    static let openAllBookmarksInTabsShortcut = Notification.Name("Dotphin.openAllBookmarksInTabsShortcut")
-}
-
 private struct BrowserViewModelFocusedKey: FocusedValueKey {
     typealias Value = BrowserViewModel
 }
@@ -49,10 +15,7 @@ extension FocusedValues {
 /// Edit, File, View, Go, and Bookmarks menu commands replicating Dolphin's keyboard shortcuts alongside native macOS ones.
 struct FileEditCommands: Commands {
     @FocusedValue(\.browserViewModel) private var viewModel
-
-    private var isEditingText: Bool {
-        NSApp.keyWindow?.firstResponder is NSText
-    }
+    @FocusedValue(\.windowCommands) private var commands
 
     private static func fKey(_ code: Int) -> KeyEquivalent {
         KeyEquivalent(Character(UnicodeScalar(code)!))
@@ -61,28 +24,28 @@ struct FileEditCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
             Button("Nueva pestaña") {
-                NotificationCenter.default.post(name: .addTabShortcut, object: nil)
+                commands?.perform(.addTab)
             }
             .keyboardShortcut("t", modifiers: .command)
 
             Button("Duplicar pestaña actual") {
-                NotificationCenter.default.post(name: .duplicateTabShortcut, object: nil)
+                commands?.perform(.duplicateTab)
             }
 
             Button("Reabrir pestaña cerrada") {
-                NotificationCenter.default.post(name: .reopenClosedTabShortcut, object: nil)
+                commands?.perform(.reopenClosedTab)
             }
             .keyboardShortcut("t", modifiers: [.command, .shift])
 
             Divider()
 
             Button("Nueva carpeta…") {
-                NotificationCenter.default.post(name: .createNewFolderShortcut, object: nil)
+                commands?.perform(.createNewFolder)
             }
             .keyboardShortcut("n", modifiers: [.command, .shift])
 
             Button("Mover selección a carpeta nueva…") {
-                NotificationCenter.default.post(name: .moveToNewFolderShortcut, object: nil)
+                commands?.perform(.moveToNewFolder)
             }
             .keyboardShortcut("n", modifiers: [.command, .control])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
@@ -94,80 +57,39 @@ struct FileEditCommands: Commands {
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
             Button("Cerrar pestaña") {
-                NotificationCenter.default.post(name: .closeTabShortcut, object: nil)
+                commands?.perform(.closeTab)
             }
             .keyboardShortcut("w", modifiers: .command)
 
             Button("Cerrar otras pestañas") {
-                NotificationCenter.default.post(name: .closeOtherTabsShortcut, object: nil)
+                commands?.perform(.closeOtherTabs)
             }
 
             Divider()
 
             Button("Vista rápida") {
-                NotificationCenter.default.post(name: .quickLookSelectedFilesShortcut, object: nil)
+                commands?.perform(.quickLookSelectedFiles)
             }
             .keyboardShortcut("y", modifiers: .command)
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
             Button("Comparar archivos seleccionados…") {
-                NotificationCenter.default.post(name: .compareFilesShortcut, object: nil)
+                commands?.perform(.compareFiles)
             }
             .keyboardShortcut("c", modifiers: [.command, .option])
 
             Button("Propiedades…") {
-                NotificationCenter.default.post(name: .showPropertiesShortcut, object: nil)
+                commands?.perform(.showProperties)
             }
             .keyboardShortcut("i", modifiers: .command)
         }
 
-        CommandGroup(replacing: .undoRedo) {
-            Button(isEditingText ? "Deshacer" : (viewModel?.history.undoMenuTitle ?? "Deshacer")) {
-                if isEditingText {
-                    NSApp.sendAction(Selector(("undo:")), to: nil, from: nil)
-                } else {
-                    viewModel?.undo()
-                }
-            }
-            .keyboardShortcut("z", modifiers: .command)
-            .disabled(!isEditingText && !(viewModel?.canUndo ?? false))
+        // Deshacer/Rehacer y Cortar/Copiar/Pegar/Seleccionar todo son los del
+        // menú Edición estándar: van por la responder chain (campos de texto,
+        // `UndoManager` de la ventana y, para archivos, `AppDelegate`).
+        CommandGroup(after: .pasteboard) {
+            Divider()
 
-            Button(isEditingText ? "Rehacer" : (viewModel?.history.redoMenuTitle ?? "Rehacer")) {
-                if isEditingText {
-                    NSApp.sendAction(Selector(("redo:")), to: nil, from: nil)
-                } else {
-                    viewModel?.redo()
-                }
-            }
-            .keyboardShortcut("z", modifiers: [.command, .shift])
-            .disabled(!isEditingText && !(viewModel?.canRedo ?? false))
-        }
-
-        CommandGroup(replacing: .pasteboard) {
-            Button("Cortar") {
-                if isEditingText {
-                    NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: nil)
-                } else {
-                    viewModel?.cutSelected()
-                }
-            }
-            .keyboardShortcut("x", modifiers: .command)
-            Button("Copiar") {
-                if isEditingText {
-                    NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil)
-                } else {
-                    viewModel?.copySelected()
-                }
-            }
-            .keyboardShortcut("c", modifiers: .command)
-            Button("Pegar") {
-                if isEditingText {
-                    NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil)
-                } else {
-                    viewModel?.paste()
-                }
-            }
-            .keyboardShortcut("v", modifiers: .command)
             Button("Duplicar aquí") {
                 viewModel?.duplicateSelected()
             }
@@ -181,13 +103,13 @@ struct FileEditCommands: Commands {
             .disabled(viewModel == nil)
 
             Button("Copiar al otro panel dividido") {
-                NotificationCenter.default.post(name: .copyToOtherSplitPaneShortcut, object: nil)
+                commands?.perform(.copyToOtherSplitPane)
             }
             .keyboardShortcut(Self.fKey(NSF5FunctionKey), modifiers: [.shift])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
             Button("Mover al otro panel dividido") {
-                NotificationCenter.default.post(name: .moveToOtherSplitPaneShortcut, object: nil)
+                commands?.perform(.moveToOtherSplitPane)
             }
             .keyboardShortcut(Self.fKey(NSF6FunctionKey), modifiers: [.shift])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
@@ -199,15 +121,6 @@ struct FileEditCommands: Commands {
             }
             .keyboardShortcut("s", modifiers: [.command, .shift])
 
-            Button("Seleccionar todo") {
-                if isEditingText {
-                    NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil)
-                } else {
-                    viewModel?.selectAll()
-                }
-            }
-            .keyboardShortcut("a", modifiers: .command)
-
             Button("Deseleccionar todo") {
                 viewModel?.deselectAll()
             }
@@ -215,7 +128,7 @@ struct FileEditCommands: Commands {
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
             Button("Seleccionar ítems por patrón…") {
-                NotificationCenter.default.post(name: .selectByPatternShortcut, object: nil)
+                commands?.perform(.selectByPattern)
             }
             .keyboardShortcut("s", modifiers: .command)
 
@@ -227,19 +140,19 @@ struct FileEditCommands: Commands {
             Divider()
 
             Button("Renombrar…") {
-                NotificationCenter.default.post(name: .renameSelectedFiles, object: nil)
+                commands?.perform(.renameSelectedFiles)
             }
             .keyboardShortcut(Self.fKey(NSF2FunctionKey), modifiers: [])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
             Button("Mover a la Papelera") {
-                NotificationCenter.default.post(name: .deleteSelectedFilesShortcut, object: nil)
+                commands?.perform(.deleteSelectedFiles)
             }
             .keyboardShortcut(.delete, modifiers: .command)
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
             Button("Eliminar permanentemente…") {
-                NotificationCenter.default.post(name: .permanentDeleteSelectedFilesShortcut, object: nil)
+                commands?.perform(.permanentDeleteSelectedFiles)
             }
             .keyboardShortcut(.delete, modifiers: [.command, .shift])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
@@ -304,7 +217,7 @@ struct FileEditCommands: Commands {
             .keyboardShortcut(".", modifiers: [.command, .shift])
 
             Button("Estilo de visualización de vista…") {
-                NotificationCenter.default.post(name: .showViewPropertiesDialogShortcut, object: nil)
+                commands?.perform(.showViewPropertiesDialog)
             }
             .keyboardShortcut("j", modifiers: .command)
 
@@ -332,50 +245,50 @@ struct FileEditCommands: Commands {
             Divider()
 
             Button("Dividir vista") {
-                NotificationCenter.default.post(name: .toggleSplitShortcut, object: nil)
+                commands?.perform(.toggleSplit)
             }
             .keyboardShortcut(Self.fKey(NSF3FunctionKey), modifiers: [])
 
             Button("Enfocar el otro panel dividido") {
-                NotificationCenter.default.post(name: .focusOtherSplitPaneShortcut, object: nil)
+                commands?.perform(.focusOtherSplitPane)
             }
             .keyboardShortcut(Self.fKey(NSF3FunctionKey), modifiers: [.control])
 
             Button("Separar vista dividida en pestañas") {
-                NotificationCenter.default.post(name: .moveSplitToTabsShortcut, object: nil)
+                commands?.perform(.moveSplitToTabs)
             }
             .keyboardShortcut(Self.fKey(NSF3FunctionKey), modifiers: [.control, .shift])
 
             Button("Intercambiar paneles divididos") {
-                NotificationCenter.default.post(name: .swapSplitPanesShortcut, object: nil)
+                commands?.perform(.swapSplitPanes)
             }
 
             Divider()
 
             Button("Panel de información") {
-                NotificationCenter.default.post(name: .toggleInfoPanelShortcut, object: nil)
+                commands?.perform(.toggleInfoPanel)
             }
             .keyboardShortcut(Self.fKey(NSF11FunctionKey), modifiers: [])
 
             Button((viewModel?.isFilterBarVisible ?? false) ? "Barra de filtro ✓" : "Barra de filtro") {
-                NotificationCenter.default.post(name: .toggleFilterBarShortcut, object: nil)
+                commands?.perform(.toggleFilterBar)
             }
             .keyboardShortcut("/", modifiers: [.command])
 
             Button("Panel de Terminal integrada") {
-                NotificationCenter.default.post(name: .toggleEmbeddedTerminalShortcut, object: nil)
+                commands?.perform(.toggleEmbeddedTerminal)
             }
             .keyboardShortcut(Self.fKey(NSF4FunctionKey), modifiers: [])
 
             Button("Abrir Terminal externa aquí") {
-                NotificationCenter.default.post(name: .openTerminalShortcut, object: nil)
+                commands?.perform(.openTerminal)
             }
             .keyboardShortcut(Self.fKey(NSF4FunctionKey), modifiers: [.shift])
 
             Divider()
 
             Button("Estadísticas de uso de disco…") {
-                NotificationCenter.default.post(name: .showDiskUsageAnalyzerShortcut, object: nil)
+                commands?.perform(.showDiskUsageAnalyzer)
             }
             .keyboardShortcut("u", modifiers: .command)
 
@@ -422,7 +335,7 @@ struct FileEditCommands: Commands {
             .keyboardShortcut("h", modifiers: [.command, .shift])
 
             Button("Editar ubicación…") {
-                NotificationCenter.default.post(name: .editLocationBar, object: nil)
+                commands?.perform(.editLocationBar)
             }
             .keyboardShortcut("l", modifiers: .command)
 
@@ -449,17 +362,17 @@ struct FileEditCommands: Commands {
             Divider()
 
             Button("Pestaña siguiente") {
-                NotificationCenter.default.post(name: .selectNextTabShortcut, object: nil)
+                commands?.perform(.selectNextTab)
             }
             .keyboardShortcut("]", modifiers: [.command, .shift])
 
             Button("Pestaña anterior") {
-                NotificationCenter.default.post(name: .selectPrevTabShortcut, object: nil)
+                commands?.perform(.selectPrevTab)
             }
             .keyboardShortcut("[", modifiers: [.command, .shift])
 
             Button("Reabrir última pestaña cerrada") {
-                NotificationCenter.default.post(name: .reopenClosedTabShortcut, object: nil)
+                commands?.perform(.reopenClosedTab)
             }
         }
 
@@ -472,17 +385,17 @@ struct FileEditCommands: Commands {
             .disabled(viewModel == nil)
 
             Button("Añadir todas las pestañas abiertas a Marcadores") {
-                NotificationCenter.default.post(name: .bookmarkAllTabsShortcut, object: nil)
+                commands?.perform(.bookmarkAllTabs)
             }
             .keyboardShortcut("d", modifiers: [.command, .shift])
 
             Button("Abrir todos los marcadores en pestañas") {
-                NotificationCenter.default.post(name: .openAllBookmarksInTabsShortcut, object: nil)
+                commands?.perform(.openAllBookmarksInTabs)
             }
             .disabled(PlacesProvider().customBookmarks().isEmpty)
 
             Button("Editar marcadores…") {
-                NotificationCenter.default.post(name: .editBookmarksShortcut, object: nil)
+                commands?.perform(.editBookmarks)
             }
             .keyboardShortcut("b", modifiers: [.command, .option])
 

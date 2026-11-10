@@ -1,6 +1,7 @@
 import XCTest
 @testable import Dotphin
 
+@MainActor
 final class BrowserViewModelTests: XCTestCase {
     private var tempDir: URL!
 
@@ -233,14 +234,40 @@ final class BrowserViewModelTests: XCTestCase {
         XCTAssertEqual(vm.selectedItem?.name, "a.txt", "borrar otro ítem no debe tocar la selección actual")
     }
 
-    func test_performSearch_findsNestedMatch() throws {
+    func test_performSearch_findsNestedMatch() async throws {
         let sub = tempDir.appendingPathComponent("sub", isDirectory: true)
         try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
         try "x".write(to: sub.appendingPathComponent("Report.txt"), atomically: true, encoding: .utf8)
         let vm = BrowserViewModel(startingAt: tempDir)
         vm.searchQuery = "report"
         vm.performSearch()
+        await vm.waitForBackgroundWork()
         XCTAssertEqual(vm.searchResults.map(\.name), ["Report.txt"])
+    }
+
+    func test_performSearch_twice_onlyLatestQueryWins() async throws {
+        try "x".write(to: tempDir.appendingPathComponent("Report.txt"), atomically: true, encoding: .utf8)
+        try "x".write(to: tempDir.appendingPathComponent("Notes.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.searchQuery = "report"
+        vm.performSearch()
+        vm.searchQuery = "notes"
+        vm.performSearch()
+        await vm.waitForBackgroundWork()
+        XCTAssertEqual(vm.searchResults.map(\.name), ["Notes.txt"], "la búsqueda cancelada no debe pisar a la última")
+        XCTAssertFalse(vm.isSearching)
+    }
+
+    func test_filteredItems_reflectsNewItemsAfterRefresh_withActiveFilter() throws {
+        try "x".write(to: tempDir.appendingPathComponent("alpha.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: tempDir)
+        vm.filterText = "al"
+        XCTAssertEqual(vm.filteredItems.map(\.name), ["alpha.txt"])
+        try "x".write(to: tempDir.appendingPathComponent("almond.txt"), atomically: true, encoding: .utf8)
+        vm.refresh()
+        XCTAssertEqual(vm.filteredItems.map(\.name), ["almond.txt", "alpha.txt"], "el caché del filtro debe invalidarse al recargar")
+        vm.filterText = "alp"
+        XCTAssertEqual(vm.filteredItems.map(\.name), ["alpha.txt"])
     }
 
     func test_navigate_clearsSearch() throws {
@@ -262,15 +289,17 @@ final class BrowserViewModelTests: XCTestCase {
         XCTAssertNil(vm.selectedItem, "la selección de modo navegación no debe sobrevivir invisible durante una búsqueda")
     }
 
-    func test_delete_duringActiveSearch_refreshesSearchResultsToo() throws {
+    func test_delete_duringActiveSearch_refreshesSearchResultsToo() async throws {
         let sub = tempDir.appendingPathComponent("sub", isDirectory: true)
         try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
         try "x".write(to: sub.appendingPathComponent("Report.txt"), atomically: true, encoding: .utf8)
         let vm = BrowserViewModel(startingAt: tempDir)
         vm.searchQuery = "report"
         vm.performSearch()
+        await vm.waitForBackgroundWork()
         let found = vm.searchResults[0]
         vm.delete(found)
+        await vm.waitForBackgroundWork()
         XCTAssertEqual(vm.searchResults, [], "el resultado borrado no debe seguir apareciendo en la búsqueda")
     }
 
@@ -329,10 +358,11 @@ final class BrowserViewModelTests: XCTestCase {
         process.waitUntilExit()
     }
 
-    func test_load_populatesGitStatusesForGitRepo() throws {
+    func test_load_populatesGitStatusesForGitRepo() async throws {
         try runGit(["init", "-q"], in: tempDir)
         try "x".write(to: tempDir.appendingPathComponent("new.txt"), atomically: true, encoding: .utf8)
         let vm = BrowserViewModel(startingAt: tempDir)
+        await vm.waitForBackgroundWork()
         XCTAssertEqual(vm.gitStatuses["new.txt"], .untracked)
     }
 

@@ -1,6 +1,7 @@
 import XCTest
 @testable import Dotphin
 
+@MainActor
 final class TabsViewModelTests: XCTestCase {
     private var tempDir: URL!
 
