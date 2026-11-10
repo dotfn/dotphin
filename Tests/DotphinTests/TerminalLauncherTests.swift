@@ -1,11 +1,10 @@
+import AppKit
 import XCTest
 @testable import Dotphin
 
 final class TerminalLauncherTests: XCTestCase {
-    func test_launchArguments_opensTerminalAtGivenPath() {
-        let url = URL(fileURLWithPath: "/tmp/some folder")
-        let args = TerminalLauncher().launchArguments(for: url)
-        XCTAssertEqual(args, ["-a", "Terminal", "/tmp/some folder"])
+    func test_terminalApp_isResolvedThroughLaunchServices() {
+        XCTAssertNotNil(NSWorkspace.shared.urlForApplication(withBundleIdentifier: TerminalLauncher.terminalBundleIdentifier))
     }
 
     func test_openTerminal_throwsWhenPathDoesNotExist() {

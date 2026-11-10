@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 enum TerminalLauncherError: LocalizedError {
     case failed(String)
@@ -11,27 +11,18 @@ enum TerminalLauncherError: LocalizedError {
 }
 
 struct TerminalLauncher {
-    func launchArguments(for url: URL) -> [String] {
-        ["-a", "Terminal", url.path]
-    }
+    static let terminalBundleIdentifier = "com.apple.Terminal"
 
+    /// Abre Terminal en `url` con `NSWorkspace` (antes lanzaba `/usr/bin/open`).
     func openTerminal(at url: URL) throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        process.arguments = launchArguments(for: url)
-        let errorPipe = Pipe()
-        process.standardError = errorPipe
-        do {
-            try process.run()
-        } catch {
-            throw TerminalLauncherError.failed(error.localizedDescription)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw TerminalLauncherError.failed("No existe «\(url.path)».")
         }
-        // Leer el pipe antes de waitUntilExit (lección del slice 10: al revés, deadlock).
-        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
-            let message = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-            throw TerminalLauncherError.failed(message?.isEmpty == false ? message! : "No se pudo abrir Terminal.")
+        guard let terminalURL = NSWorkspace.shared.urlForApplication(
+            withBundleIdentifier: Self.terminalBundleIdentifier
+        ) else {
+            throw TerminalLauncherError.failed("No se encontró la app Terminal.")
         }
+        NSWorkspace.shared.open([url], withApplicationAt: terminalURL, configuration: NSWorkspace.OpenConfiguration())
     }
 }
