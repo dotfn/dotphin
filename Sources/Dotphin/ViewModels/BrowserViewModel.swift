@@ -27,6 +27,13 @@ enum FilterPatternMode: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// Opciones de "Agrupar por" (`DolphinViewActionHandler::slotGroupByTriggered`).
+enum GroupByChoice: Hashable {
+    case none
+    case sameAsSort
+    case field(SortField)
+}
+
 @MainActor
 @Observable
 final class BrowserViewModel {
@@ -881,6 +888,21 @@ final class BrowserViewModel {
     func toggleShowInGroups() {
         viewProperties.showInGroups.toggle()
         store.setProperties(viewProperties, for: currentURL)
+    }
+
+    /// "Agrupar por" como una sola elección, para mostrarlo con un `Picker`.
+    var groupByChoice: GroupByChoice {
+        get {
+            guard viewProperties.showInGroups else { return .none }
+            return viewProperties.groupByFieldOverride.map(GroupByChoice.field) ?? .sameAsSort
+        }
+        set {
+            switch newValue {
+            case .none: setGroupBy(showInGroups: false, groupFieldOverride: nil)
+            case .sameAsSort: setGroupBy(showInGroups: true, groupFieldOverride: nil)
+            case .field(let field): setGroupBy(showInGroups: true, groupFieldOverride: field)
+            }
+        }
     }
 
     /// Sets the `Group By` role (`DolphinViewActionHandler::slotGroupByTriggered`).

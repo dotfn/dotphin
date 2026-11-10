@@ -1048,3 +1048,31 @@ paquetes) y probado con un paquete de prueba antes de tocar la app.
   es / es-AR → español, fr → inglés, "fr, es" → español. Sin verificar a la
   vista (sin acceso a pantalla): textos que no entren en su lugar en inglés.
   242 tests en verde.
+
+## 2026-11-10 — Barra de pestañas con una sola pestaña, menú Visualización duplicado y marcas de menú nativas
+
+Reportado por el usuario al probar.
+
+- **Barra de pestañas**: se mostraba también con una sola pestaña si había
+  pestañas cerradas recientemente (para dar acceso a "reabrir"). Ahora, como
+  Safari, solo aparece con dos o más pestañas o con el ajuste "Mostrar
+  siempre". Reabrir sigue en Archivo y con ⇧⌘T.
+- **Dos menús "View"**: no era un texto hardcodeado. macOS pone siempre su
+  menú Visualización (pantalla completa, barra lateral, toolbar) y la app
+  agregaba otro propio "Ver"; en inglés los dos se llamaban "View". Las
+  opciones propias pasan a `CommandGroup(before: .sidebar)`, dentro del menú
+  del sistema, como Finder.
+- **Marcas de menú**: 14 opciones ponían "✓" en el título y 7 menús dibujaban
+  un ícono `checkmark` al lado del texto. La "✓" del título quedaba sin
+  traducir (así se descubrió) y ninguna de las dos la anuncia VoiceOver como
+  estado. Pasan a `Toggle` (sí/no) y `Picker` en línea (una entre varias:
+  agrupar por, orden, dirección, modo de vista, etiqueta de color, filtros de
+  búsqueda, estilo de la barra de estado, subcarpetas de la barra de
+  ubicación). "Agrupar por" se modela con `GroupByChoice`.
+- Efecto menor aceptado: en "Ordenar por" del menú contextual, volver a
+  elegir el mismo campo ya no invierte la dirección; la dirección es una
+  elección aparte (como en Finder). En las subcarpetas de la barra de
+  ubicación, elegir la marcada no hace nada (ya es la siguiente miga).
+- Verificado con el binario real volcando el menú: un solo "View" /
+  "Visualización", todo traducido, marcas en el estado correcto. Un test
+  impide volver a escribir "✓" o el ícono `checkmark` a mano. 243 tests.

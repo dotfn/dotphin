@@ -97,14 +97,10 @@ struct FolderTreeRow: View {
                 if showsHiddenFiles != nil || limitToHomeDirectory != nil {
                     Divider()
                     if let showsHiddenFiles {
-                        Button(showsHiddenFiles.wrappedValue ? "Mostrar archivos ocultos ✓" : String(localized: "Mostrar archivos ocultos", bundle: #bundle)) {
-                            showsHiddenFiles.wrappedValue.toggle()
-                        }
+                        Toggle(String(localized: "Mostrar archivos ocultos", bundle: #bundle), isOn: showsHiddenFiles)
                     }
                     if let limitToHomeDirectory {
-                        Button(limitToHomeDirectory.wrappedValue ? "Limitar a la carpeta personal ✓" : String(localized: "Limitar a la carpeta personal", bundle: #bundle)) {
-                            limitToHomeDirectory.wrappedValue.toggle()
-                        }
+                        Toggle(String(localized: "Limitar a la carpeta personal", bundle: #bundle), isOn: limitToHomeDirectory)
                     }
                 }
             }

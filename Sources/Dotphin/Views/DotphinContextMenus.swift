@@ -391,18 +391,20 @@ struct DotphinItemContextMenu: View {
     @ViewBuilder
     private var colorTagMenu: some View {
         Menu(String(localized: "Etiqueta de color", bundle: #bundle)) {
-            ForEach(FinderColorTag.allCases) { tag in
-                Button {
-                    actions.viewModel.setColorTag(tag, for: targetItems)
-                } label: {
-                    HStack {
-                        Text(tag.title)
-                        if let singleItem, singleItem.colorTag == tag {
-                            Image(systemName: "checkmark")
-                        }
-                    }
+            // Con varios ítems no hay una etiqueta "actual": ninguna va marcada.
+            Picker(selection: Binding(
+                get: { singleItem?.colorTag },
+                set: { tag in
+                    if let tag { actions.viewModel.setColorTag(tag, for: targetItems) }
                 }
+            )) {
+                ForEach(FinderColorTag.allCases) { tag in
+                    Text(tag.title).tag(Optional(tag))
+                }
+            } label: {
+                EmptyView()
             }
+            .pickerStyle(.inline)
         }
     }
 
@@ -573,119 +575,86 @@ struct DotphinViewportContextMenu: View {
         Divider()
 
         Menu(String(localized: "Modo de vista", bundle: #bundle)) {
-            ForEach(ViewMode.allCases, id: \.self) { mode in
-                Button {
-                    actions.viewModel.setViewMode(mode)
-                } label: {
-                    HStack {
-                        Text(mode.title)
-                        if actions.viewModel.viewProperties.mode == mode {
-                            Image(systemName: "checkmark")
-                        }
-                    }
+            Picker(selection: Binding(
+                get: { actions.viewModel.viewProperties.mode },
+                set: { actions.viewModel.setViewMode($0) }
+            )) {
+                ForEach(ViewMode.allCases, id: \.self) { mode in
+                    Text(mode.title).tag(mode)
                 }
+            } label: {
+                EmptyView()
             }
+            .pickerStyle(.inline)
         }
 
         Menu(String(localized: "Ordenar por", bundle: #bundle)) {
-            ForEach(SortField.allCases, id: \.self) { field in
-                Button {
-                    let isSameField = actions.viewModel.viewProperties.sortField == field
-                    let nextAscending = isSameField
-                        ? !actions.viewModel.viewProperties.ascending
-                        : field.defaultAscending
-                    actions.viewModel.setSort(field: field, ascending: nextAscending)
-                } label: {
-                    HStack {
-                        Text(field.title)
-                        if actions.viewModel.viewProperties.sortField == field {
-                            Image(systemName: "checkmark")
-                        }
-                    }
+            let viewModel = actions.viewModel
+            Picker(selection: Binding(
+                get: { viewModel.viewProperties.sortField },
+                set: { viewModel.setSort(field: $0, ascending: $0.defaultAscending) }
+            )) {
+                ForEach(SortField.allCases, id: \.self) { field in
+                    Text(field.title).tag(field)
                 }
+            } label: {
+                EmptyView()
             }
+            .pickerStyle(.inline)
             Divider()
-            Button(actions.viewModel.viewProperties.ascending ? String(localized: "Ascendente ✓", bundle: #bundle) : String(localized: "Descendente ✓", bundle: #bundle)) {
-                actions.viewModel.setSort(
-                    field: actions.viewModel.viewProperties.sortField,
-                    ascending: !actions.viewModel.viewProperties.ascending
-                )
+            Picker(selection: Binding(
+                get: { viewModel.viewProperties.ascending },
+                set: { viewModel.setSort(field: viewModel.viewProperties.sortField, ascending: $0) }
+            )) {
+                Text(String(localized: "Ascendente", bundle: #bundle)).tag(true)
+                Text(String(localized: "Descendente", bundle: #bundle)).tag(false)
+            } label: {
+                EmptyView()
             }
+            .pickerStyle(.inline)
             Divider()
-            Button(actions.viewModel.viewProperties.sortFoldersFirst ? "Carpetas primero ✓" : String(localized: "Carpetas primero", bundle: #bundle)) {
-                actions.viewModel.toggleSortFoldersFirst()
-            }
-            Button(actions.viewModel.viewProperties.sortHiddenLast ? "Archivos ocultos al final ✓" : String(localized: "Archivos ocultos al final", bundle: #bundle)) {
-                actions.viewModel.toggleSortHiddenLast()
-            }
+            Toggle(String(localized: "Carpetas primero", bundle: #bundle), isOn: Binding(
+                get: { viewModel.viewProperties.sortFoldersFirst },
+                set: { _ in viewModel.toggleSortFoldersFirst() }
+            ))
+            Toggle(String(localized: "Archivos ocultos al final", bundle: #bundle), isOn: Binding(
+                get: { viewModel.viewProperties.sortHiddenLast },
+                set: { _ in viewModel.toggleSortHiddenLast() }
+            ))
             Divider()
-            Button(actions.viewModel.viewProperties.showInGroups ? "Mostrar en grupos ✓" : String(localized: "Mostrar en grupos", bundle: #bundle)) {
-                actions.viewModel.toggleShowInGroups()
-            }
+            Toggle(String(localized: "Mostrar en grupos", bundle: #bundle), isOn: Binding(
+                get: { viewModel.viewProperties.showInGroups },
+                set: { _ in viewModel.toggleShowInGroups() }
+            ))
         }
 
         Menu(String(localized: "Agrupar por", bundle: #bundle)) {
-            let props = actions.viewModel.viewProperties
-            Button {
-                actions.viewModel.setGroupBy(showInGroups: false, groupFieldOverride: nil)
-            } label: {
-                HStack {
-                    Text(String(localized: "Ninguno", bundle: #bundle))
-                    if !props.showInGroups {
-                        Image(systemName: "checkmark")
-                    }
-                }
-            }
-            Button {
-                actions.viewModel.setGroupBy(showInGroups: true, groupFieldOverride: nil)
-            } label: {
-                HStack {
-                    Text(String(localized: "Igual que el criterio de ordenación", bundle: #bundle))
-                    if props.showInGroups && props.groupByFieldOverride == nil {
-                        Image(systemName: "checkmark")
-                    }
-                }
-            }
-            Divider()
-            ForEach(SortField.allCases, id: \.self) { field in
-                Button {
-                    actions.viewModel.setGroupBy(showInGroups: true, groupFieldOverride: field)
-                } label: {
-                    HStack {
-                        Text(field.title)
-                        if props.showInGroups && props.groupByFieldOverride == field {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
+            GroupByPicker(selection: Binding(
+                get: { actions.viewModel.groupByChoice },
+                set: { actions.viewModel.groupByChoice = $0 }
+            ))
         }
 
         if actions.viewModel.viewProperties.mode == .details {
             Menu(String(localized: "Columnas visibles", bundle: #bundle)) {
                 ForEach(DetailsColumn.allCases) { col in
-                    let isVisible = actions.viewModel.viewProperties.visibleDetailsColumns.contains(col)
-                    Button {
-                        actions.viewModel.toggleDetailsColumn(col)
-                    } label: {
-                        HStack {
-                            Text(col.title)
-                            if isVisible {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
+                    Toggle(col.title, isOn: Binding(
+                        get: { actions.viewModel.viewProperties.visibleDetailsColumns.contains(col) },
+                        set: { _ in actions.viewModel.toggleDetailsColumn(col) }
+                    ))
                 }
             }
         }
 
-        Button(actions.viewModel.viewProperties.showPreviews ? "Mostrar vistas previas ✓" : String(localized: "Mostrar vistas previas", bundle: #bundle)) {
-            actions.viewModel.toggleShowPreviews()
-        }
+        Toggle(String(localized: "Mostrar vistas previas", bundle: #bundle), isOn: Binding(
+            get: { actions.viewModel.viewProperties.showPreviews },
+            set: { _ in actions.viewModel.toggleShowPreviews() }
+        ))
 
-        Button(actions.viewModel.effectiveShowsHiddenFiles ? "Mostrar archivos ocultos ✓" : String(localized: "Mostrar archivos ocultos", bundle: #bundle)) {
-            actions.viewModel.toggleShowsHiddenFiles()
-        }
+        Toggle(String(localized: "Mostrar archivos ocultos", bundle: #bundle), isOn: Binding(
+            get: { actions.viewModel.effectiveShowsHiddenFiles },
+            set: { _ in actions.viewModel.toggleShowsHiddenFiles() }
+        ))
 
         if let onShowViewPropertiesDialog = actions.onShowViewPropertiesDialog {
             Button(String(localized: "Estilo de visualización de vista…", bundle: #bundle)) {

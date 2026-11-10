@@ -230,18 +230,18 @@ struct BreadcrumbView: View {
                 .padding(.horizontal, 1)
         } else {
             Menu {
-                ForEach(subfolders, id: \.self) { sub in
-                    Button {
-                        onNavigate(sub)
-                    } label: {
-                        HStack {
-                            Text(sub.lastPathComponent)
-                            if let activeChild, sub.standardizedFileURL == activeChild.standardizedFileURL {
-                                Image(systemName: "checkmark")
-                            }
-                        }
+                // Marca la subcarpeta por la que pasa la ruta actual.
+                Picker(selection: Binding(
+                    get: { activeChild.flatMap { child in subfolders.first { $0.standardizedFileURL == child.standardizedFileURL } } },
+                    set: { if let sub = $0 { onNavigate(sub) } }
+                )) {
+                    ForEach(subfolders, id: \.self) { sub in
+                        Text(sub.lastPathComponent).tag(Optional(sub))
                     }
+                } label: {
+                    EmptyView()
                 }
+                .pickerStyle(.inline)
             } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 9, weight: .semibold))

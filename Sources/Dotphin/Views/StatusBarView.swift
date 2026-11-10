@@ -200,29 +200,20 @@ struct StatusBarView: View {
         .background(.bar)
         .contextMenu {
             if let onToggleZoomSlider {
-                Button {
-                    onToggleZoomSlider()
-                } label: {
-                    Label(
-                        zoomLevel != nil ? "Mostrar deslizador de zoom ✓" : String(localized: "Mostrar deslizador de zoom", bundle: #bundle),
-                        systemImage: "magnifyingglass"
-                    )
+                Toggle(isOn: Binding(get: { zoomLevel != nil }, set: { _ in onToggleZoomSlider() })) {
+                    Label(String(localized: "Mostrar deslizador de zoom", bundle: #bundle), systemImage: "magnifyingglass")
                 }
             }
             if let onChangeDisplayMode {
                 Menu(String(localized: "Estilo de barra de estado", bundle: #bundle)) {
-                    ForEach(StatusBarDisplayMode.allCases) { mode in
-                        Button {
-                            onChangeDisplayMode(mode)
-                        } label: {
-                            HStack {
-                                Text(mode.title)
-                                if displayMode == mode {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
+                    Picker(selection: Binding(get: { displayMode }, set: { onChangeDisplayMode($0) })) {
+                        ForEach(StatusBarDisplayMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
                         }
+                    } label: {
+                        EmptyView()
                     }
+                    .pickerStyle(.inline)
                 }
             }
             Divider()

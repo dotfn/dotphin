@@ -638,18 +638,14 @@ struct BrowserView: View {
 
                 // Date filter chip (`modifiedSinceDate` in Dolphin)
                 Menu {
-                    ForEach(SearchDateFilter.allCases) { dateFilter in
-                        Button {
-                            viewModel.searchDateFilter = dateFilter
-                        } label: {
-                            HStack {
-                                Text(dateFilter.title)
-                                if viewModel.searchDateFilter == dateFilter {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
+                    Picker(selection: Bindable(viewModel).searchDateFilter) {
+                        ForEach(SearchDateFilter.allCases) { dateFilter in
+                            Text(dateFilter.title).tag(dateFilter)
                         }
+                    } label: {
+                        EmptyView()
                     }
+                    .pickerStyle(.inline)
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "calendar")
@@ -670,18 +666,14 @@ struct BrowserView: View {
 
                 // Size filter chip
                 Menu {
-                    ForEach(SearchSizeFilter.allCases) { sizeFilter in
-                        Button {
-                            viewModel.searchSizeFilter = sizeFilter
-                        } label: {
-                            HStack {
-                                Text(sizeFilter.title)
-                                if viewModel.searchSizeFilter == sizeFilter {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
+                    Picker(selection: Bindable(viewModel).searchSizeFilter) {
+                        ForEach(SearchSizeFilter.allCases) { sizeFilter in
+                            Text(sizeFilter.title).tag(sizeFilter)
                         }
+                    } label: {
+                        EmptyView()
                     }
+                    .pickerStyle(.inline)
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "externaldrive.badge.timemachine")
@@ -702,18 +694,14 @@ struct BrowserView: View {
 
                 // Color tag filter chip (`TagsSelector` in `src/search/selectors/tagsselector.cpp`)
                 Menu {
-                    ForEach(FinderColorTag.allCases) { tag in
-                        Button {
-                            viewModel.searchColorTagFilter = tag
-                        } label: {
-                            HStack {
-                                Text(tag.title)
-                                if viewModel.searchColorTagFilter == tag {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
+                    Picker(selection: Bindable(viewModel).searchColorTagFilter) {
+                        ForEach(FinderColorTag.allCases) { tag in
+                            Text(tag.title).tag(tag)
                         }
+                    } label: {
+                        EmptyView()
                     }
+                    .pickerStyle(.inline)
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "tag")

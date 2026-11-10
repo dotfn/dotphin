@@ -158,7 +158,9 @@ struct FileEditCommands: Commands {
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
         }
 
-        CommandMenu(String(localized: "Ver", bundle: #bundle)) {
+        // Dentro del menú Visualización del sistema (el de pantalla completa y
+        // barra lateral), como Finder: un menú propio "Ver" quedaba duplicado.
+        CommandGroup(before: .sidebar) {
             Button(String(localized: "Modo Iconos", bundle: #bundle)) {
                 viewModel?.setViewMode(.icons)
             }
@@ -181,39 +183,29 @@ struct FileEditCommands: Commands {
 
             Divider()
 
-            Button((viewModel?.viewProperties.showInGroups ?? false) ? "Mostrar en grupos ✓" : String(localized: "Mostrar en grupos", bundle: #bundle)) {
-                viewModel?.toggleShowInGroups()
-            }
+            Toggle(String(localized: "Mostrar en grupos", bundle: #bundle), isOn: Binding(
+                get: { viewModel?.viewProperties.showInGroups ?? false },
+                set: { _ in viewModel?.toggleShowInGroups() }
+            ))
             .keyboardShortcut("g", modifiers: .command)
 
             Menu(String(localized: "Agrupar por", bundle: #bundle)) {
-                let props = viewModel?.viewProperties
-                Button(!(props?.showInGroups ?? false) ? "Ninguno ✓" : String(localized: "Ninguno", bundle: #bundle)) {
-                    viewModel?.setGroupBy(showInGroups: false, groupFieldOverride: nil)
-                }
-                Button(((props?.showInGroups ?? false) && props?.groupByFieldOverride == nil)
-                    ? String(localized: "Igual que el criterio de ordenación ✓", bundle: #bundle)
-                    : String(localized: "Igual que el criterio de ordenación", bundle: #bundle)
-                ) {
-                    viewModel?.setGroupBy(showInGroups: true, groupFieldOverride: nil)
-                }
-                Divider()
-                ForEach(SortField.allCases, id: \.self) { field in
-                    let isChecked = (props?.showInGroups ?? false) && props?.groupByFieldOverride == field
-                    Button(isChecked ? "\(field.title) ✓" : field.title) {
-                        viewModel?.setGroupBy(showInGroups: true, groupFieldOverride: field)
-                    }
-                }
+                GroupByPicker(selection: Binding(
+                    get: { viewModel?.groupByChoice ?? .none },
+                    set: { viewModel?.groupByChoice = $0 }
+                ))
             }
 
-            Button((viewModel?.viewProperties.showPreviews ?? true) ? "Mostrar vistas previas ✓" : String(localized: "Mostrar vistas previas", bundle: #bundle)) {
-                viewModel?.toggleShowPreviews()
-            }
+            Toggle(String(localized: "Mostrar vistas previas", bundle: #bundle), isOn: Binding(
+                get: { viewModel?.viewProperties.showPreviews ?? true },
+                set: { _ in viewModel?.toggleShowPreviews() }
+            ))
             .keyboardShortcut(Self.fKey(NSF12FunctionKey), modifiers: [])
 
-            Button((viewModel?.effectiveShowsHiddenFiles ?? false) ? "Mostrar archivos ocultos ✓" : String(localized: "Mostrar archivos ocultos", bundle: #bundle)) {
-                viewModel?.toggleShowsHiddenFiles()
-            }
+            Toggle(String(localized: "Mostrar archivos ocultos", bundle: #bundle), isOn: Binding(
+                get: { viewModel?.effectiveShowsHiddenFiles ?? false },
+                set: { _ in viewModel?.toggleShowsHiddenFiles() }
+            ))
             .keyboardShortcut(".", modifiers: [.command, .shift])
 
             Button(String(localized: "Estilo de visualización de vista…", bundle: #bundle)) {
@@ -270,9 +262,10 @@ struct FileEditCommands: Commands {
             }
             .keyboardShortcut(Self.fKey(NSF11FunctionKey), modifiers: [])
 
-            Button((viewModel?.isFilterBarVisible ?? false) ? "Barra de filtro ✓" : String(localized: "Barra de filtro", bundle: #bundle)) {
-                commands?.perform(.toggleFilterBar)
-            }
+            Toggle(String(localized: "Barra de filtro", bundle: #bundle), isOn: Binding(
+                get: { viewModel?.isFilterBarVisible ?? false },
+                set: { _ in commands?.perform(.toggleFilterBar) }
+            ))
             .keyboardShortcut("/", modifiers: [.command])
 
             Button(String(localized: "Panel de Terminal integrada", bundle: #bundle)) {

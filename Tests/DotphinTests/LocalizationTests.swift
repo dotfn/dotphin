@@ -74,4 +74,23 @@ final class LocalizationTests: XCTestCase {
         }
         XCTAssertEqual(offenders, [], "String(localized:) sin bundle: #bundle")
     }
+
+    /// Las opciones marcables de los menús usan `Toggle` / `Picker`, que
+    /// muestran la marca nativa del menú. Una "✓" escrita en el título no se
+    /// traduce y no la lee VoiceOver como estado.
+    func test_menusUseNativeCheckmarks_notOnesWrittenInTheTitle() throws {
+        let sources = Self.packageRoot.appendingPathComponent("Sources/Dotphin")
+        let files = try XCTUnwrap(FileManager.default.enumerator(at: sources, includingPropertiesForKeys: nil))
+            .compactMap { $0 as? URL }
+            .filter { $0.pathExtension == "swift" }
+        var offenders: [String] = []
+        for file in files {
+            let text = try String(contentsOf: file, encoding: .utf8)
+            for (index, line) in text.components(separatedBy: "\n").enumerated()
+            where line.contains("✓") || line.contains("Image(systemName: \"checkmark\")") {
+                offenders.append("\(file.lastPathComponent):\(index + 1)")
+            }
+        }
+        XCTAssertEqual(offenders, [])
+    }
 }

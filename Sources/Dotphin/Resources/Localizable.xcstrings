@@ -1170,22 +1170,6 @@
         }
       }
     },
-    "Ascendente ✓": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ascending ✓"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ascendente ✓"
-          }
-        }
-      }
-    },
     "Atrás": {
       "localizations": {
         "en": {
@@ -2830,22 +2814,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Descendente (Z → A / Mayor a menor)"
-          }
-        }
-      }
-    },
-    "Descendente ✓": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Descending ✓"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Descendente ✓"
           }
         }
       }
@@ -4638,22 +4606,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Igual que el criterio de ordenación"
-          }
-        }
-      }
-    },
-    "Igual que el criterio de ordenación ✓": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Same as Sort Order ✓"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Igual que el criterio de ordenación ✓"
           }
         }
       }
@@ -9134,22 +9086,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vacío (0 B)"
-          }
-        }
-      }
-    },
-    "Ver": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "View"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ver"
           }
         }
       }

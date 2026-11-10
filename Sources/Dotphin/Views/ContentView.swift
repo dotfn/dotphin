@@ -494,7 +494,9 @@ struct ContentView: View {
     private var detailMainStack: some View {
         VStack(spacing: 0) {
             VStack(spacing: 4) {
-                if settingsModel.settings.alwaysShowTabBar || tabsViewModel.tabs.count > 1 || !tabsViewModel.recentlyClosedTabs.isEmpty {
+                // Como Safari: con una sola pestaña no hay barra (reabrir una cerrada
+                // sigue en Archivo y con ⇧⌘T).
+                if settingsModel.settings.alwaysShowTabBar || tabsViewModel.tabs.count > 1 {
                     TabBarView(
                         viewModel: tabsViewModel,
                         onShowTabOverview: {
