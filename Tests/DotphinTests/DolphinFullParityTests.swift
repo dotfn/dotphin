@@ -369,54 +369,27 @@ final class DolphinFullParityTests: XCTestCase {
         XCTAssertLessThanOrEqual(EmbeddedTerminalPanelView.expandedHeight, EmbeddedTerminalPanelView.maxHeight)
     }
 
-    func testThreeFingerSwipeRecognizerStrictDirectionAndFourFingerExclusion() {
-        var recognizer = ThreeFingerSwipeRecognizer()
+    func test_tabOverviewPinch_opensOnPinchIn_closesOnPinchOut_oncePerGesture() {
+        var recognizer = TabOverviewPinchRecognizer()
 
-        func makeThreeTouches(yOffset: CGFloat, xOffset: CGFloat = 0) -> [TrackpadTouchSample] {
-            [
-                TrackpadTouchSample(id: 1, position: CGPoint(x: 0.35 + xOffset, y: 0.40 + yOffset)),
-                TrackpadTouchSample(id: 2, position: CGPoint(x: 0.50 + xOffset, y: 0.42 + yOffset)),
-                TrackpadTouchSample(id: 3, position: CGPoint(x: 0.65 + xOffset, y: 0.40 + yOffset))
-            ]
-        }
+        // Juntar los dedos con la vista cerrada: abre al pasar el umbral, una sola vez.
+        recognizer.began()
+        XCTAssertNil(recognizer.changed(magnification: -0.05, isOverviewVisible: false))
+        XCTAssertEqual(recognizer.changed(magnification: -0.25, isOverviewVisible: false), .showOverview)
+        XCTAssertNil(recognizer.changed(magnification: -0.60, isOverviewVisible: true))
+        XCTAssertNil(recognizer.changed(magnification: 0.40, isOverviewVisible: true), "el mismo gesto no vuelve a disparar")
 
-        // 1. 3-finger swipe DOWN when overview is closed -> must NOT trigger, even with upward rebound
-        _ = recognizer.processFrame(touches: makeThreeTouches(yOffset: 0.0), timestamp: 1.00, isOverviewVisible: false)
-        _ = recognizer.processFrame(touches: makeThreeTouches(yOffset: -0.02), timestamp: 1.02, isOverviewVisible: false)
-        _ = recognizer.processFrame(touches: makeThreeTouches(yOffset: -0.06), timestamp: 1.04, isOverviewVisible: false)
-        let downResult = recognizer.processFrame(touches: makeThreeTouches(yOffset: -0.14), timestamp: 1.07, isOverviewVisible: false)
-        XCTAssertNil(downResult)
-        // Rebound upward in the same stroke must still be ignored
-        let reboundResult = recognizer.processFrame(touches: makeThreeTouches(yOffset: 0.12), timestamp: 1.10, isOverviewVisible: false)
-        XCTAssertNil(reboundResult)
-        _ = recognizer.processFrame(touches: [], timestamp: 1.12, isOverviewVisible: false)
+        // Separar los dedos con la vista abierta: cierra.
+        recognizer.began()
+        XCTAssertNil(recognizer.changed(magnification: 0.10, isOverviewVisible: true))
+        XCTAssertEqual(recognizer.changed(magnification: 0.30, isOverviewVisible: true), .hideOverview)
 
-        // 2. 4-finger gesture (3 fingers touch first at t=2.00, 4th finger lands at t=2.02, moves up, then 1 finger lifts leaving 3) -> must NOT trigger
-        _ = recognizer.processFrame(touches: makeThreeTouches(yOffset: 0.0), timestamp: 2.00, isOverviewVisible: false)
-        var fourTouches = makeThreeTouches(yOffset: 0.03)
-        fourTouches.append(TrackpadTouchSample(id: 4, position: CGPoint(x: 0.78, y: 0.38)))
-        _ = recognizer.processFrame(touches: fourTouches, timestamp: 2.02, isOverviewVisible: false)
-        let trailingThreeAfterFour = recognizer.processFrame(touches: makeThreeTouches(yOffset: 0.16), timestamp: 2.08, isOverviewVisible: false)
-        XCTAssertNil(trailingThreeAfterFour)
-        _ = recognizer.processFrame(touches: [], timestamp: 2.10, isOverviewVisible: false)
-
-        // 3. Clean 3-finger swipe UP after cooldown -> triggers .showOverview
-        _ = recognizer.processFrame(touches: makeThreeTouches(yOffset: 0.0), timestamp: 3.00, isOverviewVisible: false)
-        _ = recognizer.processFrame(touches: makeThreeTouches(yOffset: 0.03), timestamp: 3.02, isOverviewVisible: false)
-        _ = recognizer.processFrame(touches: makeThreeTouches(yOffset: 0.07), timestamp: 3.04, isOverviewVisible: false)
-        let upResult = recognizer.processFrame(touches: makeThreeTouches(yOffset: 0.12), timestamp: 3.07, isOverviewVisible: false)
-        XCTAssertEqual(upResult, .showOverview)
-        _ = recognizer.processFrame(touches: [], timestamp: 3.10, isOverviewVisible: true)
-
-        // 4. Clean 3-finger swipe DOWN while overview is open -> triggers .hideOverview
-        _ = recognizer.processFrame(touches: makeThreeTouches(yOffset: 0.0), timestamp: 4.00, isOverviewVisible: true)
-        _ = recognizer.processFrame(touches: makeThreeTouches(yOffset: -0.03), timestamp: 4.02, isOverviewVisible: true)
-        _ = recognizer.processFrame(touches: makeThreeTouches(yOffset: -0.06), timestamp: 4.04, isOverviewVisible: true)
-        let closeResult = recognizer.processFrame(touches: makeThreeTouches(yOffset: -0.11), timestamp: 4.07, isOverviewVisible: true)
-        XCTAssertEqual(closeResult, .hideOverview)
+        // En el sentido que no corresponde no pasa nada.
+        recognizer.began()
+        XCTAssertNil(recognizer.changed(magnification: 0.50, isOverviewVisible: false))
+        recognizer.began()
+        XCTAssertNil(recognizer.changed(magnification: -0.50, isOverviewVisible: true))
     }
-
-    // MARK: - 9. File & Directory Comparison (`compare_files`)
 
     func test_fileComparisonService_comparesFilesAndDirectories() throws {
         let leftFile = tempDir.appendingPathComponent("left.txt")

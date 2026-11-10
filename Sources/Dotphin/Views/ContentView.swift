@@ -657,7 +657,7 @@ struct ContentView: View {
 
     private var gestureMonitor: some View {
         ZStack {
-            TrackpadTabGestureMonitorView(
+            TabOverviewPinchGestureView(
                 isOverviewVisible: showsTabOverview,
                 onShowOverview: {
                     withAnimation(.spring(duration: 0.28, bounce: 0.05)) {
@@ -667,11 +667,6 @@ struct ContentView: View {
                 onHideOverview: {
                     withAnimation(.spring(duration: 0.28, bounce: 0.05)) {
                         showsTabOverview = false
-                    }
-                },
-                onToggleOverview: {
-                    withAnimation(.spring(duration: 0.28, bounce: 0.05)) {
-                        showsTabOverview.toggle()
                     }
                 }
             )

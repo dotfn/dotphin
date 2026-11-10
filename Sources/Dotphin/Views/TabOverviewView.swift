@@ -17,6 +17,12 @@ struct TabOverviewView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
+            // Esc cierra la vista (acción de cancelar estándar).
+            Button("Cerrar vista de pestañas", action: onCloseOverview)
+                .keyboardShortcut(.cancelAction)
+                .opacity(0)
+                .accessibilityHidden(true)
+
             // Full-window dark backdrop matching native macOS Tab Overview
             Color(red: 0.15, green: 0.165, blue: 0.17)
                 .ignoresSafeArea()
@@ -355,318 +361,104 @@ private struct NewTabOverviewCard: View {
     }
 }
 
-struct TrackpadTouchSample: Sendable {
-    let id: Int
-    let position: CGPoint
-}
-
-enum ThreeFingerGestureAction: Equatable, Sendable {
+enum TabOverviewGestureAction: Equatable, Sendable {
     case showOverview
     case hideOverview
 }
 
-/// Recognizes intentional 3-finger vertical trackpad swipes while strictly filtering out:
-/// - 4-finger / 5-finger system gestures (Mission Control, App Exposé, Spaces switch), including
-///   transient 3-finger frames during finger touchdown or liftoff.
-/// - Downward swipes when Tab Overview is closed (and upward swipes when Tab Overview is open).
-/// - Horizontal 3-finger swipes and finger rebounds at the end of a stroke.
-struct ThreeFingerSwipeRecognizer: Sendable {
-    var minStableDuration: TimeInterval = 0.055
-    var minThreeFingerSamples: Int = 4
-    var fourFingerCooldown: TimeInterval = 0.45
-    var triggerCooldown: TimeInterval = 0.50
-    var minShowVerticalDelta: CGFloat = 0.095
-    var minHideVerticalDelta: CGFloat = 0.085
-    var minPerFingerVerticalDelta: CGFloat = 0.065
-    var verticalDominanceRatio: CGFloat = 1.80
-    var maxSpreadDeviation: CGFloat = 0.085
+/// Decide cuándo un pellizco abre o cierra la vista de pestañas, como en
+/// Safari: juntar los dedos la abre, separarlos la cierra. Dispara una sola
+/// vez por gesto, al pasar el umbral.
+struct TabOverviewPinchRecognizer: Sendable {
+    /// Cambio de escala (0.2 = 20 %) a partir del cual el pellizco cuenta.
+    var threshold: CGFloat = 0.2
+    private var hasTriggered = false
 
-    private var startPositions: [Int: CGPoint] = [:]
-    private var startCentroid: CGPoint?
-    private var startSpread: CGFloat = 0
-    private var startTimestamp: TimeInterval?
-    private var sampleCount: Int = 0
-    private var isSequenceDisqualified: Bool = false
-    private var hasTriggeredInSequence: Bool = false
-    private var lastFourFingerTimestamp: TimeInterval = -.infinity
-    private var lastTriggerTimestamp: TimeInterval = -.infinity
-
-    mutating func reset() {
-        startPositions.removeAll()
-        startCentroid = nil
-        startSpread = 0
-        startTimestamp = nil
-        sampleCount = 0
-        isSequenceDisqualified = false
-        hasTriggeredInSequence = false
+    mutating func began() {
+        hasTriggered = false
     }
 
-    mutating func processFrame(
-        touches: [TrackpadTouchSample],
-        timestamp: TimeInterval,
-        isOverviewVisible: Bool
-    ) -> ThreeFingerGestureAction? {
-        if touches.isEmpty {
-            reset()
-            return nil
+    /// `magnification`: cambio acumulado desde que empezó el gesto
+    /// (negativo = juntar los dedos), como lo entrega `NSMagnificationGestureRecognizer`.
+    mutating func changed(magnification: CGFloat, isOverviewVisible: Bool) -> TabOverviewGestureAction? {
+        guard !hasTriggered else { return nil }
+        if magnification <= -threshold, !isOverviewVisible {
+            hasTriggered = true
+            return .showOverview
         }
-
-        // Any 4+ finger contact immediately disqualifies the entire touch sequence
-        if touches.count >= 4 {
-            isSequenceDisqualified = true
-            lastFourFingerTimestamp = timestamp
-            startPositions.removeAll()
-            startCentroid = nil
-            startTimestamp = nil
-            sampleCount = 0
-            return nil
+        if magnification >= threshold, isOverviewVisible {
+            hasTriggered = true
+            return .hideOverview
         }
-
-        if isSequenceDisqualified || hasTriggeredInSequence {
-            return nil
-        }
-
-        // Cooldown after a 4-finger gesture or recent trigger
-        if timestamp - lastFourFingerTimestamp < fourFingerCooldown {
-            return nil
-        }
-        if timestamp - lastTriggerTimestamp < triggerCooldown {
-            return nil
-        }
-
-        guard touches.count == 3 else {
-            // 1 or 2 fingers on trackpad: clear 3-finger baseline until 3 fingers are stably down
-            startPositions.removeAll()
-            startCentroid = nil
-            startSpread = 0
-            startTimestamp = nil
-            sampleCount = 0
-            return nil
-        }
-
-        let avgX = touches.map(\.position.x).reduce(0, +) / 3.0
-        let avgY = touches.map(\.position.y).reduce(0, +) / 3.0
-        let centroid = CGPoint(x: avgX, y: avgY)
-        let spread = touches.map { hypot($0.position.x - avgX, $0.position.y - avgY) }.reduce(0, +) / 3.0
-
-        let sameIdentities = touches.allSatisfy { startPositions[$0.id] != nil } && startPositions.count == 3
-        if !sameIdentities || startTimestamp == nil || startCentroid == nil {
-            startPositions = Dictionary(uniqueKeysWithValues: touches.map { ($0.id, $0.position) })
-            startCentroid = centroid
-            startSpread = spread
-            startTimestamp = timestamp
-            sampleCount = 1
-            return nil
-        }
-
-        sampleCount += 1
-        guard let initialTimestamp = startTimestamp,
-              let initialCentroid = startCentroid else {
-            return nil
-        }
-
-        let deltaX = centroid.x - initialCentroid.x
-        let deltaY = centroid.y - initialCentroid.y
-
-        // Immediately disqualify the sequence if the user commits to the wrong direction
-        // (prevents end-of-stroke rebound from triggering the opposite action).
-        if abs(deltaX) > 0.065 && abs(deltaX) > abs(deltaY) {
-            isSequenceDisqualified = true
-            return nil
-        }
-        if !isOverviewVisible && deltaY < -0.045 {
-            isSequenceDisqualified = true
-            return nil
-        }
-        if isOverviewVisible && deltaY > 0.045 {
-            isSequenceDisqualified = true
-            return nil
-        }
-
-        // Wait until 3 fingers have been stably on the trackpad (prevents catching the start of a 4-finger gesture)
-        guard timestamp - initialTimestamp >= minStableDuration,
-              sampleCount >= minThreeFingerSamples else {
-            return nil
-        }
-
-        // Reject if fingers are pinching/spreading rather than swiping together
-        if abs(spread - startSpread) > maxSpreadDeviation {
-            return nil
-        }
-
-        // Require clear vertical dominance over horizontal motion
-        guard abs(deltaY) > abs(deltaX) * verticalDominanceRatio else {
-            return nil
-        }
-
-        // Check individual finger coherence
-        let fingerDeltasY = touches.compactMap { sample -> CGFloat? in
-            guard let startPos = startPositions[sample.id] else { return nil }
-            return sample.position.y - startPos.y
-        }
-        guard fingerDeltasY.count == 3 else { return nil }
-
-        if !isOverviewVisible {
-            // Only a deliberate 3-finger swipe UP opens Tab Overview
-            let allMovedUp = fingerDeltasY.allSatisfy { $0 >= minPerFingerVerticalDelta }
-            if deltaY >= minShowVerticalDelta && allMovedUp {
-                hasTriggeredInSequence = true
-                lastTriggerTimestamp = timestamp
-                return .showOverview
-            }
-        } else {
-            // Only a deliberate 3-finger swipe DOWN closes Tab Overview
-            let allMovedDown = fingerDeltasY.allSatisfy { $0 <= -minPerFingerVerticalDelta }
-            if deltaY <= -minHideVerticalDelta && allMovedDown {
-                hasTriggeredInSequence = true
-                lastTriggerTimestamp = timestamp
-                return .hideOverview
-            }
-        }
-
         return nil
     }
 }
 
-struct TrackpadTabGestureMonitorView: NSViewRepresentable {
-    var isOverviewVisible: Bool = false
-    var onShowOverview: (() -> Void)? = nil
-    var onHideOverview: (() -> Void)? = nil
-    let onToggleOverview: () -> Void
+/// Pellizco del trackpad sobre la ventana, con el reconocedor nativo de AppKit
+/// (`NSMagnificationGestureRecognizer`). Reemplaza al deslizamiento de tres
+/// dedos, que leía toques crudos con un monitor global de eventos.
+struct TabOverviewPinchGestureView: NSViewRepresentable {
+    var isOverviewVisible: Bool
+    let onShowOverview: () -> Void
+    let onHideOverview: () -> Void
 
     func makeNSView(context: Context) -> GestureNSView {
         let view = GestureNSView()
-        view.updateCallbacks(
-            isOverviewVisible: isOverviewVisible,
-            onShowOverview: onShowOverview,
-            onHideOverview: onHideOverview,
-            onToggleOverview: onToggleOverview
-        )
+        view.update(isOverviewVisible: isOverviewVisible, onShowOverview: onShowOverview, onHideOverview: onHideOverview)
         return view
     }
 
     func updateNSView(_ nsView: GestureNSView, context: Context) {
-        nsView.updateCallbacks(
-            isOverviewVisible: isOverviewVisible,
-            onShowOverview: onShowOverview,
-            onHideOverview: onHideOverview,
-            onToggleOverview: onToggleOverview
-        )
+        nsView.update(isOverviewVisible: isOverviewVisible, onShowOverview: onShowOverview, onHideOverview: onHideOverview)
     }
 
     final class GestureNSView: NSView {
         private var isOverviewVisible = false
         private var onShowOverview: (() -> Void)?
         private var onHideOverview: (() -> Void)?
-        private var onToggleOverview: (() -> Void)?
-        private var eventMonitor: Any?
-        private var recognizer = ThreeFingerSwipeRecognizer()
+        private var pinch = TabOverviewPinchRecognizer()
+        private var gestureRecognizer: NSMagnificationGestureRecognizer?
+        private weak var gestureHost: NSView?
 
-        func updateCallbacks(
-            isOverviewVisible: Bool,
-            onShowOverview: (() -> Void)?,
-            onHideOverview: (() -> Void)?,
-            onToggleOverview: @escaping () -> Void
-        ) {
+        func update(isOverviewVisible: Bool, onShowOverview: @escaping () -> Void, onHideOverview: @escaping () -> Void) {
             self.isOverviewVisible = isOverviewVisible
             self.onShowOverview = onShowOverview
             self.onHideOverview = onHideOverview
-            self.onToggleOverview = onToggleOverview
         }
 
+        /// El reconocedor va en la vista raíz de la ventana: así el pellizco
+        /// funciona sobre cualquier parte del contenido.
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
-            allowedTouchTypes = [.indirect]
-            wantsRestingTouches = false
-            if let window {
-                if let rootView = window.contentView {
-                    enableIndirectTouchesRecursively(in: rootView)
-                }
-                if eventMonitor == nil {
-                    installMonitor()
-                }
-            } else if let monitor = eventMonitor {
-                NSEvent.removeMonitor(monitor)
-                eventMonitor = nil
+            if let gestureRecognizer {
+                gestureHost?.removeGestureRecognizer(gestureRecognizer)
+                self.gestureRecognizer = nil
+            }
+            guard let host = window?.contentView else { return }
+            let recognizer = NSMagnificationGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+            recognizer.delaysMagnificationEvents = false
+            host.addGestureRecognizer(recognizer)
+            gestureRecognizer = recognizer
+            gestureHost = host
+        }
+
+        @objc private func handlePinch(_ recognizer: NSMagnificationGestureRecognizer) {
+            switch recognizer.state {
+            case .began:
+                pinch.began()
+                fallthrough
+            case .changed:
+                handle(magnification: recognizer.magnification)
+            default:
+                break
             }
         }
 
-        private func enableIndirectTouchesRecursively(in view: NSView) {
-            if !view.allowedTouchTypes.contains(.indirect) {
-                view.allowedTouchTypes.insert(.indirect)
-            }
-            for subview in view.subviews {
-                enableIndirectTouchesRecursively(in: subview)
-            }
-        }
-
-        private func enableIndirectTouchesAlongHitChain(at windowPoint: CGPoint, in window: NSWindow) {
-            var current = window.contentView?.hitTest(windowPoint) ?? window.contentView
-            while let view = current {
-                if !view.allowedTouchTypes.contains(.indirect) {
-                    view.allowedTouchTypes.insert(.indirect)
-                }
-                current = view.superview
-            }
-        }
-
-        private func performAction(_ action: ThreeFingerGestureAction) {
-            NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
-            switch action {
-            case .showOverview:
-                if let onShowOverview {
-                    onShowOverview()
-                } else if !isOverviewVisible {
-                    onToggleOverview?()
-                }
-            case .hideOverview:
-                if let onHideOverview {
-                    onHideOverview()
-                } else if isOverviewVisible {
-                    onToggleOverview?()
-                }
-            }
-        }
-
-        private func installMonitor() {
-            eventMonitor = NSEvent.addLocalMonitorForEvents(
-                matching: [.gesture, .keyDown]
-            ) { [weak self] event in
-                guard let self else { return event }
-                let targetWindow = event.window ?? self.window ?? NSApp.keyWindow
-
-                switch event.type {
-                case .gesture:
-                    if let targetWindow {
-                        self.enableIndirectTouchesAlongHitChain(at: event.locationInWindow, in: targetWindow)
-                    }
-                    let activeTouches = event.touches(matching: .touching, in: nil)
-                    let samples = activeTouches.map { touch in
-                        TrackpadTouchSample(
-                            id: ObjectIdentifier(touch.identity).hashValue,
-                            position: touch.normalizedPosition
-                        )
-                    }
-                    if let action = self.recognizer.processFrame(
-                        touches: samples,
-                        timestamp: event.timestamp,
-                        isOverviewVisible: self.isOverviewVisible
-                    ) {
-                        self.performAction(action)
-                    }
-                    return event
-
-                case .keyDown:
-                    // Allow closing Tab Overview with the Escape key (keyCode 53)
-                    if self.isOverviewVisible && event.keyCode == 53 {
-                        self.performAction(.hideOverview)
-                        return nil
-                    }
-                    return event
-
-                default:
-                    return event
-                }
+        func handle(magnification: CGFloat) {
+            switch pinch.changed(magnification: magnification, isOverviewVisible: isOverviewVisible) {
+            case .showOverview: onShowOverview?()
+            case .hideOverview: onHideOverview?()
+            case nil: break
             }
         }
     }

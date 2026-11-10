@@ -214,7 +214,7 @@ struct TabBarView: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .help("Ver todas las pestañas (Gesto de 3 dedos o ⇧⌘\\)")
+        .help("Ver todas las pestañas (pellizcar o ⇧⌘\\)")
         .accessibilityLabel("Ver todas las pestañas")
     }
 }
