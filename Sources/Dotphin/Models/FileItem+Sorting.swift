@@ -87,10 +87,10 @@ extension Array where Element == FileItem {
 
     private static func kindLabel(for item: FileItem) -> String {
         if item.isDirectory {
-            return "Carpeta"
+            return String(localized: "Carpeta", bundle: #bundle)
         }
         let ext = item.url.pathExtension
-        return ext.isEmpty ? "Documento" : ext.uppercased()
+        return ext.isEmpty ? String(localized: "Documento", bundle: #bundle) : ext.uppercased()
     }
 
     private static func groupTitle(
@@ -112,52 +112,52 @@ extension Array where Element == FileItem {
 
         case .size:
             if foldersFirst && item.isDirectory {
-                return "Carpetas"
+                return String(localized: "Carpetas", bundle: #bundle)
             }
             let bytes = item.size ?? 0
             if bytes == 0 {
-                return "Vacío (0 B)"
+                return String(localized: "Vacío (0 B)", bundle: #bundle)
             } else if bytes < 1_048_576 {
-                return "Pequeño (< 1 MB)"
+                return String(localized: "Pequeño (< 1 MB)", bundle: #bundle)
             } else if bytes < 104_857_600 {
-                return "Mediano (1 MB – 100 MB)"
+                return String(localized: "Mediano (1 MB – 100 MB)", bundle: #bundle)
             } else if bytes < 1_073_741_824 {
-                return "Grande (100 MB – 1 GB)"
+                return String(localized: "Grande (100 MB – 1 GB)", bundle: #bundle)
             } else {
-                return "Enorme (> 1 GB)"
+                return String(localized: "Enorme (> 1 GB)", bundle: #bundle)
             }
 
         case .modificationDate, .creationDate:
             let rawDate = (field == .creationDate) ? (item.creationDate ?? item.modificationDate) : item.modificationDate
             guard let date = rawDate else {
-                return "Fecha desconocida"
+                return String(localized: "Fecha desconocida", bundle: #bundle)
             }
             let calendar = Calendar.current
             if calendar.isDate(date, inSameDayAs: referenceDate) {
-                return "Hoy"
+                return String(localized: "Hoy", bundle: #bundle)
             }
             if let yesterday = calendar.date(byAdding: .day, value: -1, to: referenceDate),
                calendar.isDate(date, inSameDayAs: yesterday) {
-                return "Ayer"
+                return String(localized: "Ayer", bundle: #bundle)
             }
             if calendar.isDate(date, equalTo: referenceDate, toGranularity: .weekOfYear) {
-                return "Esta semana"
+                return String(localized: "Esta semana", bundle: #bundle)
             }
             if calendar.isDate(date, equalTo: referenceDate, toGranularity: .month) {
-                return "Este mes"
+                return String(localized: "Este mes", bundle: #bundle)
             }
             if calendar.isDate(date, equalTo: referenceDate, toGranularity: .year) {
-                return "Este año"
+                return String(localized: "Este año", bundle: #bundle)
             }
-            return "Anteriores"
+            return String(localized: "Anteriores", bundle: #bundle)
 
         case .type:
             return kindLabel(for: item)
 
         case .extensionType:
-            if item.isDirectory { return "Carpetas" }
+            if item.isDirectory { return String(localized: "Carpetas", bundle: #bundle) }
             let ext = item.fileExtension
-            return ext.isEmpty ? "Sin extensión" : ".\(ext)"
+            return ext.isEmpty ? String(localized: "Sin extensión", bundle: #bundle) : ".\(ext)"
         }
     }
 }

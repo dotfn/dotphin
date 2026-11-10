@@ -110,23 +110,23 @@ struct InfoPanelView: View {
                     Divider()
 
                     VStack(alignment: .leading, spacing: 8) {
-                        LabeledContent("Tipo", value: meta.kind)
+                        LabeledContent(String(localized: "Tipo", bundle: #bundle), value: meta.kind)
                         LabeledContent(
-                            "Tamaño",
-                            value: item.isDirectory ? (folderSizeText ?? "Calculando…") : meta.sizeText
+                            String(localized: "Tamaño", bundle: #bundle),
+                            value: item.isDirectory ? (folderSizeText ?? String(localized: "Calculando…", bundle: #bundle)) : meta.sizeText
                         )
                         if let imageDimensionsText {
-                            LabeledContent("Dimensiones", value: imageDimensionsText)
+                            LabeledContent(String(localized: "Dimensiones", bundle: #bundle), value: imageDimensionsText)
                         }
-                        LabeledContent("Modificado", value: meta.modifiedText)
+                        LabeledContent(String(localized: "Modificado", bundle: #bundle), value: meta.modifiedText)
                         if let posixPermissionsText {
-                            LabeledContent("Permisos") {
+                            LabeledContent(String(localized: "Permisos", bundle: #bundle)) {
                                 Text(posixPermissionsText)
                                     .font(.system(.caption, design: .monospaced))
                                     .foregroundStyle(.secondary)
                             }
                         }
-                        LabeledContent("Ubicación") {
+                        LabeledContent(String(localized: "Ubicación", bundle: #bundle)) {
                             Text(item.url.deletingLastPathComponent().path)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -140,7 +140,7 @@ struct InfoPanelView: View {
 
                     // Inline Tags & Comments (`Baloo::FileMetaDataWidget`)
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Etiqueta de color")
+                        Text(String(localized: "Etiqueta de color", bundle: #bundle))
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
                         HStack(spacing: 6) {
@@ -176,12 +176,12 @@ struct InfoPanelView: View {
                             }
                         }
 
-                        Text("Comentario")
+                        Text(String(localized: "Comentario", bundle: #bundle))
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
                             .padding(.top, 2)
                         HStack(spacing: 6) {
-                            TextField("Añadir comentario de Spotlight…", text: $finderComment)
+                            TextField(String(localized: "Añadir comentario de Spotlight…", bundle: #bundle), text: $finderComment)
                                 .textFieldStyle(.roundedBorder)
                                 .controlSize(.small)
                                 .onSubmit {
@@ -193,7 +193,7 @@ struct InfoPanelView: View {
                                 Image(systemName: "checkmark.circle")
                             }
                             .buttonStyle(.borderless)
-                            .help("Guardar comentario")
+                            .help(String(localized: "Guardar comentario", bundle: #bundle))
                         }
                     }
 
@@ -203,7 +203,7 @@ struct InfoPanelView: View {
                         Button {
                             QuickLookPreviewController.shared.present(items: [item], startIndex: 0)
                         } label: {
-                            Label("Vista rápida (Espacio)", systemImage: "eye")
+                            Label(String(localized: "Vista rápida (Espacio)", bundle: #bundle), systemImage: "eye")
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .controlSize(.small)
@@ -211,7 +211,7 @@ struct InfoPanelView: View {
                         Button {
                             NSWorkspace.shared.activateFileViewerSelecting([item.url])
                         } label: {
-                            Label("Mostrar en Finder", systemImage: "macwindow")
+                            Label(String(localized: "Mostrar en Finder", bundle: #bundle), systemImage: "macwindow")
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .controlSize(.small)
@@ -220,7 +220,7 @@ struct InfoPanelView: View {
                             Button {
                                 onShowProperties(item.url)
                             } label: {
-                                Label("Propiedades y sumas de verificación…", systemImage: "info.circle")
+                                Label(String(localized: "Propiedades y sumas de verificación…", bundle: #bundle), systemImage: "info.circle")
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .controlSize(.small)
@@ -239,7 +239,7 @@ struct InfoPanelView: View {
                     .font(.system(size: 42))
                     .foregroundStyle(.secondary)
                     .symbolEffect(.bounce, value: selectedCount)
-                Text("\(selectedCount) ítems seleccionados")
+                Text(String(localized: "\(selectedCount) ítems seleccionados", bundle: #bundle))
                     .font(.headline)
                     .contentTransition(.numericText())
                     .animation(.snappy(duration: 0.16), value: selectedCount)
@@ -256,9 +256,9 @@ struct InfoPanelView: View {
             .transition(.opacity)
         } else {
             ContentUnavailableView(
-                "Nada seleccionado",
+                String(localized: "Nada seleccionado", bundle: #bundle),
                 systemImage: "sidebar.right",
-                description: Text("Seleccioná un archivo o carpeta para ver su vista previa y metadatos.")
+                description: Text(String(localized: "Seleccioná un archivo o carpeta para ver su vista previa y metadatos.", bundle: #bundle))
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -310,7 +310,7 @@ struct InfoPanelView: View {
     @ViewBuilder
     private func textPreviewCard(_ snippet: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Vista previa de texto")
+            Text(String(localized: "Vista previa de texto", bundle: #bundle))
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.secondary)
             ScrollView {

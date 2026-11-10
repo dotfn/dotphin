@@ -24,28 +24,30 @@ struct StatusBarView: View {
     }()
 
     var statusSummaryText: String {
-        let noun = itemCount == 1 ? "ítem" : "ítems"
-        let totalNoun = totalCount == 1 ? "ítem" : "ítems"
-        let base = itemCount == totalCount ? "\(itemCount) \(noun)" : "\(itemCount) de \(totalCount) \(totalNoun)"
+        let noun = itemCount == 1 ? String(localized: "ítem", bundle: #bundle) : String(localized: "ítems", bundle: #bundle)
+        let totalNoun = totalCount == 1 ? String(localized: "ítem", bundle: #bundle) : String(localized: "ítems", bundle: #bundle)
+        let base = itemCount == totalCount
+            ? String(localized: "\(itemCount) \(noun)", bundle: #bundle)
+            : String(localized: "\(itemCount) de \(totalCount) \(totalNoun)", bundle: #bundle)
         guard selectedCount > 0 else { return base }
         if selectedCount == 1, let item = singleSelectedItem {
             let meta = FileMetadataFormatter().metadata(for: item)
             if item.isDirectory {
-                return "\(base) — «\(item.name)» (\(meta.kind))"
+                return String(localized: "\(base) — «\(item.name)» (\(meta.kind))", bundle: #bundle)
             } else {
-                return "\(base) — «\(item.name)» (\(meta.kind), \(meta.sizeText))"
+                return String(localized: "\(base) — «\(item.name)» (\(meta.kind), \(meta.sizeText))", bundle: #bundle)
             }
         }
-        let selNoun = selectedCount == 1 ? "seleccionado" : "seleccionados"
+        let selNoun = selectedCount == 1 ? String(localized: "seleccionado", bundle: #bundle) : String(localized: "seleccionados", bundle: #bundle)
         if let bytes = selectedTotalBytes, bytes > 0 {
             let formatted = Self.sizeFormatter.string(fromByteCount: bytes)
-            return "\(base) — \(selectedCount) \(selNoun) (\(formatted))"
+            return String(localized: "\(base) — \(selectedCount) \(selNoun) (\(formatted))", bundle: #bundle)
         }
-        return "\(base) — \(selectedCount) \(selNoun)"
+        return String(localized: "\(base) — \(selectedCount) \(selNoun)", bundle: #bundle)
     }
 
     private var capacityText: String {
-        availableCapacity.map { "\(Self.sizeFormatter.string(fromByteCount: $0)) libres" } ?? "—"
+        availableCapacity.map { String(localized: "\(Self.sizeFormatter.string(fromByteCount: $0)) libres", bundle: #bundle) } ?? "—"
     }
 
     private var usedFraction: Double? {
@@ -66,13 +68,13 @@ struct StatusBarView: View {
                         Image(systemName: isSelectionModeActive.wrappedValue ? "checkmark.circle.fill" : "checkmark.circle")
                             .foregroundStyle(isSelectionModeActive.wrappedValue ? Color.accentColor : .secondary)
                             .contentTransition(.symbolEffect(.replace))
-                        Text("Seleccionar")
+                        Text(String(localized: "Seleccionar", bundle: #bundle))
                             .foregroundStyle(isSelectionModeActive.wrappedValue ? Color.accentColor : .secondary)
                     }
                 }
                 .buttonStyle(.plain)
-                .help("Alternar modo de selección de Dolphin")
-                .accessibilityLabel("Modo de selección")
+                .help(String(localized: "Alternar modo de selección de Dolphin", bundle: #bundle))
+                .accessibilityLabel(String(localized: "Modo de selección", bundle: #bundle))
 
                 Divider()
                     .frame(height: 12)
@@ -99,13 +101,13 @@ struct StatusBarView: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .help("Reducir zoom")
+                    .help(String(localized: "Reducir zoom", bundle: #bundle))
 
                     Slider(value: zoomLevel, in: 0.5...2.0)
                         .controlSize(.small)
                         .frame(width: 96)
-                        .help("Tamaño de vista")
-                        .accessibilityLabel("Tamaño de vista")
+                        .help(String(localized: "Tamaño de vista", bundle: #bundle))
+                        .accessibilityLabel(String(localized: "Tamaño de vista", bundle: #bundle))
 
                     Button {
                         withAnimation(.snappy(duration: 0.18)) {
@@ -116,14 +118,14 @@ struct StatusBarView: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .help("Aumentar zoom")
+                    .help(String(localized: "Aumentar zoom", bundle: #bundle))
 
                     Button {
                         withAnimation(.snappy(duration: 0.18)) {
                             zoomLevel.wrappedValue = 1.0
                         }
                     } label: {
-                        Text("\(Int(round(zoomLevel.wrappedValue * 100)))%")
+                        Text(String(localized: "\(Int(round(zoomLevel.wrappedValue * 100)))%", bundle: #bundle))
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                             .contentTransition(.numericText())
@@ -131,7 +133,7 @@ struct StatusBarView: View {
                             .frame(width: 36, alignment: .trailing)
                     }
                     .buttonStyle(.plain)
-                    .help("Restablecer zoom al 100%")
+                    .help(String(localized: "Restablecer zoom al 100%", bundle: #bundle))
                 }
                 .fixedSize(horizontal: true, vertical: false)
             }
@@ -143,29 +145,29 @@ struct StatusBarView: View {
                 Menu {
                     if let total = totalCapacity, let free = availableCapacity {
                         let used = max(0, total - free)
-                        Text("Usado: \(Self.sizeFormatter.string(fromByteCount: used)) de \(Self.sizeFormatter.string(fromByteCount: total))")
-                        Text("Libre: \(Self.sizeFormatter.string(fromByteCount: free))")
+                        Text(String(localized: "Usado: \(Self.sizeFormatter.string(fromByteCount: used)) de \(Self.sizeFormatter.string(fromByteCount: total))", bundle: #bundle))
+                        Text(String(localized: "Libre: \(Self.sizeFormatter.string(fromByteCount: free))", bundle: #bundle))
                         Divider()
                     }
                     if let onOpenDiskUsageAnalyzer {
                         Button {
                             onOpenDiskUsageAnalyzer()
                         } label: {
-                            Label("Estadísticas de uso de la carpeta actual…", systemImage: "chart.pie")
+                            Label(String(localized: "Estadísticas de uso de la carpeta actual…", bundle: #bundle), systemImage: "chart.pie")
                         }
                     }
                     Button {
                         let diskUtilURL = URL(fileURLWithPath: "/System/Applications/Utilities/Disk Utility.app")
                         NSWorkspace.shared.openApplication(at: diskUtilURL, configuration: NSWorkspace.OpenConfiguration())
                     } label: {
-                        Label("Abrir Utilidad de Discos…", systemImage: "internaldrive")
+                        Label(String(localized: "Abrir Utilidad de Discos…", bundle: #bundle), systemImage: "internaldrive")
                     }
                     if let onEmptyTrash {
                         Divider()
                         Button(role: .destructive) {
                             onEmptyTrash()
                         } label: {
-                            Label("Vaciar la Papelera…", systemImage: "trash.slash")
+                            Label(String(localized: "Vaciar la Papelera…", bundle: #bundle), systemImage: "trash.slash")
                         }
                     }
                 } label: {
@@ -189,7 +191,7 @@ struct StatusBarView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
-                .help("Espacio libre en disco — clic para ver estadísticas de uso")
+                .help(String(localized: "Espacio libre en disco — clic para ver estadísticas de uso", bundle: #bundle))
             }
         }
         .font(.caption)
@@ -202,13 +204,13 @@ struct StatusBarView: View {
                     onToggleZoomSlider()
                 } label: {
                     Label(
-                        zoomLevel != nil ? "Mostrar deslizador de zoom ✓" : "Mostrar deslizador de zoom",
+                        zoomLevel != nil ? "Mostrar deslizador de zoom ✓" : String(localized: "Mostrar deslizador de zoom", bundle: #bundle),
                         systemImage: "magnifyingglass"
                     )
                 }
             }
             if let onChangeDisplayMode {
-                Menu("Estilo de barra de estado") {
+                Menu(String(localized: "Estilo de barra de estado", bundle: #bundle)) {
                     ForEach(StatusBarDisplayMode.allCases) { mode in
                         Button {
                             onChangeDisplayMode(mode)
@@ -228,7 +230,7 @@ struct StatusBarView: View {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(statusSummaryText, forType: .string)
             } label: {
-                Label("Copiar texto de estado", systemImage: "doc.on.doc")
+                Label(String(localized: "Copiar texto de estado", bundle: #bundle), systemImage: "doc.on.doc")
             }
         }
     }

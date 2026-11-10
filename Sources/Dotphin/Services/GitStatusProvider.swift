@@ -5,11 +5,11 @@ enum GitFileStatus: Equatable, Sendable {
 
     var accessibilityDescription: String {
         switch self {
-        case .modified: return "Modificado"
-        case .added: return "Agregado"
-        case .deleted: return "Eliminado"
-        case .untracked: return "Sin seguimiento"
-        case .renamed: return "Renombrado"
+        case .modified: return String(localized: "Modificado", bundle: #bundle)
+        case .added: return String(localized: "Agregado", bundle: #bundle)
+        case .deleted: return String(localized: "Eliminado", bundle: #bundle)
+        case .untracked: return String(localized: "Sin seguimiento", bundle: #bundle)
+        case .renamed: return String(localized: "Renombrado", bundle: #bundle)
         }
     }
 }

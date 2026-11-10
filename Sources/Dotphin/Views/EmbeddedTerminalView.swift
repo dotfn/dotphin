@@ -297,7 +297,7 @@ final class EmbeddedTerminalSession {
         var slave: Int32 = -1
         var winSize = winsize(ws_row: 36, ws_col: 220, ws_xpixel: 0, ws_ypixel: 0)
         guard openpty(&master, &slave, nil, nil, &winSize) == 0 else {
-            outputText += "\n[Error: no se pudo abrir el pseudo-terminal (openpty)]\n"
+            outputText += String(localized: "\n[Error: no se pudo abrir el pseudo-terminal (openpty)]\n", bundle: #bundle)
             return
         }
 
@@ -366,7 +366,7 @@ final class EmbeddedTerminalSession {
             self.isRunning = true
             self.currentSyncedDirectory = initialDirectory.standardizedFileURL
         } catch {
-            outputText += "\n[Error al iniciar \(shellPath): \(error.localizedDescription)]\n"
+            outputText += String(localized: "\n[Error al iniciar \(shellPath): \(error.localizedDescription)]\n", bundle: #bundle)
             source.cancel()
             self.readSource = nil
             self.masterFD = -1
@@ -595,7 +595,7 @@ struct EmbeddedTerminalPanelView: View {
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    Text(session.outputText.isEmpty ? "Iniciando sesión de terminal en \(currentDirectory.path)…" : session.outputText)
+                    Text(session.outputText.isEmpty ? String(localized: "Iniciando sesión de terminal en \(currentDirectory.path)…", bundle: #bundle) : session.outputText)
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(Color.primary.opacity(0.92))
                         .textSelection(.enabled)
@@ -643,7 +643,7 @@ struct EmbeddedTerminalPanelView: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Color.accentColor)
 
-            Text("Terminal — \(currentDirectory.lastPathComponent.isEmpty ? "/" : currentDirectory.lastPathComponent)")
+            Text(String(localized: "Terminal — \(currentDirectory.lastPathComponent.isEmpty ? "/" : currentDirectory.lastPathComponent)", bundle: #bundle))
                 .font(.system(size: 11.5, weight: .semibold))
                 .lineLimit(1)
 
@@ -664,7 +664,7 @@ struct EmbeddedTerminalPanelView: View {
                 HStack(spacing: 4) {
                     Image(systemName: session.autoSyncDirectory ? "link" : "link.badge.plus")
                         .font(.system(size: 10, weight: .semibold))
-                    Text("Sincronizar")
+                    Text(String(localized: "Sincronizar", bundle: #bundle))
                         .font(.system(size: 10.5, weight: .medium))
                 }
                 .foregroundStyle(session.autoSyncDirectory ? Color.accentColor : Color.secondary)
@@ -676,12 +676,12 @@ struct EmbeddedTerminalPanelView: View {
                 )
             }
             .buttonStyle(.plain)
-            .help("Sincronizar automáticamente el directorio de la terminal con la carpeta actual de Dolphin")
+            .help(String(localized: "Sincronizar automáticamente el directorio de la terminal con la carpeta actual de Dolphin", bundle: #bundle))
 
             Button {
                 session.sendInterrupt()
             } label: {
-                Text("^C")
+                Text(String(localized: "^C", bundle: #bundle))
                     .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 6)
@@ -689,7 +689,7 @@ struct EmbeddedTerminalPanelView: View {
                     .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 4))
             }
             .buttonStyle(.plain)
-            .help("Enviar interrupción (Ctrl+C)")
+            .help(String(localized: "Enviar interrupción (Ctrl+C)", bundle: #bundle))
 
             Button {
                 session.clearOutput()
@@ -700,7 +700,7 @@ struct EmbeddedTerminalPanelView: View {
                     .frame(width: 22, height: 22)
             }
             .buttonStyle(.plain)
-            .help("Limpiar salida de la terminal")
+            .help(String(localized: "Limpiar salida de la terminal", bundle: #bundle))
 
             Button(action: onOpenExternalTerminal) {
                 Image(systemName: "arrow.up.forward.app")
@@ -709,7 +709,7 @@ struct EmbeddedTerminalPanelView: View {
                     .frame(width: 22, height: 22)
             }
             .buttonStyle(.plain)
-            .help("Abrir en Terminal.app externa (⇧F4)")
+            .help(String(localized: "Abrir en Terminal.app externa (⇧F4)", bundle: #bundle))
 
             Button(action: onClose) {
                 Image(systemName: "xmark")
@@ -718,7 +718,7 @@ struct EmbeddedTerminalPanelView: View {
                     .frame(width: 22, height: 22)
             }
             .buttonStyle(.plain)
-            .help("Ocultar panel de terminal (F4)")
+            .help(String(localized: "Ocultar panel de terminal (F4)", bundle: #bundle))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
@@ -726,11 +726,11 @@ struct EmbeddedTerminalPanelView: View {
 
     private var inputBar: some View {
         HStack(spacing: 6) {
-            Text("❯")
+            Text(String(localized: "❯", bundle: #bundle))
                 .font(.system(size: 12, weight: .bold, design: .monospaced))
                 .foregroundStyle(Color.accentColor)
 
-            TextField("Escribir comando… (Intro para ejecutar, ↑/↓ historial)", text: $commandInput)
+            TextField(String(localized: "Escribir comando… (Intro para ejecutar, ↑/↓ historial)", bundle: #bundle), text: $commandInput)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12, design: .monospaced))
                 .focused($isInputFocused)
@@ -762,7 +762,7 @@ struct EmbeddedTerminalPanelView: View {
             }
             .buttonStyle(.plain)
             .disabled(commandInput.isEmpty)
-            .help("Ejecutar comando (Intro)")
+            .help(String(localized: "Ejecutar comando (Intro)", bundle: #bundle))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)

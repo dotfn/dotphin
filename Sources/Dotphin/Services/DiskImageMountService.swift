@@ -6,7 +6,7 @@ enum DiskImageMountError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .notADiskImage: return "No es una imagen de disco."
+        case .notADiskImage: return String(localized: "No es una imagen de disco.", bundle: #bundle)
         case .failed(let message): return message
         }
     }
@@ -42,7 +42,7 @@ struct DiskImageMountService {
         guard process.terminationStatus == 0 else {
             let message = Self.userFacingError(from: String(data: errorData, encoding: .utf8) ?? "")
             throw DiskImageMountError.failed(
-                message.isEmpty ? "hdiutil terminó con código \(process.terminationStatus)." : message
+                message.isEmpty ? String(localized: "hdiutil terminó con código \(process.terminationStatus).", bundle: #bundle) : message
             )
         }
     }

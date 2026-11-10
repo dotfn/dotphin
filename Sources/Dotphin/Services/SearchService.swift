@@ -10,8 +10,8 @@ enum SearchLocationScope: String, CaseIterable, Identifiable, Codable, Sendable 
 
     var title: String {
         switch self {
-        case .fromHere: return "Desde aquí"
-        case .everywhere: return "En todas partes"
+        case .fromHere: return String(localized: "Desde aquí", bundle: #bundle)
+        case .everywhere: return String(localized: "En todas partes", bundle: #bundle)
         }
     }
 
@@ -32,8 +32,8 @@ enum SearchMatchMode: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var title: String {
         switch self {
-        case .filename: return "Nombre de archivo"
-        case .content: return "Contenido"
+        case .filename: return String(localized: "Nombre de archivo", bundle: #bundle)
+        case .content: return String(localized: "Contenido", bundle: #bundle)
         }
     }
 
@@ -58,12 +58,12 @@ enum SearchDateFilter: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var title: String {
         switch self {
-        case .any: return "Cualquier fecha"
-        case .today: return "Hoy"
-        case .yesterday: return "Ayer"
-        case .thisWeek: return "Esta semana"
-        case .thisMonth: return "Este mes"
-        case .thisYear: return "Este año"
+        case .any: return String(localized: "Cualquier fecha", bundle: #bundle)
+        case .today: return String(localized: "Hoy", bundle: #bundle)
+        case .yesterday: return String(localized: "Ayer", bundle: #bundle)
+        case .thisWeek: return String(localized: "Esta semana", bundle: #bundle)
+        case .thisMonth: return String(localized: "Este mes", bundle: #bundle)
+        case .thisYear: return String(localized: "Este año", bundle: #bundle)
         }
     }
 
@@ -104,11 +104,11 @@ enum SearchSizeFilter: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var title: String {
         switch self {
-        case .any: return "Cualquier tamaño"
-        case .empty: return "Vacío (0 B)"
-        case .small: return "Pequeño (< 1 MB)"
-        case .medium: return "Mediano (1–100 MB)"
-        case .large: return "Grande (> 100 MB)"
+        case .any: return String(localized: "Cualquier tamaño", bundle: #bundle)
+        case .empty: return String(localized: "Vacío (0 B)", bundle: #bundle)
+        case .small: return String(localized: "Pequeño (< 1 MB)", bundle: #bundle)
+        case .medium: return String(localized: "Mediano (1–100 MB)", bundle: #bundle)
+        case .large: return String(localized: "Grande (> 100 MB)", bundle: #bundle)
         }
     }
 
@@ -145,13 +145,13 @@ enum SearchTypeFilter: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var title: String {
         switch self {
-        case .all: return "Todo"
-        case .folders: return "Carpetas"
-        case .documents: return "Documentos"
-        case .images: return "Imágenes"
+        case .all: return String(localized: "Todo", bundle: #bundle)
+        case .folders: return String(localized: "Carpetas", bundle: #bundle)
+        case .documents: return String(localized: "Documentos", bundle: #bundle)
+        case .images: return String(localized: "Imágenes", bundle: #bundle)
         case .audio: return "Audio"
         case .video: return "Video"
-        case .code: return "Código"
+        case .code: return String(localized: "Código", bundle: #bundle)
         }
     }
 

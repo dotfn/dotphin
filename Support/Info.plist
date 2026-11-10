@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Se incrusta en el ejecutable (sección __TEXT,__info_plist, ver Package.swift).
+  Cuando la app corre como ejecutable suelto (Xcode, `swift run`) no hay
+  bundle .app: sin esto macOS no sabe qué idiomas tiene y muestra siempre el
+  idioma de respaldo. No lleva CFBundleIdentifier a propósito: cambiaría el
+  dominio de UserDefaults y se perderían los ajustes guardados.
+  En el .app (scripts/build_app_bundle.sh) manda el Info.plist del bundle.
+-->
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>es</string>
+    </array>
+</dict>
+</plist>

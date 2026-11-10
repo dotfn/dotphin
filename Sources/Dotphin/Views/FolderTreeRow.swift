@@ -63,46 +63,46 @@ struct FolderTreeRow: View {
             }
             .buttonStyle(.plain)
             .contextMenu {
-                Button("Abrir") {
+                Button(String(localized: "Abrir", bundle: #bundle)) {
                     onSelect(url)
                 }
                 if let onOpenInNewTab {
-                    Button("Abrir en una pestaña nueva") {
+                    Button(String(localized: "Abrir en una pestaña nueva", bundle: #bundle)) {
                         onOpenInNewTab(url)
                     }
                 }
                 if let onOpenInSplitView {
-                    Button("Abrir en vista dividida") {
+                    Button(String(localized: "Abrir en vista dividida", bundle: #bundle)) {
                         onOpenInSplitView(url)
                     }
                 }
                 Divider()
                 let places = PlacesProvider()
                 if places.isBookmarked(url) {
-                    Button("Quitar de Lugares") {
+                    Button(String(localized: "Quitar de Lugares", bundle: #bundle)) {
                         places.removeBookmark(for: url)
                     }
                 } else {
-                    Button("Añadir a Lugares") {
+                    Button(String(localized: "Añadir a Lugares", bundle: #bundle)) {
                         places.addBookmark(for: url)
                     }
                 }
-                Button("Copiar ubicación") {
+                Button(String(localized: "Copiar ubicación", bundle: #bundle)) {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(url.path, forType: .string)
                 }
-                Button("Mostrar en Finder") {
+                Button(String(localized: "Mostrar en Finder", bundle: #bundle)) {
                     NSWorkspace.shared.activateFileViewerSelecting([url])
                 }
                 if showsHiddenFiles != nil || limitToHomeDirectory != nil {
                     Divider()
                     if let showsHiddenFiles {
-                        Button(showsHiddenFiles.wrappedValue ? "Mostrar archivos ocultos ✓" : "Mostrar archivos ocultos") {
+                        Button(showsHiddenFiles.wrappedValue ? "Mostrar archivos ocultos ✓" : String(localized: "Mostrar archivos ocultos", bundle: #bundle)) {
                             showsHiddenFiles.wrappedValue.toggle()
                         }
                     }
                     if let limitToHomeDirectory {
-                        Button(limitToHomeDirectory.wrappedValue ? "Limitar a la carpeta personal ✓" : "Limitar a la carpeta personal") {
+                        Button(limitToHomeDirectory.wrappedValue ? "Limitar a la carpeta personal ✓" : String(localized: "Limitar a la carpeta personal", bundle: #bundle)) {
                             limitToHomeDirectory.wrappedValue.toggle()
                         }
                     }

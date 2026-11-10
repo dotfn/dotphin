@@ -20,18 +20,18 @@ enum FolderIconPreset: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .default: return "Por defecto"
-        case .bookmark: return "Favoritos"
-        case .code: return "Desarrollo / Código"
-        case .pictures: return "Imágenes"
-        case .music: return "Música"
-        case .videos: return "Videos"
-        case .documents: return "Documentos"
-        case .downloads: return "Descargas"
-        case .archive: return "Archivo"
-        case .games: return "Juegos"
-        case .important: return "Importante"
-        case .cloud: return "Nube / Red"
+        case .default: return String(localized: "Por defecto", bundle: #bundle)
+        case .bookmark: return String(localized: "Favoritos", bundle: #bundle)
+        case .code: return String(localized: "Desarrollo / Código", bundle: #bundle)
+        case .pictures: return String(localized: "Imágenes", bundle: #bundle)
+        case .music: return String(localized: "Música", bundle: #bundle)
+        case .videos: return String(localized: "Videos", bundle: #bundle)
+        case .documents: return String(localized: "Documentos", bundle: #bundle)
+        case .downloads: return String(localized: "Descargas", bundle: #bundle)
+        case .archive: return String(localized: "Archivo", bundle: #bundle)
+        case .games: return String(localized: "Juegos", bundle: #bundle)
+        case .important: return String(localized: "Importante", bundle: #bundle)
+        case .cloud: return String(localized: "Nube / Red", bundle: #bundle)
         }
     }
 

@@ -5,7 +5,7 @@ struct BatchRenameSheetView: View {
     let onCommit: (String, Int) -> Void
     @Environment(\.dismiss) private var dismiss
 
-    @State private var pattern: String = "Archivo_#"
+    @State private var pattern: String = String(localized: "Archivo_#", bundle: #bundle)
     @State private var startIndex: Int = 1
 
     private var previewPairs: [(item: FileItem, newName: String)] {
@@ -14,24 +14,24 @@ struct BatchRenameSheetView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Renombrar \(items.count) ítems")
+            Text(String(localized: "Renombrar \(items.count) ítems", bundle: #bundle))
                 .font(.headline)
 
-            Text("Usa un carácter '#' o varios ('###') donde quieras insertar la numeración consecutiva. La extensión de cada archivo se mantiene automáticamente.")
+            Text(String(localized: "Usa un carácter '#' o varios ('###') donde quieras insertar la numeración consecutiva. La extensión de cada archivo se mantiene automáticamente.", bundle: #bundle))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 12) {
-                TextField("Patrón (ej. Foto_###)", text: $pattern)
+                TextField(String(localized: "Patrón (ej. Foto_###)", bundle: #bundle), text: $pattern)
                     .textFieldStyle(.roundedBorder)
 
-                Stepper("Inicio: \(startIndex)", value: $startIndex, in: 0...99999)
+                Stepper(String(localized: "Inicio: \(startIndex)", bundle: #bundle), value: $startIndex, in: 0...99999)
                     .fixedSize()
             }
 
             Divider()
 
-            Text("Vista previa")
+            Text(String(localized: "Vista previa", bundle: #bundle))
                 .font(.subheadline.weight(.semibold))
 
             List(previewPairs, id: \.item.id) { pair in
@@ -53,10 +53,10 @@ struct BatchRenameSheetView: View {
 
             HStack {
                 Spacer()
-                Button("Cancelar", role: .cancel) {
+                Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {
                     dismiss()
                 }
-                Button("Renombrar") {
+                Button(String(localized: "Renombrar", bundle: #bundle)) {
                     onCommit(pattern, startIndex)
                     dismiss()
                 }

@@ -399,7 +399,7 @@ final class BrowserViewModelTests: XCTestCase {
         XCTAssertNotNil(vm.operationError)
         let message = vm.operationError?.message ?? ""
         XCTAssertTrue(
-            message.contains("Ya existe un ítem con ese nombre."),
+            message.contains(appText("Ya existe un ítem con ese nombre.")),
             "el mensaje debe llevar el motivo real del fallo, no solo el nombre del archivo: \(message)"
         )
     }

@@ -87,14 +87,14 @@ private struct FallbackItemMenu: View {
     var body: some View {
         if targetItems.count > 1 {
             if let onBatchRename {
-                Button("Renombrar \(targetItems.count) ítems…") { onBatchRename() }
+                Button(String(localized: "Renombrar \(targetItems.count) ítems…", bundle: #bundle)) { onBatchRename() }
             }
-            Button("Eliminar \(targetItems.count) ítems", role: .destructive) { onDeleteSelection() }
+            Button(String(localized: "Eliminar \(targetItems.count) ítems", bundle: #bundle), role: .destructive) { onDeleteSelection() }
         } else if let item = targetItems.first {
             if let onRename {
-                Button("Renombrar…") { onRename(item) }
+                Button(String(localized: "Renombrar…", bundle: #bundle)) { onRename(item) }
             }
-            Button("Eliminar", role: .destructive) { onDelete(item) }
+            Button(String(localized: "Eliminar", bundle: #bundle), role: .destructive) { onDelete(item) }
         }
     }
 }

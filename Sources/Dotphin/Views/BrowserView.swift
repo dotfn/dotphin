@@ -147,18 +147,18 @@ struct BrowserView: View {
                     comparePair = (left, right)
                 },
                 onNewFolderPrompt: {
-                    newItemNameInput = "Nueva carpeta"
+                    newItemNameInput = String(localized: "Nueva carpeta", bundle: #bundle)
                     showsNewFolderPrompt = true
                 },
                 onMoveToNewFolderPrompt: {
-                    newItemNameInput = "Nueva carpeta"
+                    newItemNameInput = String(localized: "Nueva carpeta", bundle: #bundle)
                     showsMoveToNewFolderPrompt = true
                 },
                 onNewFilePrompt: promptNewFile(named:),
                 onNewFileFromTemplatePrompt: promptNewFile(fromTemplate:),
                 onMountDiskImage: mountDiskImage(_:),
                 onNewSymbolicLinkPrompt: {
-                    newItemNameInput = "Nuevo enlace"
+                    newItemNameInput = String(localized: "Nuevo enlace", bundle: #bundle)
                     symlinkTargetInput = viewModel.selectedItem?.url.path ?? ""
                     showsNewSymlinkPrompt = true
                 },
@@ -194,14 +194,14 @@ struct BrowserView: View {
                     PermissionDeniedView(url: url)
                 case .notFound(let url):
                     ContentUnavailableView(
-                        "Carpeta no encontrada",
+                        String(localized: "Carpeta no encontrada", bundle: #bundle),
                         systemImage: "folder.badge.questionmark",
-                        description: Text("No se encontró \(url.path)")
+                        description: Text(String(localized: "No se encontró \(url.path)", bundle: #bundle))
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 case .other(let message):
                     ContentUnavailableView(
-                        "Error al abrir la carpeta",
+                        String(localized: "Error al abrir la carpeta", bundle: #bundle),
                         systemImage: "exclamationmark.triangle",
                         description: Text(message)
                     )
@@ -209,7 +209,7 @@ struct BrowserView: View {
                 }
             } else if !viewModel.searchQuery.isEmpty {
                 if viewModel.searchResults.isEmpty && viewModel.isSearching {
-                    ProgressView("Buscando «\(viewModel.searchQuery)»…")
+                    ProgressView(String(localized: "Buscando «\(viewModel.searchQuery)»…", bundle: #bundle))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if viewModel.searchResults.isEmpty {
                     ContentUnavailableView.search(text: viewModel.searchQuery)
@@ -240,7 +240,7 @@ struct BrowserView: View {
                     )
                 }
             } else if viewModel.filteredItems.isEmpty && (!viewModel.filterText.isEmpty || viewModel.hasActiveFacets) {
-                ContentUnavailableView.search(text: viewModel.filterText.isEmpty ? "filtros activos" : viewModel.filterText)
+                ContentUnavailableView.search(text: viewModel.filterText.isEmpty ? String(localized: "filtros activos", bundle: #bundle) : viewModel.filterText)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 switch viewModel.viewProperties.mode {
@@ -360,7 +360,7 @@ struct BrowserView: View {
                         }
                     },
                     onMoveToNewFolder: {
-                        newItemNameInput = "Nueva carpeta"
+                        newItemNameInput = String(localized: "Nueva carpeta", bundle: #bundle)
                         showsMoveToNewFolderPrompt = true
                     },
                     onDelete: {
@@ -501,84 +501,84 @@ struct BrowserView: View {
                 }
             )
         }
-        .alert("Nueva carpeta", isPresented: $showsNewFolderPrompt) {
-            TextField("Nombre", text: $newItemNameInput)
-            Button("Crear") { viewModel.createFolder(named: newItemNameInput) }
-            Button("Cancelar", role: .cancel) {}
+        .alert(String(localized: "Nueva carpeta", bundle: #bundle), isPresented: $showsNewFolderPrompt) {
+            TextField(String(localized: "Nombre", bundle: #bundle), text: $newItemNameInput)
+            Button(String(localized: "Crear", bundle: #bundle)) { viewModel.createFolder(named: newItemNameInput) }
+            Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
         }
-        .alert("Mover selección a carpeta nueva", isPresented: $showsMoveToNewFolderPrompt) {
-            TextField("Nombre de la carpeta", text: $newItemNameInput)
-            Button("Crear y mover") { viewModel.moveSelectedToNewFolder(named: newItemNameInput) }
-            Button("Cancelar", role: .cancel) {}
+        .alert(String(localized: "Mover selección a carpeta nueva", bundle: #bundle), isPresented: $showsMoveToNewFolderPrompt) {
+            TextField(String(localized: "Nombre de la carpeta", bundle: #bundle), text: $newItemNameInput)
+            Button(String(localized: "Crear y mover", bundle: #bundle)) { viewModel.moveSelectedToNewFolder(named: newItemNameInput) }
+            Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
         } message: {
-            Text("Se creará la carpeta y se moverán los \(viewModel.selectedIDs.count) ítems seleccionados dentro de ella.")
+            Text(String(localized: "Se creará la carpeta y se moverán los \(viewModel.selectedIDs.count) ítems seleccionados dentro de ella.", bundle: #bundle))
         }
-        .alert("Seleccionar ítems por patrón", isPresented: $showsSelectByPatternPrompt) {
-            TextField("Patrón (ej. *.swift, *.png, foto_*)", text: $patternInput)
-            Button("Seleccionar") { viewModel.selectItems(matchingPattern: patternInput, additive: false) }
-            Button("Añadir a selección") { viewModel.selectItems(matchingPattern: patternInput, additive: true) }
-            Button("Cancelar", role: .cancel) {}
+        .alert(String(localized: "Seleccionar ítems por patrón", bundle: #bundle), isPresented: $showsSelectByPatternPrompt) {
+            TextField(String(localized: "Patrón (ej. *.swift, *.png, foto_*)", bundle: #bundle), text: $patternInput)
+            Button(String(localized: "Seleccionar", bundle: #bundle)) { viewModel.selectItems(matchingPattern: patternInput, additive: false) }
+            Button(String(localized: "Añadir a selección", bundle: #bundle)) { viewModel.selectItems(matchingPattern: patternInput, additive: true) }
+            Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
         } message: {
-            Text("Usa comodines * y ? o texto parcial para seleccionar archivos en la carpeta actual.")
+            Text(String(localized: "Usa comodines * y ? o texto parcial para seleccionar archivos en la carpeta actual.", bundle: #bundle))
         }
-        .alert("Nuevo archivo", isPresented: $showsNewFilePrompt) {
-            TextField("Nombre", text: $newItemNameInput)
-            Button("Crear", action: createFileFromPrompt)
-            Button("Cancelar", role: .cancel) { pendingTemplateSourceURL = nil }
+        .alert(String(localized: "Nuevo archivo", bundle: #bundle), isPresented: $showsNewFilePrompt) {
+            TextField(String(localized: "Nombre", bundle: #bundle), text: $newItemNameInput)
+            Button(String(localized: "Crear", bundle: #bundle), action: createFileFromPrompt)
+            Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) { pendingTemplateSourceURL = nil }
         }
-        .alert("Nuevo enlace simbólico", isPresented: $showsNewSymlinkPrompt) {
-            TextField("Nombre del enlace", text: $newItemNameInput)
-            TextField("Ruta de destino", text: $symlinkTargetInput)
-            Button("Crear enlace") {
+        .alert(String(localized: "Nuevo enlace simbólico", bundle: #bundle), isPresented: $showsNewSymlinkPrompt) {
+            TextField(String(localized: "Nombre del enlace", bundle: #bundle), text: $newItemNameInput)
+            TextField(String(localized: "Ruta de destino", bundle: #bundle), text: $symlinkTargetInput)
+            Button(String(localized: "Crear enlace", bundle: #bundle)) {
                 viewModel.createSymbolicLink(named: newItemNameInput, pointingTo: symlinkTargetInput)
             }
-            Button("Cancelar", role: .cancel) {}
+            Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
         } message: {
-            Text("Introduce el nombre del enlace simbólico y la ruta hacia el archivo o carpeta de destino.")
+            Text(String(localized: "Introduce el nombre del enlace simbólico y la ruta hacia el archivo o carpeta de destino.", bundle: #bundle))
         }
         .alert(
             pendingPermanentDeleteItems.count == 1
-                ? "¿Eliminar permanentemente «\(pendingPermanentDeleteItems[0].name)»?"
-                : "¿Eliminar permanentemente \(pendingPermanentDeleteItems.count) ítems?",
+                ? String(localized: "¿Eliminar permanentemente «\(pendingPermanentDeleteItems[0].name)»?", bundle: #bundle)
+                : String(localized: "¿Eliminar permanentemente \(pendingPermanentDeleteItems.count) ítems?", bundle: #bundle),
             isPresented: $showsPermanentDeleteConfirmation
         ) {
-            Button("Eliminar permanentemente", role: .destructive) {
+            Button(String(localized: "Eliminar permanentemente", bundle: #bundle), role: .destructive) {
                 viewModel.deletePermanently(pendingPermanentDeleteItems)
                 pendingPermanentDeleteItems = []
             }
-            Button("Cancelar", role: .cancel) {
+            Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {
                 pendingPermanentDeleteItems = []
             }
         } message: {
-            Text("Esta acción borrará los elementos del disco sin pasar por la Papelera y no se puede deshacer.")
+            Text(String(localized: "Esta acción borrará los elementos del disco sin pasar por la Papelera y no se puede deshacer.", bundle: #bundle))
         }
         .alert(
-            "¿Eliminar este ítem?",
+            String(localized: "¿Eliminar este ítem?", bundle: #bundle),
             isPresented: $showsDeleteConfirmation,
             presenting: pendingDelete
         ) { item in
-            Button("Eliminar", role: .destructive) { viewModel.delete(item) }
-            Button("Cancelar", role: .cancel) {}
+            Button(String(localized: "Eliminar", bundle: #bundle), role: .destructive) { viewModel.delete(item) }
+            Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
         } message: { item in
-            Text("Se moverá «\(item.name)» a la Papelera.")
+            Text(String(localized: "Se moverá «\(item.name)» a la Papelera.", bundle: #bundle))
         }
         .alert(
-            "¿Eliminar \(viewModel.selectedIDs.count) ítems?",
+            String(localized: "¿Eliminar \(viewModel.selectedIDs.count) ítems?", bundle: #bundle),
             isPresented: $showsDeleteSelectionConfirmation
         ) {
-            Button("Eliminar", role: .destructive) { viewModel.deleteSelectedItems() }
-            Button("Cancelar", role: .cancel) {}
+            Button(String(localized: "Eliminar", bundle: #bundle), role: .destructive) { viewModel.deleteSelectedItems() }
+            Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
         } message: {
-            Text("Se moverán a la Papelera.")
+            Text(String(localized: "Se moverán a la Papelera.", bundle: #bundle))
         }
         .alert(
-            "No se pudo completar la operación",
+            String(localized: "No se pudo completar la operación", bundle: #bundle),
             isPresented: Binding(
                 get: { viewModel.operationError != nil },
                 set: { if !$0 { viewModel.clearOperationError() } }
             )
         ) {
-            Button("OK") { viewModel.clearOperationError() }
+            Button(String(localized: "OK", bundle: #bundle)) { viewModel.clearOperationError() }
         } message: {
             Text(operationErrorMessage)
         }
@@ -618,7 +618,7 @@ struct BrowserView: View {
                         .frame(height: 14)
                 }
 
-                Text("Tipo:")
+                Text(String(localized: "Tipo:", bundle: #bundle))
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -654,7 +654,7 @@ struct BrowserView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "calendar")
                             .font(.system(size: 10, weight: .medium))
-                        Text(viewModel.searchDateFilter == .any ? "Fecha" : viewModel.searchDateFilter.title)
+                        Text(viewModel.searchDateFilter == .any ? String(localized: "Fecha", bundle: #bundle) : viewModel.searchDateFilter.title)
                             .font(.system(size: 11, weight: viewModel.searchDateFilter != .any ? .semibold : .regular))
                     }
                     .padding(.horizontal, 8)
@@ -686,7 +686,7 @@ struct BrowserView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "externaldrive.badge.timemachine")
                             .font(.system(size: 10, weight: .medium))
-                        Text(viewModel.searchSizeFilter == .any ? "Tamaño" : viewModel.searchSizeFilter.title)
+                        Text(viewModel.searchSizeFilter == .any ? String(localized: "Tamaño", bundle: #bundle) : viewModel.searchSizeFilter.title)
                             .font(.system(size: 11, weight: viewModel.searchSizeFilter != .any ? .semibold : .regular))
                     }
                     .padding(.horizontal, 8)
@@ -718,7 +718,7 @@ struct BrowserView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "tag")
                             .font(.system(size: 10, weight: .medium))
-                        Text(viewModel.searchColorTagFilter == .none ? "Etiqueta" : viewModel.searchColorTagFilter.title)
+                        Text(viewModel.searchColorTagFilter == .none ? String(localized: "Etiqueta", bundle: #bundle) : viewModel.searchColorTagFilter.title)
                             .font(.system(size: 11, weight: viewModel.searchColorTagFilter != .none ? .semibold : .regular))
                     }
                     .padding(.horizontal, 8)
@@ -739,7 +739,7 @@ struct BrowserView: View {
                         HStack(spacing: 3) {
                             Image(systemName: "bookmark.badge.plus")
                                 .font(.system(size: 10, weight: .medium))
-                            Text("Guardar")
+                            Text(String(localized: "Guardar", bundle: #bundle))
                                 .font(.system(size: 11))
                         }
                         .padding(.horizontal, 8)
@@ -747,7 +747,7 @@ struct BrowserView: View {
                         .background(Capsule().fill(Color.primary.opacity(0.06)))
                     }
                     .buttonStyle(.plain)
-                    .help("Guardar esta búsqueda en el panel Lugares")
+                    .help(String(localized: "Guardar esta búsqueda en el panel Lugares", bundle: #bundle))
                 }
 
                 if viewModel.hasActiveFacets || !viewModel.filterText.isEmpty || !viewModel.searchQuery.isEmpty {
@@ -759,7 +759,7 @@ struct BrowserView: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .help("Restablecer todos los filtros y búsqueda")
+                    .help(String(localized: "Restablecer todos los filtros y búsqueda", bundle: #bundle))
                 }
 
                 Spacer(minLength: 0)
@@ -803,19 +803,19 @@ struct BrowserView: View {
             Image(systemName: "lock.fill")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.secondary)
-            Text("Carpeta de solo lectura")
+            Text(String(localized: "Carpeta de solo lectura", bundle: #bundle))
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.primary)
-            Text("— No tienes permisos de escritura en «\(viewModel.currentURL.lastPathComponent.isEmpty ? "/" : viewModel.currentURL.lastPathComponent)».")
+            Text(String(localized: "— No tienes permisos de escritura en «\(viewModel.currentURL.lastPathComponent.isEmpty ? "/" : viewModel.currentURL.lastPathComponent)».", bundle: #bundle))
                 .font(.system(size: 11.5))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             Spacer(minLength: 8)
-            Button("Propiedades…") {
+            Button(String(localized: "Propiedades…", bundle: #bundle)) {
                 propertiesTargetURL = viewModel.currentURL
             }
             .controlSize(.small)
-            Button("Mostrar en Finder") {
+            Button(String(localized: "Mostrar en Finder", bundle: #bundle)) {
                 NSWorkspace.shared.activateFileViewerSelecting([viewModel.currentURL])
             }
             .controlSize(.small)
@@ -848,7 +848,7 @@ struct BrowserView: View {
         }
         pendingTemplateSourceURL = nil
         guard let contents = try? Data(contentsOf: templateURL) else {
-            viewModel.reportOperationError("No se pudo leer la plantilla «\(templateURL.lastPathComponent)».")
+            viewModel.reportOperationError(String(localized: "No se pudo leer la plantilla «\(templateURL.lastPathComponent)».", bundle: #bundle))
             return
         }
         viewModel.createFile(named: newItemNameInput, contents: contents)

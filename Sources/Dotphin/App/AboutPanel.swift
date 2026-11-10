@@ -9,7 +9,7 @@ import SwiftUI
 /// que ahí va `0.1.0` y la etiqueta vive acá. Al publicar: tag `v0.1.0-beta.1`.
 enum AppInfo {
     static let name = "Dotphin"
-    static let tagline = "Gestor de archivos nativo para macOS, inspirado en Dolphin."
+    static let tagline = String(localized: "Gestor de archivos nativo para macOS, inspirado en Dolphin.", bundle: #bundle)
     static let authorSite = URL(string: "https://dotfn.dev")!
     static let copyright = "© 2026 ●fn"
 
@@ -32,7 +32,7 @@ enum AppInfo {
 struct AboutCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
-            Button("Acerca de \(AppInfo.name)") {
+            Button(String(localized: "Acerca de \(AppInfo.name)", bundle: #bundle)) {
                 AboutPanel.show()
             }
         }

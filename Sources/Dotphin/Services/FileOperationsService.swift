@@ -8,9 +8,9 @@ enum FileOperationError: Error, Equatable, Sendable {
     var message: String {
         switch self {
         case .nameAlreadyExists:
-            return "Ya existe un ítem con ese nombre."
+            return String(localized: "Ya existe un ítem con ese nombre.", bundle: #bundle)
         case .invalidName:
-            return "El nombre no es válido."
+            return String(localized: "El nombre no es válido.", bundle: #bundle)
         case .other(let message):
             return message
         }
@@ -119,12 +119,15 @@ struct FileOperationsService: Sendable {
     func validateTransfer(of sourceURL: URL, to destination: URL, kind: FileTransferKind) throws {
         let sourcePath = Self.resolvingParentSymlinks(of: sourceURL)
         let destinationPath = Self.resolvingParentSymlinks(of: destination)
-        let verb = kind == .copy ? "copiar" : "mover"
         guard destinationPath != sourcePath else {
-            throw FileOperationError.other("No se puede \(verb) un ítem sobre sí mismo.")
+            throw FileOperationError.other(kind == .copy
+                ? String(localized: "No se puede copiar un ítem sobre sí mismo.", bundle: #bundle)
+                : String(localized: "No se puede mover un ítem sobre sí mismo.", bundle: #bundle))
         }
         guard !destinationPath.hasPrefix(sourcePath + "/") else {
-            throw FileOperationError.other("No se puede \(verb) una carpeta dentro de sí misma.")
+            throw FileOperationError.other(kind == .copy
+                ? String(localized: "No se puede copiar una carpeta dentro de sí misma.", bundle: #bundle)
+                : String(localized: "No se puede mover una carpeta dentro de sí misma.", bundle: #bundle))
         }
     }
 
@@ -285,7 +288,7 @@ struct FileOperationsService: Sendable {
             return sourceURL
         }
         guard !destinationDirectoryPath.hasPrefix(sourcePath + "/") else {
-            throw FileOperationError.other("No se puede mover una carpeta dentro de sí misma.")
+            throw FileOperationError.other(String(localized: "No se puede mover una carpeta dentro de sí misma.", bundle: #bundle))
         }
         guard !FileManager.default.fileExists(atPath: destinationPath) else {
             throw FileOperationError.nameAlreadyExists(destination)
@@ -326,7 +329,7 @@ struct FileOperationsService: Sendable {
         }
 
         if !failures.isEmpty {
-            throw FileOperationError.other("No se pudieron eliminar: \(failures.joined(separator: ", "))")
+            throw FileOperationError.other(String(localized: "No se pudieron eliminar: \(failures.joined(separator: ", "))", bundle: #bundle))
         }
     }
 }

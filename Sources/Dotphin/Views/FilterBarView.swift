@@ -23,8 +23,8 @@ struct FilterBarView: View {
                     )
             }
             .buttonStyle(.plain)
-            .help("Mantener filtro al cambiar de carpeta")
-            .accessibilityLabel("Mantener filtro al cambiar de carpeta")
+            .help(String(localized: "Mantener filtro al cambiar de carpeta", bundle: #bundle))
+            .accessibilityLabel(String(localized: "Mantener filtro al cambiar de carpeta", bundle: #bundle))
 
             // Filter text field (`m_filterInput` in `filterbar.cpp`)
             HStack(spacing: 6) {
@@ -33,7 +33,7 @@ struct FilterBarView: View {
                     .foregroundStyle(.secondary)
 
                 TextField(
-                    "Filtrar elementos…",
+                    String(localized: "Filtrar elementos…", bundle: #bundle),
                     text: Binding(
                         get: { viewModel.filterText },
                         set: { viewModel.filterText = $0 }
@@ -50,7 +50,7 @@ struct FilterBarView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 11))
                         .foregroundStyle(.orange)
-                        .help("Expresión regular no válida")
+                        .help(String(localized: "Expresión regular no válida", bundle: #bundle))
                 }
 
                 if !viewModel.filterText.isEmpty {
@@ -62,7 +62,7 @@ struct FilterBarView: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .help("Limpiar texto de filtro")
+                    .help(String(localized: "Limpiar texto de filtro", bundle: #bundle))
                 }
             }
             .padding(.horizontal, 8)
@@ -80,7 +80,7 @@ struct FilterBarView: View {
             Button {
                 viewModel.isFilterCaseSensitive.toggle()
             } label: {
-                Text("Aa")
+                Text(String(localized: "Aa", bundle: #bundle))
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(viewModel.isFilterCaseSensitive ? Color.accentColor : .secondary)
                     .padding(.horizontal, 6)
@@ -91,12 +91,12 @@ struct FilterBarView: View {
                     )
             }
             .buttonStyle(.plain)
-            .help("Distinguir mayúsculas y minúsculas")
-            .accessibilityLabel("Distinguir mayúsculas y minúsculas")
+            .help(String(localized: "Distinguir mayúsculas y minúsculas", bundle: #bundle))
+            .accessibilityLabel(String(localized: "Distinguir mayúsculas y minúsculas", bundle: #bundle))
 
             // Filter mode picker (`m_filterModeComboBox` in `filterbar.cpp`: Plain Text, Glob Pattern, Regular Expression)
             Picker(
-                "",
+                String(localized: "", bundle: #bundle),
                 selection: Binding(
                     get: { viewModel.filterMode },
                     set: { viewModel.filterMode = $0 }
@@ -109,7 +109,7 @@ struct FilterBarView: View {
             .labelsHidden()
             .controlSize(.small)
             .frame(width: 150)
-            .help("Modo de coincidencia del filtro")
+            .help(String(localized: "Modo de coincidencia del filtro", bundle: #bundle))
 
             // Close button (`closeFilterBar()` in `filterbar.cpp`)
             Button {
@@ -121,8 +121,8 @@ struct FilterBarView: View {
                     .frame(width: 22, height: 22)
             }
             .buttonStyle(.plain)
-            .help("Ocultar barra de filtro (Esc)")
-            .accessibilityLabel("Ocultar barra de filtro")
+            .help(String(localized: "Ocultar barra de filtro (Esc)", bundle: #bundle))
+            .accessibilityLabel(String(localized: "Ocultar barra de filtro", bundle: #bundle))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)

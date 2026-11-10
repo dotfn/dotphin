@@ -51,7 +51,7 @@ private struct AppSettingsCommands: Commands {
 
     var body: some Commands {
         CommandGroup(after: .appSettings) {
-            Button("Mostrar todas las pestañas") {
+            Button(String(localized: "Mostrar todas las pestañas", bundle: #bundle)) {
                 commands?.perform(.toggleTabOverview)
             }
             .keyboardShortcut("\\", modifiers: [.command, .shift])
@@ -65,7 +65,7 @@ private struct DebugEventsToggle: View {
     @State private var isEnabled = DebugEventLog.isEnabled
 
     var body: some View {
-        Toggle("Registrar eventos de depuración", isOn: $isEnabled)
+        Toggle(String(localized: "Registrar eventos de depuración", bundle: #bundle), isOn: $isEnabled)
             .onChange(of: isEnabled) { _, newValue in
                 DebugEventLog.setEnabled(newValue)
             }

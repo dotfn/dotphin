@@ -16,12 +16,12 @@ struct TerminalLauncher {
     /// Abre Terminal en `url` con `NSWorkspace` (antes lanzaba `/usr/bin/open`).
     func openTerminal(at url: URL) throws {
         guard FileManager.default.fileExists(atPath: url.path) else {
-            throw TerminalLauncherError.failed("No existe «\(url.path)».")
+            throw TerminalLauncherError.failed(String(localized: "No existe «\(url.path)».", bundle: #bundle))
         }
         guard let terminalURL = NSWorkspace.shared.urlForApplication(
             withBundleIdentifier: Self.terminalBundleIdentifier
         ) else {
-            throw TerminalLauncherError.failed("No se encontró la app Terminal.")
+            throw TerminalLauncherError.failed(String(localized: "No se encontró la app Terminal.", bundle: #bundle))
         }
         NSWorkspace.shared.open([url], withApplicationAt: terminalURL, configuration: NSWorkspace.OpenConfiguration())
     }

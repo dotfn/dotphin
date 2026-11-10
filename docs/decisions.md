@@ -1012,3 +1012,39 @@ actor, continuación para esperar la respuesta del usuario).
 - Queda sin hacer del relevamiento: sección Recientes en Lugares, stash de
   la vista dividida, separar un panel a ventana nueva y actuar como
   administrador. 238 tests en verde.
+
+## 2026-11-10 — Inglés y español (localización)
+
+Consultado axiom-integration (`localization`: String Catalogs, `#bundle` en
+paquetes) y probado con un paquete de prueba antes de tocar la app.
+
+- **Catálogo** `Resources/Localizable.xcstrings` (~630 claves). Las claves
+  son los textos en español del código; cada una tiene valor explícito en
+  inglés y en español. **Inglés es el idioma de respaldo**
+  (`defaultLocalization: "en"`): quien no tenga ni inglés ni español ve inglés.
+- **Todo texto busca en el bundle del paquete** (`bundle: #bundle`, ~830
+  lugares). Al correr como ejecutable suelto (Xcode, `swift run`) el bundle
+  principal no tiene traducciones: sin esto la app quedaba siempre en español.
+  Los literales de SwiftUI se pasaron a `String(localized: …, bundle: #bundle)`
+  (mismas claves). Un test falla si aparece un `String(localized:)` sin bundle.
+- **`Support/Info.plist` incrustado en el binario** (`-sectcreate __TEXT
+  __info_plist`, ruta absoluta desde `#filePath`). Sin él, macOS no sabe qué
+  idiomas tiene un ejecutable suelto y siempre elige el de respaldo: ni
+  `-AppleLanguages (es)` lograba español. **No lleva `CFBundleIdentifier`**: el
+  dominio de UserDefaults cambiaría y se perderían los ajustes guardados.
+  El `.app` de `scripts/build_app_bundle.sh` declara lo mismo en su Info.plist.
+- Frases armadas con pedazos traducidos ("No se puede \(verbo)…", la barra de
+  estado, la barra de progreso) pasaron a frases completas: el orden cambia
+  entre idiomas.
+- Enums cuyo `rawValue` se mostraba en pantalla (pestañas de Propiedades y de
+  Git, estados de la comparación) ahora tienen un `title` localizado; el
+  `rawValue` queda fijo.
+- **Tests**: el idioma del proceso de tests es el del sistema. Las aserciones
+  sobre textos visibles comparan contra `appText(clave)` (la traducción en el
+  idioma en curso) en vez de un texto fijo en español.
+- **No traducido a propósito**: nombres de archivo que crea la app (" copy",
+  " enlace"), el registro de depuración y los nombres de Lugares guardados.
+- **Verificado** con el binario real y `-AppleLanguages`: en → inglés,
+  es / es-AR → español, fr → inglés, "fr, es" → español. Sin verificar a la
+  vista (sin acceso a pantalla): textos que no entren en su lugar en inglés.
+  242 tests en verde.

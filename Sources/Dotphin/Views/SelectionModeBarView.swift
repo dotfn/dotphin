@@ -13,7 +13,7 @@ struct SelectionModeTopBarView: View {
                 .foregroundStyle(Color.accentColor)
                 .font(.system(size: 13, weight: .semibold))
 
-            Text("Modo de selección: haz clic en archivos o carpetas para seleccionarlos o deseleccionarlos.")
+            Text(String(localized: "Modo de selección: haz clic en archivos o carpetas para seleccionarlos o deseleccionarlos.", bundle: #bundle))
                 .font(.system(size: 12, weight: .medium))
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -26,14 +26,14 @@ struct SelectionModeTopBarView: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Ayuda del modo de selección")
+            .help(String(localized: "Ayuda del modo de selección", bundle: #bundle))
             .popover(isPresented: $showsHelpPopover, arrowEdge: .bottom) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Modo de selección de Dolphin")
+                    Text(String(localized: "Modo de selección de Dolphin", bundle: #bundle))
                         .font(.headline)
-                    Text("• Un solo clic sobre un archivo o carpeta alterna su selección sin perder el resto.")
-                    Text("• Usa la barra inferior para ejecutar acciones por lotes sobre los ítems marcados.")
-                    Text("• Puedes seleccionar por patrón (p. ej. *.swift o *.png) o invertir la selección.")
+                    Text(String(localized: "• Un solo clic sobre un archivo o carpeta alterna su selección sin perder el resto.", bundle: #bundle))
+                    Text(String(localized: "• Usa la barra inferior para ejecutar acciones por lotes sobre los ítems marcados.", bundle: #bundle))
+                    Text(String(localized: "• Puedes seleccionar por patrón (p. ej. *.swift o *.png) o invertir la selección.", bundle: #bundle))
                 }
                 .font(.caption)
                 .padding(12)
@@ -42,7 +42,7 @@ struct SelectionModeTopBarView: View {
 
             Spacer(minLength: 8)
 
-            Button("Seleccionar por patrón…") {
+            Button(String(localized: "Seleccionar por patrón…", bundle: #bundle)) {
                 onSelectByPattern()
             }
             .controlSize(.small)
@@ -53,7 +53,7 @@ struct SelectionModeTopBarView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "xmark")
                         .font(.system(size: 10, weight: .bold))
-                    Text("Salir del modo de selección")
+                    Text(String(localized: "Salir del modo de selección", bundle: #bundle))
                         .font(.system(size: 11.5, weight: .medium))
                 }
             }
@@ -83,7 +83,9 @@ struct SelectionModeBottomBarView: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                Text(selectedCount == 0 ? "Sin selección" : "\(selectedCount) \(selectedCount == 1 ? "seleccionado" : "seleccionados")")
+                Text(selectedCount == 0
+                    ? String(localized: "Sin selección", bundle: #bundle)
+                    : selectedCount == 1 ? String(localized: "1 seleccionado", bundle: #bundle) : String(localized: "\(selectedCount) seleccionados", bundle: #bundle))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(selectedCount == 0 ? .secondary : .primary)
                     .monospacedDigit()
@@ -91,17 +93,17 @@ struct SelectionModeBottomBarView: View {
                 Divider()
                     .frame(height: 16)
 
-                Button("Seleccionar todo") {
+                Button(String(localized: "Seleccionar todo", bundle: #bundle)) {
                     viewModel.selectAll()
                 }
                 .controlSize(.small)
 
-                Button("Invertir") {
+                Button(String(localized: "Invertir", bundle: #bundle)) {
                     viewModel.invertSelection()
                 }
                 .controlSize(.small)
 
-                Button("Por patrón…") {
+                Button(String(localized: "Por patrón…", bundle: #bundle)) {
                     onSelectByPattern()
                 }
                 .controlSize(.small)
@@ -113,13 +115,13 @@ struct SelectionModeBottomBarView: View {
                     Button {
                         viewModel.paste()
                     } label: {
-                        Label("Pegar aquí", systemImage: "doc.on.clipboard")
+                        Label(String(localized: "Pegar aquí", bundle: #bundle), systemImage: "doc.on.clipboard")
                     }
                     .controlSize(.small)
                 }
 
                 if selectedCount > 0 {
-                    Button("Deseleccionar") {
+                    Button(String(localized: "Deseleccionar", bundle: #bundle)) {
                         viewModel.deselectAll()
                     }
                     .controlSize(.small)
@@ -130,42 +132,42 @@ struct SelectionModeBottomBarView: View {
                     Button {
                         viewModel.copySelected()
                     } label: {
-                        Label("Copiar", systemImage: "doc.on.doc")
+                        Label(String(localized: "Copiar", bundle: #bundle), systemImage: "doc.on.doc")
                     }
                     .controlSize(.small)
 
                     Button {
                         viewModel.cutSelected()
                     } label: {
-                        Label("Cortar", systemImage: "scissors")
+                        Label(String(localized: "Cortar", bundle: #bundle), systemImage: "scissors")
                     }
                     .controlSize(.small)
 
                     Button {
                         viewModel.duplicateSelected()
                     } label: {
-                        Label("Duplicar", systemImage: "plus.square.on.square")
+                        Label(String(localized: "Duplicar", bundle: #bundle), systemImage: "plus.square.on.square")
                     }
                     .controlSize(.small)
 
                     Button {
                         onMoveToNewFolder()
                     } label: {
-                        Label("Carpeta nueva con selección…", systemImage: "folder.badge.plus")
+                        Label(String(localized: "Carpeta nueva con selección…", bundle: #bundle), systemImage: "folder.badge.plus")
                     }
                     .controlSize(.small)
 
                     Button {
                         onRename()
                     } label: {
-                        Label(selectedCount > 1 ? "Renombrar (\(selectedCount))…" : "Renombrar…", systemImage: "pencil")
+                        Label(selectedCount > 1 ? String(localized: "Renombrar (\(selectedCount))…", bundle: #bundle) : String(localized: "Renombrar…", bundle: #bundle), systemImage: "pencil")
                     }
                     .controlSize(.small)
 
                     Button {
                         viewModel.compressSelected()
                     } label: {
-                        Label("Comprimir ZIP", systemImage: "doc.zipper")
+                        Label(String(localized: "Comprimir ZIP", bundle: #bundle), systemImage: "doc.zipper")
                     }
                     .controlSize(.small)
 
@@ -173,7 +175,7 @@ struct SelectionModeBottomBarView: View {
                         Button {
                             onCompareSelected()
                         } label: {
-                            Label("Comparar (2)…", systemImage: "arrow.left.and.right.doc.vertical")
+                            Label(String(localized: "Comparar (2)…", bundle: #bundle), systemImage: "arrow.left.and.right.doc.vertical")
                         }
                         .controlSize(.small)
                     }
@@ -186,7 +188,7 @@ struct SelectionModeBottomBarView: View {
                             viewModel.copySelected(to: otherPaneURL)
                             onCrossPaneTransferCompleted?()
                         } label: {
-                            Label("Copiar al otro panel", systemImage: "arrow.right.doc.on.clipboard")
+                            Label(String(localized: "Copiar al otro panel", bundle: #bundle), systemImage: "arrow.right.doc.on.clipboard")
                         }
                         .controlSize(.small)
 
@@ -194,7 +196,7 @@ struct SelectionModeBottomBarView: View {
                             viewModel.moveSelected(to: otherPaneURL)
                             onCrossPaneTransferCompleted?()
                         } label: {
-                            Label("Mover al otro panel", systemImage: "arrow.right.square")
+                            Label(String(localized: "Mover al otro panel", bundle: #bundle), systemImage: "arrow.right.square")
                         }
                         .controlSize(.small)
                     }
@@ -205,7 +207,7 @@ struct SelectionModeBottomBarView: View {
                     Button(role: .destructive) {
                         onDelete()
                     } label: {
-                        Label("Mover a la Papelera", systemImage: "trash")
+                        Label(String(localized: "Mover a la Papelera", bundle: #bundle), systemImage: "trash")
                     }
                     .controlSize(.small)
                 }
@@ -232,12 +234,12 @@ struct PasteAfterCopyingBarView: View {
     private var summaryText: String {
         if itemCount == 1 {
             return isCut
-                ? "«\(firstFileName)» listo para mover"
-                : "«\(firstFileName)» en el portapapeles"
+                ? String(localized: "«\(firstFileName)» listo para mover", bundle: #bundle)
+                : String(localized: "«\(firstFileName)» en el portapapeles", bundle: #bundle)
         }
         return isCut
-            ? "\(itemCount) ítems listos para mover"
-            : "\(itemCount) ítems en el portapapeles"
+            ? String(localized: "\(itemCount) ítems listos para mover", bundle: #bundle)
+            : String(localized: "\(itemCount) ítems en el portapapeles", bundle: #bundle)
     }
 
     var body: some View {
@@ -256,7 +258,7 @@ struct PasteAfterCopyingBarView: View {
                 onPasteHere()
             } label: {
                 Label(
-                    isCut ? "Mover aquí (\(destinationFolderName))" : "Pegar aquí (\(destinationFolderName))",
+                    isCut ? String(localized: "Mover aquí (\(destinationFolderName))", bundle: #bundle) : String(localized: "Pegar aquí (\(destinationFolderName))", bundle: #bundle),
                     systemImage: "arrow.down.doc"
                 )
             }
@@ -271,7 +273,7 @@ struct PasteAfterCopyingBarView: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Limpiar portapapeles")
+            .help(String(localized: "Limpiar portapapeles", bundle: #bundle))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)

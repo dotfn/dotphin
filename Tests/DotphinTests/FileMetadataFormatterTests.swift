@@ -5,7 +5,7 @@ final class FileMetadataFormatterTests: XCTestCase {
     func test_folder_hasCarpetaKindAndDashSize() {
         let item = FileItem(url: URL(fileURLWithPath: "/tmp/x"), name: "x", isDirectory: true, isSymbolicLink: false, size: nil, modificationDate: nil)
         let meta = FileMetadataFormatter().metadata(for: item)
-        XCTAssertEqual(meta.kind, "Carpeta")
+        XCTAssertEqual(meta.kind, appText("Carpeta"))
         XCTAssertEqual(meta.sizeText, "—")
         XCTAssertEqual(meta.modifiedText, "—")
     }
@@ -20,7 +20,7 @@ final class FileMetadataFormatterTests: XCTestCase {
     func test_fileWithoutExtension_usesDocumentoAsKind() {
         let item = FileItem(url: URL(fileURLWithPath: "/tmp/README"), name: "README", isDirectory: false, isSymbolicLink: false, size: 10, modificationDate: nil)
         let meta = FileMetadataFormatter().metadata(for: item)
-        XCTAssertEqual(meta.kind, "Documento")
+        XCTAssertEqual(meta.kind, appText("Documento"))
         XCTAssertEqual(meta.modifiedText, "—")
     }
 

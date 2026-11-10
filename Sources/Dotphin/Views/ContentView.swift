@@ -112,7 +112,7 @@ struct ContentView: View {
                 BrowserToolbar(
                     viewModel: focusedViewModel,
                     onNewFolder: {
-                        nameInput = "Nueva carpeta"
+                        nameInput = String(localized: "Nueva carpeta", bundle: #bundle)
                         showsNewFolderPrompt = true
                     },
                     onRename: { handle(.renameSelectedFiles) },
@@ -125,7 +125,7 @@ struct ContentView: View {
                 )
             }
             // Campo de búsqueda nativo de la toolbar: filtra al tipear y busca con Intro.
-            .searchable(text: searchText, isPresented: $isSearchPresented, placement: .toolbar, prompt: "Buscar o filtrar…")
+            .searchable(text: searchText, isPresented: $isSearchPresented, placement: .toolbar, prompt: String(localized: "Buscar o filtrar…", bundle: #bundle))
             .onSubmit(of: .search) {
                 guard let focused = focusedViewModel else { return }
                 let query = focused.filterText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -152,49 +152,49 @@ struct ContentView: View {
     private var detailWithAlerts: some View {
         detailWithPromptAlerts
             .alert(
-                "¿Eliminar este ítem?",
+                String(localized: "¿Eliminar este ítem?", bundle: #bundle),
                 isPresented: $showsDeleteConfirmation,
                 presenting: pendingDelete
             ) { item in
-                Button("Eliminar", role: .destructive) { focusedViewModel?.delete(item) }
-                Button("Cancelar", role: .cancel) {}
+                Button(String(localized: "Eliminar", bundle: #bundle), role: .destructive) { focusedViewModel?.delete(item) }
+                Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
             } message: { item in
-                Text("Se moverá «\(item.name)» a la Papelera.")
+                Text(String(localized: "Se moverá «\(item.name)» a la Papelera.", bundle: #bundle))
             }
             .alert(
                 deleteSelectionAlertTitle,
                 isPresented: $showsDeleteSelectionConfirmation
             ) {
-                Button("Eliminar", role: .destructive) { focusedViewModel?.deleteSelectedItems() }
-                Button("Cancelar", role: .cancel) {}
+                Button(String(localized: "Eliminar", bundle: #bundle), role: .destructive) { focusedViewModel?.deleteSelectedItems() }
+                Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
             } message: {
-                Text("Se moverán a la Papelera.")
+                Text(String(localized: "Se moverán a la Papelera.", bundle: #bundle))
             }
             .alert(
-                "¿Eliminar permanentemente \(focusedViewModel?.selectedIDs.count ?? 0) ítem(s)?",
+                String(localized: "¿Eliminar permanentemente \(focusedViewModel?.selectedIDs.count ?? 0) ítem(s)?", bundle: #bundle),
                 isPresented: $showsPermanentDeleteSelectionConfirmation
             ) {
-                Button("Eliminar permanentemente", role: .destructive) {
+                Button(String(localized: "Eliminar permanentemente", bundle: #bundle), role: .destructive) {
                     focusedViewModel?.deleteSelectedPermanently()
                 }
-                Button("Cancelar", role: .cancel) {}
+                Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
             } message: {
-                Text("Esta acción borrará los elementos del disco sin pasar por la Papelera y no se puede deshacer.")
+                Text(String(localized: "Esta acción borrará los elementos del disco sin pasar por la Papelera y no se puede deshacer.", bundle: #bundle))
             }
-            .alert("¿Vaciar la papelera?", isPresented: $showsEmptyTrashConfirmation) {
-                Button("Vaciar", role: .destructive) { focusedViewModel?.emptyTrash() }
-                Button("Cancelar", role: .cancel) {}
+            .alert(String(localized: "¿Vaciar la papelera?", bundle: #bundle), isPresented: $showsEmptyTrashConfirmation) {
+                Button(String(localized: "Vaciar", bundle: #bundle), role: .destructive) { focusedViewModel?.emptyTrash() }
+                Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
             } message: {
-                Text("Esto borra el contenido de la papelera de forma permanente. No se puede deshacer.")
+                Text(String(localized: "Esto borra el contenido de la papelera de forma permanente. No se puede deshacer.", bundle: #bundle))
             }
             .alert(
-                "No se pudo abrir la Terminal",
+                String(localized: "No se pudo abrir la Terminal", bundle: #bundle),
                 isPresented: Binding<Bool>(
                     get: { terminalError != nil },
                     set: { if !$0 { terminalError = nil } }
                 )
             ) {
-                Button("OK") { terminalError = nil }
+                Button(String(localized: "OK", bundle: #bundle)) { terminalError = nil }
             } message: {
                 Text(terminalError ?? "")
             }
@@ -202,21 +202,21 @@ struct ContentView: View {
 
     private var detailWithPromptAlerts: some View {
         detailWithSheets
-            .alert("Nueva carpeta", isPresented: $showsNewFolderPrompt) {
-                TextField("Nombre", text: $nameInput)
-                Button("Crear") { focusedViewModel?.createFolder(named: nameInput) }
-                Button("Cancelar", role: .cancel) {}
+            .alert(String(localized: "Nueva carpeta", bundle: #bundle), isPresented: $showsNewFolderPrompt) {
+                TextField(String(localized: "Nombre", bundle: #bundle), text: $nameInput)
+                Button(String(localized: "Crear", bundle: #bundle)) { focusedViewModel?.createFolder(named: nameInput) }
+                Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
             }
-            .alert("Mover selección a carpeta nueva", isPresented: $showsMoveToNewFolderPrompt) {
-                TextField("Nombre de la carpeta", text: $nameInput)
-                Button("Crear y mover") { focusedViewModel?.moveSelectedToNewFolder(named: nameInput) }
-                Button("Cancelar", role: .cancel) {}
+            .alert(String(localized: "Mover selección a carpeta nueva", bundle: #bundle), isPresented: $showsMoveToNewFolderPrompt) {
+                TextField(String(localized: "Nombre de la carpeta", bundle: #bundle), text: $nameInput)
+                Button(String(localized: "Crear y mover", bundle: #bundle)) { focusedViewModel?.moveSelectedToNewFolder(named: nameInput) }
+                Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
             }
-            .alert("Seleccionar ítems por patrón", isPresented: $showsSelectByPatternPrompt) {
-                TextField("Patrón (ej. *.swift, *.png)", text: $patternInput)
-                Button("Seleccionar") { focusedViewModel?.selectItems(matchingPattern: patternInput, additive: false) }
-                Button("Añadir a selección") { focusedViewModel?.selectItems(matchingPattern: patternInput, additive: true) }
-                Button("Cancelar", role: .cancel) {}
+            .alert(String(localized: "Seleccionar ítems por patrón", bundle: #bundle), isPresented: $showsSelectByPatternPrompt) {
+                TextField(String(localized: "Patrón (ej. *.swift, *.png)", bundle: #bundle), text: $patternInput)
+                Button(String(localized: "Seleccionar", bundle: #bundle)) { focusedViewModel?.selectItems(matchingPattern: patternInput, additive: false) }
+                Button(String(localized: "Añadir a selección", bundle: #bundle)) { focusedViewModel?.selectItems(matchingPattern: patternInput, additive: true) }
+                Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
             }
     }
 
@@ -250,11 +250,11 @@ struct ContentView: View {
                 focused.renamingItemID = item.id
             }
         case .createNewFolder:
-            nameInput = "Nueva carpeta"
+            nameInput = String(localized: "Nueva carpeta", bundle: #bundle)
             showsNewFolderPrompt = true
         case .moveToNewFolder:
             guard let focused = focusedViewModel, !focused.selectedIDs.isEmpty else { return }
-            nameInput = "Nueva carpeta"
+            nameInput = String(localized: "Nueva carpeta", bundle: #bundle)
             showsMoveToNewFolderPrompt = true
         case .selectByPattern:
             showsSelectByPatternPrompt = true
@@ -413,7 +413,7 @@ struct ContentView: View {
 
     private var deleteSelectionAlertTitle: String {
         let count = focusedViewModel?.selectedIDs.count ?? 0
-        return "¿Eliminar \(count) ítems?"
+        return String(localized: "¿Eliminar \(count) ítems?", bundle: #bundle)
     }
 
     private var detailWithSheets: some View {

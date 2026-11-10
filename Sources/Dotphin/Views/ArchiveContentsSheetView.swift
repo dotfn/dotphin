@@ -27,12 +27,12 @@ struct ArchiveContentsSheetView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(archiveItem.name)
                         .font(.headline)
-                    Text("\(entries.count) entrada(s) en el archivo comprimido")
+                    Text(String(localized: "\(entries.count) entrada(s) en el archivo comprimido", bundle: #bundle))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                TextField("Filtrar contenido…", text: $filterText)
+                TextField(String(localized: "Filtrar contenido…", bundle: #bundle), text: $filterText)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 190)
             }
@@ -41,12 +41,12 @@ struct ArchiveContentsSheetView: View {
 
             if filteredEntries.isEmpty {
                 ContentUnavailableView(
-                    filterText.isEmpty ? "Archivo comprimido vacío" : "Sin coincidencias",
+                    filterText.isEmpty ? String(localized: "Archivo comprimido vacío", bundle: #bundle) : String(localized: "Sin coincidencias", bundle: #bundle),
                     systemImage: "doc.zipper",
                     description: Text(
                         filterText.isEmpty
-                            ? "No se encontraron entradas legibles en «\(archiveItem.name)»."
-                            : "Ninguna entrada coincide con «\(filterText)»."
+                            ? String(localized: "No se encontraron entradas legibles en «\(archiveItem.name)».", bundle: #bundle)
+                            : String(localized: "Ninguna entrada coincide con «\(filterText)».", bundle: #bundle)
                     )
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -76,16 +76,16 @@ struct ArchiveContentsSheetView: View {
             }
 
             HStack {
-                Button("Mostrar en Finder") {
+                Button(String(localized: "Mostrar en Finder", bundle: #bundle)) {
                     NSWorkspace.shared.activateFileViewerSelecting([archiveItem.url])
                 }
                 Spacer()
-                Button("Cerrar", role: .cancel) {
+                Button(String(localized: "Cerrar", bundle: #bundle), role: .cancel) {
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
 
-                Button("Extraer aquí y abrir carpeta") {
+                Button(String(localized: "Extraer aquí y abrir carpeta", bundle: #bundle)) {
                     dismiss()
                     onExtractAndOpen()
                 }

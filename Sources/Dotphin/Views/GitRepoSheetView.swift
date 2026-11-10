@@ -7,6 +7,14 @@ enum GitRepoSheetTab: String, CaseIterable, Identifiable {
     case commit = "Crear commit"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .diff: return String(localized: "Diferencias (git diff)", bundle: #bundle)
+        case .commits: return String(localized: "Historial (git log)", bundle: #bundle)
+        case .commit: return String(localized: "Crear commit", bundle: #bundle)
+        }
+    }
 }
 
 struct GitRepoSheetView: View {
@@ -29,7 +37,7 @@ struct GitRepoSheetView: View {
                     .foregroundStyle(Color.accentColor)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text("Control de versiones Git")
+                        Text(String(localized: "Control de versiones Git", bundle: #bundle))
                             .font(.headline)
                         if let branch = viewModel.gitBranchName {
                             Text(branch)
@@ -49,9 +57,9 @@ struct GitRepoSheetView: View {
                 Spacer()
             }
 
-            Picker("Sección", selection: $selectedTab) {
+            Picker(String(localized: "Sección", bundle: #bundle), selection: $selectedTab) {
                 ForEach(GitRepoSheetTab.allCases) { tab in
-                    Text(tab.rawValue).tag(tab)
+                    Text(tab.title).tag(tab)
                 }
             }
             .pickerStyle(.segmented)
@@ -76,11 +84,11 @@ struct GitRepoSheetView: View {
             }
 
             HStack {
-                Button("Actualizar") {
+                Button(String(localized: "Actualizar", bundle: #bundle)) {
                     reloadGitData()
                 }
                 Spacer()
-                Button("Cerrar") {
+                Button(String(localized: "Cerrar", bundle: #bundle)) {
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
@@ -97,9 +105,9 @@ struct GitRepoSheetView: View {
         Group {
             if diffText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 ContentUnavailableView(
-                    "Sin diferencias en el árbol de trabajo",
+                    String(localized: "Sin diferencias en el árbol de trabajo", bundle: #bundle),
                     systemImage: "checkmark.seal",
-                    description: Text("No hay cambios sin preparar (git diff) para los elementos seleccionados.")
+                    description: Text(String(localized: "No hay cambios sin preparar (git diff) para los elementos seleccionados.", bundle: #bundle))
                 )
             } else {
                 ScrollView([.vertical, .horizontal]) {
@@ -133,9 +141,9 @@ struct GitRepoSheetView: View {
         Group {
             if commits.isEmpty {
                 ContentUnavailableView(
-                    "Sin historial de commits",
+                    String(localized: "Sin historial de commits", bundle: #bundle),
                     systemImage: "clock.arrow.circlepath",
-                    description: Text("Este repositorio aún no tiene commits registrados.")
+                    description: Text(String(localized: "Este repositorio aún no tiene commits registrados.", bundle: #bundle))
                 )
             } else {
                 List(commits) { entry in
@@ -148,7 +156,7 @@ struct GitRepoSheetView: View {
                             Text(entry.subject)
                                 .font(.subheadline.weight(.medium))
                                 .lineLimit(1)
-                            Text("\(entry.author) · \(entry.relativeDate)")
+                            Text(String(localized: "\(entry.author) · \(entry.relativeDate)", bundle: #bundle))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -163,7 +171,7 @@ struct GitRepoSheetView: View {
 
     private var commitSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Mensaje del commit:")
+            Text(String(localized: "Mensaje del commit:", bundle: #bundle))
                 .font(.subheadline.weight(.medium))
             TextEditor(text: $commitMessage)
                 .font(.system(.body, design: .monospaced))
@@ -173,23 +181,23 @@ struct GitRepoSheetView: View {
                         .strokeBorder(Color.primary.opacity(0.15), lineWidth: 1)
                 )
 
-            Toggle("Preparar automáticamente los elementos modificados/seleccionados (git add)", isOn: $stageAllBeforeCommit)
+            Toggle(String(localized: "Preparar automáticamente los elementos modificados/seleccionados (git add)", bundle: #bundle), isOn: $stageAllBeforeCommit)
                 .font(.subheadline)
 
             HStack {
                 Spacer()
-                Button("Crear commit") {
+                Button(String(localized: "Crear commit", bundle: #bundle)) {
                     if stageAllBeforeCommit {
                         let toStage = targetItems.isEmpty ? viewModel.items : targetItems
                         viewModel.gitStageItems(toStage)
                     }
                     if viewModel.gitCommit(message: commitMessage) {
                         commitMessage = ""
-                        statusBanner = "Commit creado correctamente."
+                        statusBanner = String(localized: "Commit creado correctamente.", bundle: #bundle)
                         reloadGitData()
                         selectedTab = .commits
                     } else {
-                        statusBanner = "No se pudo crear el commit (verificá que haya cambios preparados)."
+                        statusBanner = String(localized: "No se pudo crear el commit (verificá que haya cambios preparados).", bundle: #bundle)
                     }
                 }
                 .buttonStyle(.borderedProminent)

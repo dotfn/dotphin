@@ -47,23 +47,23 @@ struct DotphinItemContextMenu: View {
 
     @ViewBuilder
     private var trashItemMenuBody: some View {
-        Button(targetItems.count > 1 ? "Restaurar de la Papelera (\(targetItems.count) ítems)" : "Restaurar de la Papelera") {
+        Button(targetItems.count > 1 ? String(localized: "Restaurar de la Papelera (\(targetItems.count) ítems)", bundle: #bundle) : String(localized: "Restaurar de la Papelera", bundle: #bundle)) {
             actions.viewModel.restoreItemsFromTrash(targetItems)
         }
         Divider()
-        Button("Cortar") {
+        Button(String(localized: "Cortar", bundle: #bundle)) {
             ensureTargetItemsSelected()
             actions.viewModel.cutSelected()
         }
-        Button("Copiar") {
+        Button(String(localized: "Copiar", bundle: #bundle)) {
             ensureTargetItemsSelected()
             actions.viewModel.copySelected()
         }
         Divider()
         Button(
             targetItems.count > 1
-                ? "Eliminar permanentemente \(targetItems.count) ítems…"
-                : "Eliminar permanentemente…",
+                ? String(localized: "Eliminar permanentemente \(targetItems.count) ítems…", bundle: #bundle)
+                : String(localized: "Eliminar permanentemente…", bundle: #bundle),
             role: .destructive
         ) {
             if let onDeletePermanently = actions.onDeletePermanently {
@@ -74,7 +74,7 @@ struct DotphinItemContextMenu: View {
         }
         if let item = singleItem {
             Divider()
-            Button("Propiedades…") {
+            Button(String(localized: "Propiedades…", bundle: #bundle)) {
                 actions.onShowProperties(item.url)
             }
         }
@@ -83,44 +83,44 @@ struct DotphinItemContextMenu: View {
     @ViewBuilder
     private var standardItemMenuBody: some View {
         if let item = singleItem {
-            Button("Abrir") {
+            Button(String(localized: "Abrir", bundle: #bundle)) {
                 actions.onOpen(item)
             }
             if item.isDirectory, let onOpenInNewTab = actions.onOpenInNewTab {
-                Button("Abrir en una pestaña nueva") {
+                Button(String(localized: "Abrir en una pestaña nueva", bundle: #bundle)) {
                     onOpenInNewTab(item.url)
                 }
             }
             if item.isDirectory, let onOpenInSplitView = actions.onOpenInSplitView {
-                Button("Abrir en vista dividida") {
+                Button(String(localized: "Abrir en vista dividida", bundle: #bundle)) {
                     onOpenInSplitView(item.url)
                 }
             }
             let parentFolder = item.url.deletingLastPathComponent()
             if parentFolder.standardizedFileURL.path != actions.viewModel.currentURL.standardizedFileURL.path {
-                Button("Abrir ubicación contenedora") {
+                Button(String(localized: "Abrir ubicación contenedora", bundle: #bundle)) {
                     actions.viewModel.openContainingFolder(of: item)
                 }
                 if let onOpenInNewTab = actions.onOpenInNewTab {
-                    Button("Abrir ubicación contenedora en pestaña nueva") {
+                    Button(String(localized: "Abrir ubicación contenedora en pestaña nueva", bundle: #bundle)) {
                         onOpenInNewTab(parentFolder)
                     }
                 }
             }
             if item.isSymbolicLink {
-                Button("Mostrar destino del enlace") {
+                Button(String(localized: "Mostrar destino del enlace", bundle: #bundle)) {
                     actions.viewModel.showSymbolicLinkTarget(item)
                 }
             }
             openWithMenu(for: item.url)
 
             if !item.isDirectory, DiskImageMountService.isDiskImage(item.url), let onMountDiskImage = actions.onMountDiskImage {
-                Button("Montar imagen de disco") {
+                Button(String(localized: "Montar imagen de disco", bundle: #bundle)) {
                     onMountDiskImage(item)
                 }
             }
 
-            Button("Vista rápida de «\(item.name)»") {
+            Button(String(localized: "Vista rápida de «\(item.name)»", bundle: #bundle)) {
                 ensureTargetItemsSelected()
                 QuickLookPreviewController.shared.show(for: actions.viewModel)
             }
@@ -134,54 +134,54 @@ struct DotphinItemContextMenu: View {
         } else if !targetItems.isEmpty {
             let allDirs = targetItems.allSatisfy(\.isDirectory)
             if allDirs, let onOpenInNewTab = actions.onOpenInNewTab {
-                Button("Abrir en pestañas nuevas") {
+                Button(String(localized: "Abrir en pestañas nuevas", bundle: #bundle)) {
                     for dir in targetItems {
                         onOpenInNewTab(dir.url)
                     }
                 }
             }
             if targetItems.count == 2, let onCompareItems = actions.onCompareItems {
-                Button("Comparar «\(targetItems[0].name)» y «\(targetItems[1].name)»…") {
+                Button(String(localized: "Comparar «\(targetItems[0].name)» y «\(targetItems[1].name)»…", bundle: #bundle)) {
                     onCompareItems(targetItems[0].url, targetItems[1].url)
                 }
             }
-            Button("Vista rápida de \(targetItems.count) ítems") {
+            Button(String(localized: "Vista rápida de \(targetItems.count) ítems", bundle: #bundle)) {
                 ensureTargetItemsSelected()
                 QuickLookPreviewController.shared.show(for: actions.viewModel)
             }
             Divider()
         }
 
-        Button("Cortar") {
+        Button(String(localized: "Cortar", bundle: #bundle)) {
             ensureTargetItemsSelected()
             actions.viewModel.cutSelected()
         }
-        Button("Copiar") {
+        Button(String(localized: "Copiar", bundle: #bundle)) {
             ensureTargetItemsSelected()
             actions.viewModel.copySelected()
         }
-        Button(targetItems.count > 1 ? "Copiar ubicaciones" : "Copiar ubicación") {
+        Button(targetItems.count > 1 ? String(localized: "Copiar ubicaciones", bundle: #bundle) : String(localized: "Copiar ubicación", bundle: #bundle)) {
             ensureTargetItemsSelected()
             actions.viewModel.copySelectedPathsToPasteboard()
         }
         if let item = singleItem, item.isDirectory, actions.viewModel.canPaste {
-            Button("Pegar dentro de la carpeta") {
+            Button(String(localized: "Pegar dentro de la carpeta", bundle: #bundle)) {
                 actions.viewModel.paste(into: item.url)
             }
         } else if actions.viewModel.canPaste {
-            Button("Pegar") {
+            Button(String(localized: "Pegar", bundle: #bundle)) {
                 actions.viewModel.paste()
             }
         }
 
         if let otherPaneURL = actions.otherPaneURL {
             Divider()
-            Button("Copiar al otro panel dividido") {
+            Button(String(localized: "Copiar al otro panel dividido", bundle: #bundle)) {
                 ensureTargetItemsSelected()
                 actions.viewModel.copySelected(to: otherPaneURL)
                 actions.onCrossPaneTransferCompleted?()
             }
-            Button("Mover al otro panel dividido") {
+            Button(String(localized: "Mover al otro panel dividido", bundle: #bundle)) {
                 ensureTargetItemsSelected()
                 actions.viewModel.moveSelected(to: otherPaneURL)
                 actions.onCrossPaneTransferCompleted?()
@@ -192,19 +192,19 @@ struct DotphinItemContextMenu: View {
 
         Divider()
 
-        Button("Duplicar aquí") {
+        Button(String(localized: "Duplicar aquí", bundle: #bundle)) {
             ensureTargetItemsSelected()
             actions.viewModel.duplicateSelected()
         }
 
-        Button(targetItems.count > 1 ? "Crear enlaces simbólicos aquí" : "Crear enlace simbólico aquí") {
+        Button(targetItems.count > 1 ? String(localized: "Crear enlaces simbólicos aquí", bundle: #bundle) : String(localized: "Crear enlace simbólico aquí", bundle: #bundle)) {
             ensureTargetItemsSelected()
             actions.viewModel.createSymbolicLinkToSelected()
         }
 
         if let onMoveToNewFolderPrompt = actions.onMoveToNewFolderPrompt,
            !(targetItems.count == 1 && (singleItem?.isDirectory ?? false)) {
-            Button("Mover a una carpeta nueva…") {
+            Button(String(localized: "Mover a una carpeta nueva…", bundle: #bundle)) {
                 ensureTargetItemsSelected()
                 onMoveToNewFolderPrompt()
             }
@@ -212,8 +212,8 @@ struct DotphinItemContextMenu: View {
 
         Button(
             targetItems.count > 1
-                ? "Comprimir \(targetItems.count) ítems en ZIP"
-                : "Comprimir «\(singleItem?.name ?? "")» en ZIP"
+                ? String(localized: "Comprimir \(targetItems.count) ítems en ZIP", bundle: #bundle)
+                : String(localized: "Comprimir «\(singleItem?.name ?? "")» en ZIP", bundle: #bundle)
         ) {
             ensureTargetItemsSelected()
             actions.viewModel.compressSelected()
@@ -221,22 +221,22 @@ struct DotphinItemContextMenu: View {
 
         if let item = singleItem, !item.isDirectory, ArchiveService.isArchive(item.url) {
             if let onInspectArchive = actions.onInspectArchive {
-                Button("Inspeccionar contenido del archivo comprimido…") {
+                Button(String(localized: "Inspeccionar contenido del archivo comprimido…", bundle: #bundle)) {
                     onInspectArchive(item)
                 }
             }
-            Button("Extraer archivo aquí") {
+            Button(String(localized: "Extraer archivo aquí", bundle: #bundle)) {
                 actions.viewModel.extractArchive(item)
             }
         }
 
         if targetItems.count > 1 {
-            Button("Renombrar \(targetItems.count) ítems…") {
+            Button(String(localized: "Renombrar \(targetItems.count) ítems…", bundle: #bundle)) {
                 ensureTargetItemsSelected()
                 actions.onBatchRename()
             }
         } else if let item = singleItem {
-            Button("Renombrar…") {
+            Button(String(localized: "Renombrar…", bundle: #bundle)) {
                 actions.onRename(item)
             }
         }
@@ -251,11 +251,11 @@ struct DotphinItemContextMenu: View {
 
             let placesProvider = PlacesProvider()
             if placesProvider.isBookmarked(item.url) {
-                Button("Quitar de Lugares") {
+                Button(String(localized: "Quitar de Lugares", bundle: #bundle)) {
                     placesProvider.removeBookmark(for: item.url)
                 }
             } else {
-                Button("Añadir a Lugares") {
+                Button(String(localized: "Añadir a Lugares", bundle: #bundle)) {
                     placesProvider.addBookmark(for: item.url, name: item.name)
                 }
             }
@@ -270,11 +270,11 @@ struct DotphinItemContextMenu: View {
         Divider()
 
         if let item = singleItem {
-            Button("Mostrar en Finder") {
+            Button(String(localized: "Mostrar en Finder", bundle: #bundle)) {
                 NSWorkspace.shared.activateFileViewerSelecting([item.url])
             }
             if item.isDirectory, let onOpenTerminal = actions.onOpenTerminal {
-                Button("Abrir Terminal aquí") {
+                Button(String(localized: "Abrir Terminal aquí", bundle: #bundle)) {
                     onOpenTerminal(item.url)
                 }
             }
@@ -282,12 +282,12 @@ struct DotphinItemContextMenu: View {
         }
 
         if targetItems.count > 1 {
-            Button("Mover \(targetItems.count) ítems a la Papelera", role: .destructive) {
+            Button(String(localized: "Mover \(targetItems.count) ítems a la Papelera", bundle: #bundle), role: .destructive) {
                 ensureTargetItemsSelected()
                 actions.onDeleteSelection()
             }
         } else if let item = singleItem {
-            Button("Mover a la Papelera", role: .destructive) {
+            Button(String(localized: "Mover a la Papelera", bundle: #bundle), role: .destructive) {
                 actions.onDelete(item)
             }
         }
@@ -295,8 +295,8 @@ struct DotphinItemContextMenu: View {
         if AppSettingsModel.shared.settings.showPermanentDeleteCommand {
             Button(
                 targetItems.count > 1
-                    ? "Eliminar permanentemente \(targetItems.count) ítems…"
-                    : "Eliminar permanentemente…",
+                    ? String(localized: "Eliminar permanentemente \(targetItems.count) ítems…", bundle: #bundle)
+                    : String(localized: "Eliminar permanentemente…", bundle: #bundle),
                 role: .destructive
             ) {
                 ensureTargetItemsSelected()
@@ -310,7 +310,7 @@ struct DotphinItemContextMenu: View {
 
         if let item = singleItem {
             Divider()
-            Button("Propiedades…") {
+            Button(String(localized: "Propiedades…", bundle: #bundle)) {
                 actions.onShowProperties(item.url)
             }
         }
@@ -320,7 +320,7 @@ struct DotphinItemContextMenu: View {
     private var copyOrMoveToDestinationsMenus: some View {
         let provider = PlacesProvider()
         let destinations = (provider.staticBookmarks().filter { $0.name != "Trash" } + provider.customBookmarks())
-        Menu("Copiar a") {
+        Menu(String(localized: "Copiar a", bundle: #bundle)) {
             ForEach(destinations) { dest in
                 Button(dest.name) {
                     ensureTargetItemsSelected()
@@ -328,12 +328,12 @@ struct DotphinItemContextMenu: View {
                 }
             }
             Divider()
-            Button("Elegir carpeta…") {
+            Button(String(localized: "Elegir carpeta…", bundle: #bundle)) {
                 let panel = NSOpenPanel()
                 panel.canChooseFiles = false
                 panel.canChooseDirectories = true
                 panel.allowsMultipleSelection = false
-                panel.prompt = "Copiar aquí"
+                panel.prompt = String(localized: "Copiar aquí", bundle: #bundle)
                 if panel.runModal() == .OK, let targetDir = panel.url {
                     ensureTargetItemsSelected()
                     actions.viewModel.copySelected(to: targetDir)
@@ -341,7 +341,7 @@ struct DotphinItemContextMenu: View {
             }
         }
 
-        Menu("Mover a") {
+        Menu(String(localized: "Mover a", bundle: #bundle)) {
             ForEach(destinations) { dest in
                 Button(dest.name) {
                     ensureTargetItemsSelected()
@@ -349,12 +349,12 @@ struct DotphinItemContextMenu: View {
                 }
             }
             Divider()
-            Button("Elegir carpeta…") {
+            Button(String(localized: "Elegir carpeta…", bundle: #bundle)) {
                 let panel = NSOpenPanel()
                 panel.canChooseFiles = false
                 panel.canChooseDirectories = true
                 panel.allowsMultipleSelection = false
-                panel.prompt = "Mover aquí"
+                panel.prompt = String(localized: "Mover aquí", bundle: #bundle)
                 if panel.runModal() == .OK, let targetDir = panel.url {
                     ensureTargetItemsSelected()
                     actions.viewModel.moveSelected(to: targetDir)
@@ -365,23 +365,23 @@ struct DotphinItemContextMenu: View {
 
     @ViewBuilder
     private var gitVersionControlMenu: some View {
-        Menu("Control de versiones (Git)") {
+        Menu(String(localized: "Control de versiones (Git)", bundle: #bundle)) {
             if let branch = actions.viewModel.gitBranchName {
-                Text("Rama: \(branch)")
+                Text(String(localized: "Rama: \(branch)", bundle: #bundle))
                 Divider()
             }
-            Button("Añadir al área de preparación (git add)") {
+            Button(String(localized: "Añadir al área de preparación (git add)", bundle: #bundle)) {
                 actions.viewModel.gitStageItems(targetItems)
             }
-            Button("Quitar del área de preparación (git restore --staged)") {
+            Button(String(localized: "Quitar del área de preparación (git restore --staged)", bundle: #bundle)) {
                 actions.viewModel.gitUnstageItems(targetItems)
             }
-            Button("Descartar cambios locales (git checkout --)", role: .destructive) {
+            Button(String(localized: "Descartar cambios locales (git checkout --)", bundle: #bundle), role: .destructive) {
                 actions.viewModel.gitDiscardChanges(targetItems)
             }
             if let onShowGitRepoSheet = actions.onShowGitRepoSheet {
                 Divider()
-                Button("Ver diferencias, historial y crear commit…") {
+                Button(String(localized: "Ver diferencias, historial y crear commit…", bundle: #bundle)) {
                     onShowGitRepoSheet(targetItems)
                 }
             }
@@ -390,7 +390,7 @@ struct DotphinItemContextMenu: View {
 
     @ViewBuilder
     private var colorTagMenu: some View {
-        Menu("Etiqueta de color") {
+        Menu(String(localized: "Etiqueta de color", bundle: #bundle)) {
             ForEach(FinderColorTag.allCases) { tag in
                 Button {
                     actions.viewModel.setColorTag(tag, for: targetItems)
@@ -408,7 +408,7 @@ struct DotphinItemContextMenu: View {
 
     @ViewBuilder
     private func folderIconMenu(for folderURL: URL) -> some View {
-        Menu("Icono de carpeta") {
+        Menu(String(localized: "Icono de carpeta", bundle: #bundle)) {
             ForEach(FolderIconPreset.allCases) { preset in
                 Button {
                     actions.viewModel.setFolderIcon(preset, for: folderURL)
@@ -430,12 +430,12 @@ struct DotphinItemContextMenu: View {
             let anyHidden = nonDotTargets.contains(where: \.isHiddenInDotHidden)
             let anyVisible = nonDotTargets.contains { !$0.isHiddenInDotHidden }
             if anyVisible {
-                Button("Ocultar (en .hidden)") {
+                Button(String(localized: "Ocultar (en .hidden)", bundle: #bundle)) {
                     actions.viewModel.hideItemsInDotHidden(nonDotTargets)
                 }
             }
             if anyHidden {
-                Button("Mostrar (quitar de .hidden)") {
+                Button(String(localized: "Mostrar (quitar de .hidden)", bundle: #bundle)) {
                     actions.viewModel.unhideItemsInDotHidden(nonDotTargets)
                 }
             }
@@ -451,32 +451,32 @@ struct DotphinItemContextMenu: View {
 
     @ViewBuilder
     private var createNewMenu: some View {
-        Menu("Crear nuevo") {
-            Button("Carpeta…") {
+        Menu(String(localized: "Crear nuevo", bundle: #bundle)) {
+            Button(String(localized: "Carpeta…", bundle: #bundle)) {
                 actions.onNewFolderPrompt()
             }
             if let onNewSymbolicLinkPrompt = actions.onNewSymbolicLinkPrompt {
-                Button("Enlace simbólico…") {
+                Button(String(localized: "Enlace simbólico…", bundle: #bundle)) {
                     onNewSymbolicLinkPrompt()
                 }
             }
             Divider()
-            Button("Archivo de texto…") {
-                actions.onNewFilePrompt("Nuevo archivo.txt")
+            Button(String(localized: "Archivo de texto…", bundle: #bundle)) {
+                actions.onNewFilePrompt(String(localized: "Nuevo archivo.txt", bundle: #bundle))
             }
-            Button("Documento Markdown…") {
+            Button(String(localized: "Documento Markdown…", bundle: #bundle)) {
                 actions.onNewFilePrompt("Nota.md")
             }
-            Button("Script de Shell…") {
+            Button(String(localized: "Script de Shell…", bundle: #bundle)) {
                 actions.onNewFilePrompt("script.sh")
             }
-            Button("Archivo Swift…") {
+            Button(String(localized: "Archivo Swift…", bundle: #bundle)) {
                 actions.onNewFilePrompt("Archivo.swift")
             }
-            Button("Documento JSON…") {
+            Button(String(localized: "Documento JSON…", bundle: #bundle)) {
                 actions.onNewFilePrompt("datos.json")
             }
-            Button("Página HTML…") {
+            Button(String(localized: "Página HTML…", bundle: #bundle)) {
                 actions.onNewFilePrompt("index.html")
             }
             templateMenuItems
@@ -496,7 +496,7 @@ struct DotphinItemContextMenu: View {
             }
         }
         Divider()
-        Button("Abrir carpeta de plantillas…") {
+        Button(String(localized: "Abrir carpeta de plantillas…", bundle: #bundle)) {
             TemplateProvider().revealOrCreateTemplatesDirectory()
         }
     }
@@ -505,7 +505,7 @@ struct DotphinItemContextMenu: View {
     private func openWithMenu(for url: URL) -> some View {
         let appURLs = NSWorkspace.shared.urlsForApplications(toOpen: url)
         if !appURLs.isEmpty {
-            Menu("Abrir con") {
+            Menu(String(localized: "Abrir con", bundle: #bundle)) {
                 ForEach(appURLs, id: \.self) { appURL in
                     let appName = appURL.deletingPathExtension().lastPathComponent
                     Button(appName) {
@@ -526,38 +526,38 @@ struct DotphinViewportContextMenu: View {
 
     var body: some View {
         if actions.viewModel.isBrowsingTrash {
-            Button("Vaciar la Papelera…", role: .destructive) {
+            Button(String(localized: "Vaciar la Papelera…", bundle: #bundle), role: .destructive) {
                 actions.viewModel.emptyTrash()
             }
             .disabled(actions.viewModel.items.isEmpty)
             Divider()
         } else {
-            Menu("Crear nuevo") {
-                Button("Carpeta…") {
+            Menu(String(localized: "Crear nuevo", bundle: #bundle)) {
+                Button(String(localized: "Carpeta…", bundle: #bundle)) {
                     actions.onNewFolderPrompt()
                 }
                 if let onNewSymbolicLinkPrompt = actions.onNewSymbolicLinkPrompt {
-                    Button("Enlace simbólico…") {
+                    Button(String(localized: "Enlace simbólico…", bundle: #bundle)) {
                         onNewSymbolicLinkPrompt()
                     }
                 }
                 Divider()
-                Button("Archivo de texto…") {
-                    actions.onNewFilePrompt("Nuevo archivo.txt")
+                Button(String(localized: "Archivo de texto…", bundle: #bundle)) {
+                    actions.onNewFilePrompt(String(localized: "Nuevo archivo.txt", bundle: #bundle))
                 }
-                Button("Documento Markdown…") {
+                Button(String(localized: "Documento Markdown…", bundle: #bundle)) {
                     actions.onNewFilePrompt("Nota.md")
                 }
-                Button("Script de Shell…") {
+                Button(String(localized: "Script de Shell…", bundle: #bundle)) {
                     actions.onNewFilePrompt("script.sh")
                 }
-                Button("Archivo Swift…") {
+                Button(String(localized: "Archivo Swift…", bundle: #bundle)) {
                     actions.onNewFilePrompt("Archivo.swift")
                 }
-                Button("Documento JSON…") {
+                Button(String(localized: "Documento JSON…", bundle: #bundle)) {
                     actions.onNewFilePrompt("datos.json")
                 }
-                Button("Página HTML…") {
+                Button(String(localized: "Página HTML…", bundle: #bundle)) {
                     actions.onNewFilePrompt("index.html")
                 }
                 templateMenuItems
@@ -565,14 +565,14 @@ struct DotphinViewportContextMenu: View {
         }
 
         if actions.viewModel.canPaste {
-            Button("Pegar") {
+            Button(String(localized: "Pegar", bundle: #bundle)) {
                 actions.viewModel.paste()
             }
         }
 
         Divider()
 
-        Menu("Modo de vista") {
+        Menu(String(localized: "Modo de vista", bundle: #bundle)) {
             ForEach(ViewMode.allCases, id: \.self) { mode in
                 Button {
                     actions.viewModel.setViewMode(mode)
@@ -587,7 +587,7 @@ struct DotphinViewportContextMenu: View {
             }
         }
 
-        Menu("Ordenar por") {
+        Menu(String(localized: "Ordenar por", bundle: #bundle)) {
             ForEach(SortField.allCases, id: \.self) { field in
                 Button {
                     let isSameField = actions.viewModel.viewProperties.sortField == field
@@ -605,32 +605,32 @@ struct DotphinViewportContextMenu: View {
                 }
             }
             Divider()
-            Button(actions.viewModel.viewProperties.ascending ? "Ascendente ✓" : "Descendente ✓") {
+            Button(actions.viewModel.viewProperties.ascending ? String(localized: "Ascendente ✓", bundle: #bundle) : String(localized: "Descendente ✓", bundle: #bundle)) {
                 actions.viewModel.setSort(
                     field: actions.viewModel.viewProperties.sortField,
                     ascending: !actions.viewModel.viewProperties.ascending
                 )
             }
             Divider()
-            Button(actions.viewModel.viewProperties.sortFoldersFirst ? "Carpetas primero ✓" : "Carpetas primero") {
+            Button(actions.viewModel.viewProperties.sortFoldersFirst ? "Carpetas primero ✓" : String(localized: "Carpetas primero", bundle: #bundle)) {
                 actions.viewModel.toggleSortFoldersFirst()
             }
-            Button(actions.viewModel.viewProperties.sortHiddenLast ? "Archivos ocultos al final ✓" : "Archivos ocultos al final") {
+            Button(actions.viewModel.viewProperties.sortHiddenLast ? "Archivos ocultos al final ✓" : String(localized: "Archivos ocultos al final", bundle: #bundle)) {
                 actions.viewModel.toggleSortHiddenLast()
             }
             Divider()
-            Button(actions.viewModel.viewProperties.showInGroups ? "Mostrar en grupos ✓" : "Mostrar en grupos") {
+            Button(actions.viewModel.viewProperties.showInGroups ? "Mostrar en grupos ✓" : String(localized: "Mostrar en grupos", bundle: #bundle)) {
                 actions.viewModel.toggleShowInGroups()
             }
         }
 
-        Menu("Agrupar por") {
+        Menu(String(localized: "Agrupar por", bundle: #bundle)) {
             let props = actions.viewModel.viewProperties
             Button {
                 actions.viewModel.setGroupBy(showInGroups: false, groupFieldOverride: nil)
             } label: {
                 HStack {
-                    Text("Ninguno")
+                    Text(String(localized: "Ninguno", bundle: #bundle))
                     if !props.showInGroups {
                         Image(systemName: "checkmark")
                     }
@@ -640,7 +640,7 @@ struct DotphinViewportContextMenu: View {
                 actions.viewModel.setGroupBy(showInGroups: true, groupFieldOverride: nil)
             } label: {
                 HStack {
-                    Text("Igual que el criterio de ordenación")
+                    Text(String(localized: "Igual que el criterio de ordenación", bundle: #bundle))
                     if props.showInGroups && props.groupByFieldOverride == nil {
                         Image(systemName: "checkmark")
                     }
@@ -662,7 +662,7 @@ struct DotphinViewportContextMenu: View {
         }
 
         if actions.viewModel.viewProperties.mode == .details {
-            Menu("Columnas visibles") {
+            Menu(String(localized: "Columnas visibles", bundle: #bundle)) {
                 ForEach(DetailsColumn.allCases) { col in
                     let isVisible = actions.viewModel.viewProperties.visibleDetailsColumns.contains(col)
                     Button {
@@ -679,38 +679,38 @@ struct DotphinViewportContextMenu: View {
             }
         }
 
-        Button(actions.viewModel.viewProperties.showPreviews ? "Mostrar vistas previas ✓" : "Mostrar vistas previas") {
+        Button(actions.viewModel.viewProperties.showPreviews ? "Mostrar vistas previas ✓" : String(localized: "Mostrar vistas previas", bundle: #bundle)) {
             actions.viewModel.toggleShowPreviews()
         }
 
-        Button(actions.viewModel.effectiveShowsHiddenFiles ? "Mostrar archivos ocultos ✓" : "Mostrar archivos ocultos") {
+        Button(actions.viewModel.effectiveShowsHiddenFiles ? "Mostrar archivos ocultos ✓" : String(localized: "Mostrar archivos ocultos", bundle: #bundle)) {
             actions.viewModel.toggleShowsHiddenFiles()
         }
 
         if let onShowViewPropertiesDialog = actions.onShowViewPropertiesDialog {
-            Button("Estilo de visualización de vista…") {
+            Button(String(localized: "Estilo de visualización de vista…", bundle: #bundle)) {
                 onShowViewPropertiesDialog()
             }
         }
 
-        Button("Restablecer valores de vista predeterminados") {
+        Button(String(localized: "Restablecer valores de vista predeterminados", bundle: #bundle)) {
             actions.viewModel.resetViewPropertiesToDefault()
         }
 
         Divider()
 
-        Button(actions.viewModel.isSelectionModeActive ? "Salir del modo de selección" : "Modo de selección") {
+        Button(actions.viewModel.isSelectionModeActive ? String(localized: "Salir del modo de selección", bundle: #bundle) : String(localized: "Modo de selección", bundle: #bundle)) {
             actions.viewModel.isSelectionModeActive.toggle()
         }
-        Button("Seleccionar todo") {
+        Button(String(localized: "Seleccionar todo", bundle: #bundle)) {
             actions.viewModel.selectAll()
         }
         if let onSelectByPatternPrompt = actions.onSelectByPatternPrompt {
-            Button("Seleccionar ítems por patrón…") {
+            Button(String(localized: "Seleccionar ítems por patrón…", bundle: #bundle)) {
                 onSelectByPatternPrompt()
             }
         }
-        Button("Invertir selección") {
+        Button(String(localized: "Invertir selección", bundle: #bundle)) {
             actions.viewModel.invertSelection()
         }
 
@@ -718,36 +718,36 @@ struct DotphinViewportContextMenu: View {
 
         let placesProvider = PlacesProvider()
         if placesProvider.isBookmarked(actions.viewModel.currentURL) {
-            Button("Quitar carpeta actual de Lugares") {
+            Button(String(localized: "Quitar carpeta actual de Lugares", bundle: #bundle)) {
                 placesProvider.removeBookmark(for: actions.viewModel.currentURL)
             }
         } else {
-            Button("Añadir carpeta actual a Lugares") {
+            Button(String(localized: "Añadir carpeta actual a Lugares", bundle: #bundle)) {
                 placesProvider.addBookmark(for: actions.viewModel.currentURL)
             }
         }
 
-        Button("Copiar ubicación") {
+        Button(String(localized: "Copiar ubicación", bundle: #bundle)) {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(actions.viewModel.currentURL.path, forType: .string)
         }
-        Button("Mostrar carpeta en Finder") {
+        Button(String(localized: "Mostrar carpeta en Finder", bundle: #bundle)) {
             NSWorkspace.shared.activateFileViewerSelecting([actions.viewModel.currentURL])
         }
         if let onOpenTerminal = actions.onOpenTerminal {
-            Button("Abrir Terminal aquí") {
+            Button(String(localized: "Abrir Terminal aquí", bundle: #bundle)) {
                 onOpenTerminal(actions.viewModel.currentURL)
             }
         }
         if actions.viewModel.isGitRepository, let onShowGitRepoSheet = actions.onShowGitRepoSheet {
-            Button("Control de versiones Git (\(actions.viewModel.gitBranchName ?? "repo"))…") {
+            Button(String(localized: "Control de versiones Git (\(actions.viewModel.gitBranchName ?? "repo"))…", bundle: #bundle)) {
                 onShowGitRepoSheet([])
             }
         }
 
         Divider()
 
-        Button("Propiedades…") {
+        Button(String(localized: "Propiedades…", bundle: #bundle)) {
             actions.onShowProperties(actions.viewModel.currentURL)
         }
     }
@@ -765,7 +765,7 @@ struct DotphinViewportContextMenu: View {
             }
         }
         Divider()
-        Button("Abrir carpeta de plantillas…") {
+        Button(String(localized: "Abrir carpeta de plantillas…", bundle: #bundle)) {
             TemplateProvider().revealOrCreateTemplatesDirectory()
         }
     }

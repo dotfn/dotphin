@@ -19,11 +19,11 @@ struct PlaceItem: Identifiable, Hashable, Codable {
     var localizedDisplayName: String {
         guard kind == .bookmark else { return name }
         switch name {
-        case "Home": return "Inicio"
-        case "Desktop": return "Escritorio"
-        case "Documents": return "Documentos"
-        case "Downloads": return "Descargas"
-        case "Trash": return "Papelera"
+        case "Home": return String(localized: "Inicio", bundle: #bundle)
+        case "Desktop": return String(localized: "Escritorio", bundle: #bundle)
+        case "Documents": return String(localized: "Documentos", bundle: #bundle)
+        case "Downloads": return String(localized: "Descargas", bundle: #bundle)
+        case "Trash": return String(localized: "Papelera", bundle: #bundle)
         default: return name
         }
     }

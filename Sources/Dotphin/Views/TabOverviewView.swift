@@ -18,7 +18,7 @@ struct TabOverviewView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             // Esc cierra la vista (acción de cancelar estándar).
-            Button("Cerrar vista de pestañas", action: onCloseOverview)
+            Button(String(localized: "Cerrar vista de pestañas", bundle: #bundle), action: onCloseOverview)
                 .keyboardShortcut(.cancelAction)
                 .opacity(0)
                 .accessibilityHidden(true)
@@ -160,12 +160,12 @@ private struct WindowTabPreviewCard: View {
 
                     // Miniature Status Bar
                     HStack {
-                        Text("\(tab.focused.filteredItems.count) ítems")
+                        Text(String(localized: "\(tab.focused.filteredItems.count) ítems", bundle: #bundle))
                             .font(.system(size: 6))
                             .foregroundStyle(.secondary)
                         Spacer()
                         HStack(spacing: 4) {
-                            Text("Zoom:")
+                            Text(String(localized: "Zoom:", bundle: #bundle))
                                 .font(.system(size: 5.5))
                                 .foregroundStyle(.secondary)
                             Capsule()
@@ -202,7 +202,7 @@ private struct WindowTabPreviewCard: View {
                 }
                 .buttonStyle(.plain)
                 .padding(8)
-                .help("Cerrar pestaña")
+                .help(String(localized: "Cerrar pestaña", bundle: #bundle))
             }
         }
         .scaleEffect(isHovered ? 1.015 : 1.0)
@@ -213,7 +213,7 @@ private struct WindowTabPreviewCard: View {
 
     private var miniatureSidebar: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Lugares")
+            Text(String(localized: "Lugares", bundle: #bundle))
                 .font(.system(size: 5.5, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 5)
@@ -244,7 +244,7 @@ private struct WindowTabPreviewCard: View {
             .padding(.horizontal, 3)
 
             if !volumes.isEmpty {
-                Text("Dispositivos")
+                Text(String(localized: "Dispositivos", bundle: #bundle))
                     .font(.system(size: 5.5, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 5)
@@ -270,7 +270,7 @@ private struct WindowTabPreviewCard: View {
                 }
             }
 
-            Text("Carpetas")
+            Text(String(localized: "Carpetas", bundle: #bundle))
                 .font(.system(size: 5.5, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 5)
@@ -356,8 +356,8 @@ private struct NewTabOverviewCard: View {
         .animation(.snappy(duration: 0.16), value: isHovered)
         .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .onTapGesture(perform: onAddTab)
-        .help("Nueva pestaña")
-        .accessibilityLabel("Nueva pestaña")
+        .help(String(localized: "Nueva pestaña", bundle: #bundle))
+        .accessibilityLabel(String(localized: "Nueva pestaña", bundle: #bundle))
     }
 }
 

@@ -16,14 +16,14 @@ enum FinderColorTag: Int, Codable, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .none: return "Sin etiqueta"
-        case .gray: return "Gris"
-        case .green: return "Verde"
-        case .purple: return "Púrpura"
-        case .blue: return "Azul"
-        case .yellow: return "Amarillo"
-        case .red: return "Rojo"
-        case .orange: return "Naranja"
+        case .none: return String(localized: "Sin etiqueta", bundle: #bundle)
+        case .gray: return String(localized: "Gris", bundle: #bundle)
+        case .green: return String(localized: "Verde", bundle: #bundle)
+        case .purple: return String(localized: "Púrpura", bundle: #bundle)
+        case .blue: return String(localized: "Azul", bundle: #bundle)
+        case .yellow: return String(localized: "Amarillo", bundle: #bundle)
+        case .red: return String(localized: "Rojo", bundle: #bundle)
+        case .orange: return String(localized: "Naranja", bundle: #bundle)
         }
     }
 

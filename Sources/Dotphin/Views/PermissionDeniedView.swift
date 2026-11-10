@@ -9,13 +9,13 @@ struct PermissionDeniedView: View {
             Image(systemName: "lock.fill")
                 .font(.largeTitle)
                 .foregroundStyle(.secondary)
-            Text("Sin acceso a \(url.path)")
+            Text(String(localized: "Sin acceso a \(url.path)", bundle: #bundle))
                 .font(.headline)
-            Text("Otorgá acceso completo al disco en Configuración del Sistema para navegar esta carpeta.")
+            Text(String(localized: "Otorgá acceso completo al disco en Configuración del Sistema para navegar esta carpeta.", bundle: #bundle))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Abrir Configuración del Sistema") {
+            Button(String(localized: "Abrir Configuración del Sistema", bundle: #bundle)) {
                 if let settingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
                     NSWorkspace.shared.open(settingsURL)
                 }

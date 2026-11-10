@@ -22,6 +22,16 @@ enum DirectoryComparisonEntryStatus: String, Equatable, Sendable {
     case onlyRight = "Solo en derecho"
     case modified = "Diferente"
     case identical = "Idéntico"
+
+    /// Texto para mostrar (el valor crudo queda fijo, no se traduce).
+    var title: String {
+        switch self {
+        case .onlyLeft: return String(localized: "Solo en izquierdo", bundle: #bundle)
+        case .onlyRight: return String(localized: "Solo en derecho", bundle: #bundle)
+        case .modified: return String(localized: "Diferente", bundle: #bundle)
+        case .identical: return String(localized: "Idéntico", bundle: #bundle)
+        }
+    }
 }
 
 struct DirectoryComparisonEntry: Identifiable, Equatable, Sendable {
@@ -326,10 +336,10 @@ struct FileCompareSheetView: View {
                     .foregroundStyle(Color.accentColor)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Comparar: «\(leftURL.lastPathComponent)» vs «\(rightURL.lastPathComponent)»")
+                    Text(String(localized: "Comparar: «\(leftURL.lastPathComponent)» vs «\(rightURL.lastPathComponent)»", bundle: #bundle))
                         .font(.headline)
                         .lineLimit(1)
-                    Text("\(leftURL.path)  ↔  \(rightURL.path)")
+                    Text(String(localized: "\(leftURL.path)  ↔  \(rightURL.path)", bundle: #bundle))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -341,7 +351,7 @@ struct FileCompareSheetView: View {
                 if let report {
                     HStack(spacing: 6) {
                         Image(systemName: report.areIdentical ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
-                        Text(report.areIdentical ? "Idénticos" : "Diferentes")
+                        Text(report.areIdentical ? String(localized: "Idénticos", bundle: #bundle) : String(localized: "Diferentes", bundle: #bundle))
                             .fontWeight(.semibold)
                     }
                     .font(.caption)
@@ -359,19 +369,19 @@ struct FileCompareSheetView: View {
 
             if let report {
                 HStack(spacing: 16) {
-                    fileMetadataCard(title: "Izquierdo", url: report.leftURL, size: report.leftSize, sha256: report.leftSHA256)
-                    fileMetadataCard(title: "Derecho", url: report.rightURL, size: report.rightSize, sha256: report.rightSHA256)
+                    fileMetadataCard(title: String(localized: "Izquierdo", bundle: #bundle), url: report.leftURL, size: report.leftSize, sha256: report.leftSHA256)
+                    fileMetadataCard(title: String(localized: "Derecho", bundle: #bundle), url: report.rightURL, size: report.rightSize, sha256: report.rightSHA256)
                 }
 
                 if report.isDirectoryComparison {
                     directoryComparisonTable(report: report)
                 } else if report.isTextComparison {
                     HStack {
-                        Text("Diferencias de líneas: +\(report.addedLineCount) añadidas, −\(report.removedLineCount) eliminadas")
+                        Text(String(localized: "Diferencias de líneas: +\(report.addedLineCount) añadidas, −\(report.removedLineCount) eliminadas", bundle: #bundle))
                             .font(.caption.weight(.medium))
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Toggle("Mostrar solo líneas modificadas", isOn: $showOnlyChanges)
+                        Toggle(String(localized: "Mostrar solo líneas modificadas", bundle: #bundle), isOn: $showOnlyChanges)
                             .toggleStyle(.checkbox)
                             .font(.caption)
                     }
@@ -396,30 +406,30 @@ struct FileCompareSheetView: View {
                     )
                 } else {
                     ContentUnavailableView(
-                        report.areIdentical ? "Archivos binarios idénticos" : "Archivos binarios distintos",
+                        report.areIdentical ? String(localized: "Archivos binarios idénticos", bundle: #bundle) : String(localized: "Archivos binarios distintos", bundle: #bundle),
                         systemImage: report.areIdentical ? "checkmark.circle.fill" : "doc.badge.gearshape",
                         description: Text(
                             report.areIdentical
-                                ? "Ambos archivos tienen exactamente el mismo tamaño y suma SHA-256."
-                                : "Los archivos difieren en tamaño o contenido binario (ver sumas SHA-256 arriba)."
+                                ? String(localized: "Ambos archivos tienen exactamente el mismo tamaño y suma SHA-256.", bundle: #bundle)
+                                : String(localized: "Los archivos difieren en tamaño o contenido binario (ver sumas SHA-256 arriba).", bundle: #bundle)
                         )
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             } else {
-                ProgressView("Comparando archivos…")
+                ProgressView(String(localized: "Comparando archivos…", bundle: #bundle))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
             HStack {
-                Button("Abrir en FileMerge (opendiff)") {
+                Button(String(localized: "Abrir en FileMerge (opendiff)", bundle: #bundle)) {
                     launchOpenDiff()
                 }
                 .controlSize(.small)
 
                 Spacer()
 
-                Button("Cerrar") {
+                Button(String(localized: "Cerrar", bundle: #bundle)) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -455,7 +465,7 @@ struct FileCompareSheetView: View {
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(1)
             if let sha256 {
-                Text("SHA-256: \(sha256.prefix(16))…\(sha256.suffix(8))")
+                Text(String(localized: "SHA-256: \(sha256.prefix(16))…\(sha256.suffix(8))", bundle: #bundle))
                     .font(.system(size: 10.5, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
@@ -519,7 +529,7 @@ struct FileCompareSheetView: View {
                             .font(.system(size: 12, weight: .medium))
                             .lineLimit(1)
                         Spacer()
-                        Text(entry.status.rawValue)
+                        Text(entry.status.title)
                             .font(.caption.weight(.semibold))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)

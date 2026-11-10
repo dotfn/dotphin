@@ -44,7 +44,7 @@ final class DolphinFullParityTests: XCTestCase {
             FileItem(url: tempDir.appendingPathComponent("medium.bin"), name: "medium.bin", isDirectory: false, isSymbolicLink: false, size: 5_000_000, modificationDate: nil),
         ]
         let groups = items.grouped(by: .size, foldersFirst: true)
-        XCTAssertEqual(groups.map(\.title), ["Carpetas", "Vacío (0 B)", "Pequeño (< 1 MB)", "Mediano (1 MB – 100 MB)"])
+        XCTAssertEqual(groups.map(\.title), ["Carpetas", "Vacío (0 B)", "Pequeño (< 1 MB)", "Mediano (1 MB – 100 MB)"].map { appText($0) })
     }
 
     func test_sortedWithFoldersFirstFalseAndHiddenLastTrue() {
@@ -696,7 +696,7 @@ final class DolphinFullParityTests: XCTestCase {
         )
         let formatter = FileMetadataFormatter()
         XCTAssertEqual(formatter.sizeDisplayText(for: folderItem, directorySizeMode: .none), "—")
-        XCTAssertEqual(formatter.sizeDisplayText(for: folderItem, directorySizeMode: .contentCount), "2 ítems")
+        XCTAssertEqual(formatter.sizeDisplayText(for: folderItem, directorySizeMode: .contentCount), appText("%lld ítems", 2))
         XCTAssertFalse(formatter.sizeDisplayText(for: folderItem, directorySizeMode: .contentSize).isEmpty)
         XCTAssertNotEqual(formatter.sizeDisplayText(for: folderItem, directorySizeMode: .contentSize), "—")
 
@@ -706,7 +706,7 @@ final class DolphinFullParityTests: XCTestCase {
 
         let tooltip = formatter.hoverTooltip(for: folderItem)
         XCTAssertTrue(tooltip.contains("DisplayFolder"))
-        XCTAssertTrue(tooltip.contains("2 ítems"))
+        XCTAssertTrue(tooltip.contains(appText("%lld ítems", 2)))
 
         let vm = BrowserViewModel(
             startingAt: folder,
@@ -807,7 +807,7 @@ final class DolphinFullParityTests: XCTestCase {
             availableCapacity: 1024 * 1024,
             displayMode: .small
         )
-        XCTAssertTrue(bar.statusSummaryText.contains("«report_2026.pdf»"))
+        XCTAssertTrue(bar.statusSummaryText.contains("report_2026.pdf"))
         XCTAssertTrue(bar.statusSummaryText.contains("PDF"))
     }
 
@@ -911,7 +911,7 @@ final class DolphinFullParityTests: XCTestCase {
 
         // Verify localized Spanish display names for standard macOS sidebar places
         let staticPlaces = PlacesProvider().staticBookmarks()
-        XCTAssertEqual(staticPlaces.map(\.localizedDisplayName), ["Inicio", "Escritorio", "Documentos", "Descargas", "Papelera"])
+        XCTAssertEqual(staticPlaces.map(\.localizedDisplayName), ["Inicio", "Escritorio", "Documentos", "Descargas", "Papelera"].map { appText($0) })
     }
 
     // MARK: - 20. Type-Ahead Selection, Zoom Shortcuts, Extended Sort Roles, Read-Only Detection & Archive Contents
@@ -1038,20 +1038,20 @@ final class DolphinFullParityTests: XCTestCase {
             startingAt: dirA,
             store: ViewPropertiesStore(defaults: defaults, appSettingsStore: AppSettingsStore(defaults: defaults))
         )
-        XCTAssertEqual(vm.history.undoMenuTitle, "Deshacer")
+        XCTAssertEqual(vm.history.undoMenuTitle, appText("Deshacer"))
         vm.createFolder(named: "CarpetaNueva")
-        XCTAssertEqual(vm.history.undoMenuTitle, "Deshacer creación de «CarpetaNueva»")
+        XCTAssertEqual(vm.history.undoMenuTitle, appText("Deshacer %@", appText("creación de «%@»", "CarpetaNueva")))
 
         vm.createFile(named: "nota.txt")
-        XCTAssertEqual(vm.history.undoMenuTitle, "Deshacer creación de archivo «nota.txt»")
+        XCTAssertEqual(vm.history.undoMenuTitle, appText("Deshacer %@", appText("creación de archivo «%@»", "nota.txt")))
 
         let fileItem = try XCTUnwrap(vm.items.first { $0.name == "nota.txt" })
         vm.select(fileItem)
         vm.renameSelected(to: "nota_renombrada.txt")
-        XCTAssertEqual(vm.history.undoMenuTitle, "Deshacer renombrado de «nota.txt»")
+        XCTAssertEqual(vm.history.undoMenuTitle, appText("Deshacer %@", appText("renombrado de «%@»", "nota.txt")))
 
         vm.undo()
-        XCTAssertEqual(vm.history.redoMenuTitle, "Rehacer renombrado de «nota.txt»")
+        XCTAssertEqual(vm.history.redoMenuTitle, appText("Rehacer %@", appText("renombrado de «%@»", "nota.txt")))
 
         // 3. Independent `Group By` (`groupByFieldOverride`) & `resetViewPropertiesToDefault`
         try Data("swift".utf8).write(to: dirA.appendingPathComponent("uno.swift"))
@@ -1092,10 +1092,10 @@ final class DolphinFullParityTests: XCTestCase {
         let topItems = try reader.contents(of: tempDir)
         let subItem = try XCTUnwrap(topItems.first { $0.name == "PerfSub" })
         let formatter = FileMetadataFormatter()
-        XCTAssertEqual(formatter.sizeDisplayText(for: subItem, directorySizeMode: .contentCount), "1 ítem")
-        XCTAssertEqual(formatter.sizeDisplayText(for: subItem, directorySizeMode: .contentCount), "1 ítem")
+        XCTAssertEqual(formatter.sizeDisplayText(for: subItem, directorySizeMode: .contentCount), appText("1 ítem"))
+        XCTAssertEqual(formatter.sizeDisplayText(for: subItem, directorySizeMode: .contentCount), appText("1 ítem"))
         XCTAssertFalse(formatter.permissionsDisplayText(for: subItem, format: .symbolic).isEmpty)
-        XCTAssertTrue(formatter.hoverTooltip(for: subItem).contains("Contenido: 1 ítem"))
+        XCTAssertTrue(formatter.hoverTooltip(for: subItem).contains(appText("Contenido: %@", appText("1 ítem"))))
 
         // 3. Fast Git ancestor check avoids spawning git on non-git folders
         XCTAssertFalse(GitStatusProvider.hasGitRepositoryInAncestors(of: sub))

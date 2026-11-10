@@ -20,36 +20,36 @@ struct FileOperationHistory {
 
     /// Mirrors `DolphinMainWindow::slotUndoTextChanged` (`KIO::FileUndoManager::undoText`).
     var undoMenuTitle: String {
-        guard let lastBatch = undoStack.last else { return "Deshacer" }
-        return "Deshacer \(Self.actionSummary(for: lastBatch))"
+        guard let lastBatch = undoStack.last else { return String(localized: "Deshacer", bundle: #bundle) }
+        return String(localized: "Deshacer \(Self.actionSummary(for: lastBatch))", bundle: #bundle)
     }
 
     /// Mirrors `DolphinMainWindow::slotRedoTextChanged` (`KIO::FileUndoManager::redoText`).
     var redoMenuTitle: String {
-        guard let lastBatch = redoStack.last else { return "Rehacer" }
-        return "Rehacer \(Self.actionSummary(for: lastBatch))"
+        guard let lastBatch = redoStack.last else { return String(localized: "Rehacer", bundle: #bundle) }
+        return String(localized: "Rehacer \(Self.actionSummary(for: lastBatch))", bundle: #bundle)
     }
 
     static func actionSummary(for batch: [FileOperationRecord]) -> String {
-        guard let first = batch.first else { return "operación" }
+        guard let first = batch.first else { return String(localized: "operación", bundle: #bundle) }
         let count = batch.count
         switch first {
         case .moved(let from, let to):
             if from.deletingLastPathComponent().standardizedFileURL == to.deletingLastPathComponent().standardizedFileURL {
-                return count == 1 ? "renombrado de «\(from.lastPathComponent)»" : "renombrado de \(count) ítems"
+                return count == 1 ? String(localized: "renombrado de «\(from.lastPathComponent)»", bundle: #bundle) : String(localized: "renombrado de \(count) ítems", bundle: #bundle)
             }
-            return count == 1 ? "mover «\(from.lastPathComponent)»" : "mover \(count) ítems"
+            return count == 1 ? String(localized: "mover «\(from.lastPathComponent)»", bundle: #bundle) : String(localized: "mover \(count) ítems", bundle: #bundle)
         case .copied(_, let to):
-            return count == 1 ? "copia de «\(to.lastPathComponent)»" : "copia de \(count) ítems"
+            return count == 1 ? String(localized: "copia de «\(to.lastPathComponent)»", bundle: #bundle) : String(localized: "copia de \(count) ítems", bundle: #bundle)
         case .createdFolder(let url):
             if count > 1, batch.dropFirst().contains(where: { if case .moved = $0 { return true } else { return false } }) {
-                return "mover a carpeta «\(url.lastPathComponent)»"
+                return String(localized: "mover a carpeta «\(url.lastPathComponent)»", bundle: #bundle)
             }
-            return count == 1 ? "creación de «\(url.lastPathComponent)»" : "creación de \(count) elementos"
+            return count == 1 ? String(localized: "creación de «\(url.lastPathComponent)»", bundle: #bundle) : String(localized: "creación de \(count) elementos", bundle: #bundle)
         case .createdFile(let url, _):
-            return count == 1 ? "creación de archivo «\(url.lastPathComponent)»" : "creación de \(count) archivos"
+            return count == 1 ? String(localized: "creación de archivo «\(url.lastPathComponent)»", bundle: #bundle) : String(localized: "creación de \(count) archivos", bundle: #bundle)
         case .trashed(let original, _):
-            return count == 1 ? "mover «\(original.lastPathComponent)» a la Papelera" : "mover \(count) ítems a la Papelera"
+            return count == 1 ? String(localized: "mover «\(original.lastPathComponent)» a la Papelera", bundle: #bundle) : String(localized: "mover \(count) ítems a la Papelera", bundle: #bundle)
         }
     }
 

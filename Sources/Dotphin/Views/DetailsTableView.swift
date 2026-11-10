@@ -56,7 +56,7 @@ struct DetailsTableView: NSViewRepresentable {
         tableView.columnAutoresizingStyle = .firstColumnOnlyAutoresizingStyle
 
         let nameColumn = NSTableColumn(identifier: Coordinator.nameColumnID)
-        nameColumn.title = "Nombre"
+        nameColumn.title = String(localized: "Nombre", bundle: #bundle)
         nameColumn.minWidth = 160
         nameColumn.width = 320
         nameColumn.resizingMask = [.autoresizingMask, .userResizingMask]
@@ -213,7 +213,7 @@ struct DetailsTableView: NSViewRepresentable {
 
         /// Menú del encabezado, como en Finder y Dolphin: una entrada por columna opcional.
         private func makeColumnsMenu(visible: [DetailsColumn]) -> NSMenu {
-            let menu = NSMenu(title: "Columnas")
+            let menu = NSMenu(title: String(localized: "Columnas", bundle: #bundle))
             for column in DetailsColumn.allCases {
                 let item = NSMenuItem(title: column.title, action: #selector(toggleColumn(_:)), keyEquivalent: "")
                 item.target = self

@@ -4,23 +4,23 @@ struct ViewModePicker: View {
     @Binding var mode: ViewMode
 
     var body: some View {
-        Picker("Vista", selection: $mode) {
+        Picker(String(localized: "Vista", bundle: #bundle), selection: $mode) {
             Image(systemName: "square.grid.2x2")
                 .tag(ViewMode.icons)
-                .accessibilityLabel("Vista de íconos")
-                .help("Vista de íconos")
+                .accessibilityLabel(String(localized: "Vista de íconos", bundle: #bundle))
+                .help(String(localized: "Vista de íconos", bundle: #bundle))
             Image(systemName: "rectangle.grid.3x2")
                 .tag(ViewMode.compact)
-                .accessibilityLabel("Vista compacta")
-                .help("Vista compacta")
+                .accessibilityLabel(String(localized: "Vista compacta", bundle: #bundle))
+                .help(String(localized: "Vista compacta", bundle: #bundle))
             Image(systemName: "list.bullet")
                 .tag(ViewMode.list)
-                .accessibilityLabel("Vista de lista")
-                .help("Vista de lista")
+                .accessibilityLabel(String(localized: "Vista de lista", bundle: #bundle))
+                .help(String(localized: "Vista de lista", bundle: #bundle))
             Image(systemName: "tablecells")
                 .tag(ViewMode.details)
-                .accessibilityLabel("Vista de detalles")
-                .help("Vista de detalles")
+                .accessibilityLabel(String(localized: "Vista de detalles", bundle: #bundle))
+                .help(String(localized: "Vista de detalles", bundle: #bundle))
         }
         .pickerStyle(.segmented)
         .labelsHidden()

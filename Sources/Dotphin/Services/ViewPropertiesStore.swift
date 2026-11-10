@@ -11,11 +11,11 @@ enum ViewPropertiesApplyScope: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .currentFolder:
-            return "Carpeta actual"
+            return String(localized: "Carpeta actual", bundle: #bundle)
         case .currentAndSubfolders:
-            return "Carpeta actual y todas las subcarpetas"
+            return String(localized: "Carpeta actual y todas las subcarpetas", bundle: #bundle)
         case .allFolders:
-            return "Todas las carpetas"
+            return String(localized: "Todas las carpetas", bundle: #bundle)
         }
     }
 }

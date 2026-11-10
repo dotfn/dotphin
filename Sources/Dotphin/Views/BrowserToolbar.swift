@@ -94,9 +94,9 @@ struct BrowserToolbar: CustomizableToolbarContent {
         // Menú Compartir del sistema (AirDrop, Mail, Mensajes…).
         ToolbarItem(id: "share") {
             ShareLink(items: viewModel?.selectedItems.map(\.url) ?? []) {
-                Label("Compartir", systemImage: "square.and.arrow.up")
+                Label(String(localized: "Compartir", bundle: #bundle), systemImage: "square.and.arrow.up")
             }
-            .help("Compartir")
+            .help(String(localized: "Compartir", bundle: #bundle))
             .disabled(!hasSelection)
         }
     }
@@ -108,17 +108,17 @@ struct BrowserToolbar: CustomizableToolbarContent {
             Button {
                 viewModel?.restoreSelected()
             } label: {
-                Label("Restaurar", systemImage: "arrow.uturn.backward")
+                Label(String(localized: "Restaurar", bundle: #bundle), systemImage: "arrow.uturn.backward")
             }
-            .help("Restaurar")
+            .help(String(localized: "Restaurar", bundle: #bundle))
             .disabled(viewModel?.selectedItem == nil)
         }
         .hidden(!isBrowsingTrash)
         ToolbarItem(id: "emptyTrash") {
             Button(action: onEmptyTrash) {
-                Label("Vaciar", systemImage: "trash.slash")
+                Label(String(localized: "Vaciar", bundle: #bundle), systemImage: "trash.slash")
             }
-            .help("Vaciar la papelera")
+            .help(String(localized: "Vaciar la papelera", bundle: #bundle))
         }
         .hidden(!isBrowsingTrash)
     }
@@ -150,7 +150,7 @@ struct BrowserToolbar: CustomizableToolbarContent {
     private var sortMenu: some View {
         Menu {
             Picker(
-                "Ordenar por",
+                String(localized: "Ordenar por", bundle: #bundle),
                 selection: Binding(
                     get: { viewModel?.viewProperties.sortField ?? .name },
                     set: { field in viewModel?.setSort(field: field, ascending: field.defaultAscending) }
@@ -163,7 +163,7 @@ struct BrowserToolbar: CustomizableToolbarContent {
             .pickerStyle(.inline)
 
             Picker(
-                "Dirección",
+                String(localized: "Dirección", bundle: #bundle),
                 selection: Binding(
                     get: { viewModel?.viewProperties.ascending ?? true },
                     set: { ascending in
@@ -172,13 +172,13 @@ struct BrowserToolbar: CustomizableToolbarContent {
                     }
                 )
             ) {
-                Label("Ascendente", systemImage: "arrow.up").tag(true)
-                Label("Descendente", systemImage: "arrow.down").tag(false)
+                Label(String(localized: "Ascendente", bundle: #bundle), systemImage: "arrow.up").tag(true)
+                Label(String(localized: "Descendente", bundle: #bundle), systemImage: "arrow.down").tag(false)
             }
             .pickerStyle(.inline)
 
             Toggle(
-                "Mostrar en grupos",
+                String(localized: "Mostrar en grupos", bundle: #bundle),
                 isOn: Binding(
                     get: { viewModel?.viewProperties.showInGroups ?? false },
                     set: { _ in viewModel?.toggleShowInGroups() }
@@ -187,7 +187,7 @@ struct BrowserToolbar: CustomizableToolbarContent {
         } label: {
             Label(ToolbarActionItem.sort.title, systemImage: ToolbarActionItem.sort.systemImage)
         }
-        .help("Ordenar")
+        .help(String(localized: "Ordenar", bundle: #bundle))
         .disabled(viewModel == nil)
     }
 }

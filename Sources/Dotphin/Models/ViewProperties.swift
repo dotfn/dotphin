@@ -8,10 +8,10 @@ enum ViewMode: String, Codable, CaseIterable {
 
     var title: String {
         switch self {
-        case .icons: return "Iconos"
-        case .compact: return "Compacta"
-        case .list: return "Lista"
-        case .details: return "Detalles"
+        case .icons: return String(localized: "Iconos", bundle: #bundle)
+        case .compact: return String(localized: "Compacta", bundle: #bundle)
+        case .list: return String(localized: "Lista", bundle: #bundle)
+        case .details: return String(localized: "Detalles", bundle: #bundle)
         }
     }
 
@@ -35,12 +35,12 @@ enum SortField: String, Codable, CaseIterable {
 
     var title: String {
         switch self {
-        case .name: return "Nombre"
-        case .size: return "Tamaño"
-        case .modificationDate: return "Fecha de modificación"
-        case .creationDate: return "Fecha de creación"
-        case .type: return "Tipo"
-        case .extensionType: return "Extensión"
+        case .name: return String(localized: "Nombre", bundle: #bundle)
+        case .size: return String(localized: "Tamaño", bundle: #bundle)
+        case .modificationDate: return String(localized: "Fecha de modificación", bundle: #bundle)
+        case .creationDate: return String(localized: "Fecha de creación", bundle: #bundle)
+        case .type: return String(localized: "Tipo", bundle: #bundle)
+        case .extensionType: return String(localized: "Extensión", bundle: #bundle)
         }
     }
 
@@ -69,13 +69,13 @@ enum DetailsColumn: String, Codable, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .type: return "Tipo"
-        case .extensionType: return "Extensión"
-        case .size: return "Tamaño"
-        case .modificationDate: return "Modificado"
-        case .creationDate: return "Creado"
-        case .permissions: return "Permisos"
-        case .tags: return "Etiquetas"
+        case .type: return String(localized: "Tipo", bundle: #bundle)
+        case .extensionType: return String(localized: "Extensión", bundle: #bundle)
+        case .size: return String(localized: "Tamaño", bundle: #bundle)
+        case .modificationDate: return String(localized: "Modificado", bundle: #bundle)
+        case .creationDate: return String(localized: "Creado", bundle: #bundle)
+        case .permissions: return String(localized: "Permisos", bundle: #bundle)
+        case .tags: return String(localized: "Etiquetas", bundle: #bundle)
         }
     }
 }

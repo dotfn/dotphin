@@ -42,7 +42,7 @@ struct CompactGridCell: View {
                     .fill(Color(nsColor: nsColor))
                     .overlay(Circle().strokeBorder(Color.white.opacity(isSelected ? 0.85 : 0.35), lineWidth: 0.8))
                     .frame(width: 8, height: 8)
-                    .help("Etiqueta: \(item.colorTag.title)")
+                    .help(String(localized: "Etiqueta: \(item.colorTag.title)", bundle: #bundle))
             }
 
             GitStatusBadge(status: gitStatus)
@@ -73,7 +73,7 @@ struct DotphinGroupSectionHeader: View {
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.primary.opacity(0.85))
-            Text("\(count)")
+            Text(String(localized: "\(count)", bundle: #bundle))
                 .font(.system(size: 10.5, weight: .medium).monospacedDigit())
                 .contentTransition(.numericText())
                 .foregroundStyle(.secondary)

@@ -34,10 +34,10 @@ struct FileMetadataFormatter {
     func metadata(for item: FileItem) -> FileMetadata {
         let kind: String
         if item.isDirectory {
-            kind = "Carpeta"
+            kind = String(localized: "Carpeta", bundle: #bundle)
         } else {
             let ext = item.url.pathExtension
-            kind = ext.isEmpty ? "Documento" : ext.uppercased()
+            kind = ext.isEmpty ? String(localized: "Documento", bundle: #bundle) : ext.uppercased()
         }
 
         let sizeText = item.isDirectory
@@ -72,7 +72,7 @@ struct FileMetadataFormatter {
                 return "—"
             }
             let visibleCount = entries.filter { !$0.hasPrefix(".") }.count
-            computed = visibleCount == 1 ? "1 ítem" : "\(visibleCount) ítems"
+            computed = visibleCount == 1 ? String(localized: "1 ítem", bundle: #bundle) : String(localized: "\(visibleCount) ítems", bundle: #bundle)
         case .contentSize:
             // Recursivo, como Dolphin: antes solo sumaba los archivos del primer
             // nivel y una carpeta con todo dentro de subcarpetas mostraba casi 0.
@@ -154,9 +154,9 @@ struct FileMetadataFormatter {
         if useRelativeDates {
             let cal = Calendar.current
             if cal.isDateInToday(date) {
-                return "Hoy, \(date.formatted(date: .omitted, time: .shortened))"
+                return String(localized: "Hoy, \(date.formatted(date: .omitted, time: .shortened))", bundle: #bundle)
             } else if cal.isDateInYesterday(date) {
-                return "Ayer, \(date.formatted(date: .omitted, time: .shortened))"
+                return String(localized: "Ayer, \(date.formatted(date: .omitted, time: .shortened))", bundle: #bundle)
             }
         }
         return date.formatted(date: .abbreviated, time: .shortened)
@@ -170,27 +170,27 @@ struct FileMetadataFormatter {
             return cached as String
         }
         let base = metadata(for: item)
-        var lines: [String] = [item.name, "Tipo: \(base.kind)"]
+        var lines: [String] = [item.name, String(localized: "Tipo: \(base.kind)", bundle: #bundle)]
         var isComplete = true
         if item.isDirectory {
             // Solo si ya se calculó: el tooltip se arma en el `body` de cada fila.
             // Sin el conteo no se cachea, para que aparezca cuando esté listo.
             if let countText = cachedSizeDisplayText(for: item, directorySizeMode: .contentCount) {
                 if countText != "—" {
-                    lines.append("Contenido: \(countText)")
+                    lines.append(String(localized: "Contenido: \(countText)", bundle: #bundle))
                 }
             } else {
                 isComplete = false
             }
         } else {
-            lines.append("Tamaño: \(base.sizeText)")
+            lines.append(String(localized: "Tamaño: \(base.sizeText)", bundle: #bundle))
         }
         if item.modificationDate != nil {
-            lines.append("Modificado: \(base.modifiedText)")
+            lines.append(String(localized: "Modificado: \(base.modifiedText)", bundle: #bundle))
         }
         if item.isSymbolicLink,
            let target = FileOperationsService().resolvedSymbolicLinkTarget(of: item.url) {
-            lines.append("Destino del enlace: \(target.path)")
+            lines.append(String(localized: "Destino del enlace: \(target.path)", bundle: #bundle))
         }
         let joined = lines.joined(separator: "\n")
         if isComplete {

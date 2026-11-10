@@ -16,7 +16,7 @@ struct BookmarksEditorSheetView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label("Editar marcadores", systemImage: "bookmark.square.fill")
+                Label(String(localized: "Editar marcadores", bundle: #bundle), systemImage: "bookmark.square.fill")
                     .font(.headline)
                 Spacer()
                 if !bookmarks.isEmpty, let onOpenAllInTabs {
@@ -24,7 +24,7 @@ struct BookmarksEditorSheetView: View {
                         onOpenAllInTabs(bookmarks.map(\.url))
                         dismiss()
                     } label: {
-                        Label("Abrir todos en pestañas", systemImage: "plus.square.on.square")
+                        Label(String(localized: "Abrir todos en pestañas", bundle: #bundle), systemImage: "plus.square.on.square")
                     }
                     .controlSize(.small)
                 }
@@ -32,9 +32,9 @@ struct BookmarksEditorSheetView: View {
 
             if bookmarks.isEmpty {
                 ContentUnavailableView(
-                    "Sin marcadores personalizados",
+                    String(localized: "Sin marcadores personalizados", bundle: #bundle),
                     systemImage: "bookmark",
-                    description: Text("Añade carpetas a tus marcadores con ⌘B o el botón «Añadir carpeta…».")
+                    description: Text(String(localized: "Añade carpetas a tus marcadores con ⌘B o el botón «Añadir carpeta…».", bundle: #bundle))
                 )
                 .frame(maxWidth: .infinity, minHeight: 200)
             } else {
@@ -63,7 +63,7 @@ struct BookmarksEditorSheetView: View {
                                 }
                                 .buttonStyle(.borderless)
                                 .disabled(idx == 0)
-                                .help("Subir marcador")
+                                .help(String(localized: "Subir marcador", bundle: #bundle))
 
                                 Button {
                                     provider.moveBookmark(from: idx, to: idx + 1)
@@ -73,7 +73,7 @@ struct BookmarksEditorSheetView: View {
                                 }
                                 .buttonStyle(.borderless)
                                 .disabled(idx == bookmarks.count - 1)
-                                .help("Bajar marcador")
+                                .help(String(localized: "Bajar marcador", bundle: #bundle))
 
                                 Button(role: .destructive) {
                                     provider.removeBookmark(for: item.url)
@@ -83,7 +83,7 @@ struct BookmarksEditorSheetView: View {
                                         .foregroundStyle(.red)
                                 }
                                 .buttonStyle(.borderless)
-                                .help("Eliminar marcador")
+                                .help(String(localized: "Eliminar marcador", bundle: #bundle))
                             }
                         }
                         .padding(.vertical, 2)
@@ -97,17 +97,17 @@ struct BookmarksEditorSheetView: View {
             if let selectedURL,
                let selectedItem = bookmarks.first(where: { $0.url == selectedURL }) {
                 HStack(spacing: 8) {
-                    Text("Nombre:")
+                    Text(String(localized: "Nombre:", bundle: #bundle))
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    TextField("Nombre del marcador", text: $renameDraft)
+                    TextField(String(localized: "Nombre del marcador", bundle: #bundle), text: $renameDraft)
                         .textFieldStyle(.roundedBorder)
                         .controlSize(.small)
                         .onSubmit {
                             provider.renameBookmark(for: selectedItem.url, to: renameDraft)
                             reload()
                         }
-                    Button("Guardar nombre") {
+                    Button(String(localized: "Guardar nombre", bundle: #bundle)) {
                         provider.renameBookmark(for: selectedItem.url, to: renameDraft)
                         reload()
                     }
@@ -122,12 +122,12 @@ struct BookmarksEditorSheetView: View {
                 Button {
                     chooseFolderToAdd()
                 } label: {
-                    Label("Añadir carpeta…", systemImage: "plus")
+                    Label(String(localized: "Añadir carpeta…", bundle: #bundle), systemImage: "plus")
                 }
 
                 Spacer()
 
-                Button("Cerrar") {
+                Button(String(localized: "Cerrar", bundle: #bundle)) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -156,7 +156,7 @@ struct BookmarksEditorSheetView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = true
-        panel.prompt = "Añadir a Marcadores"
+        panel.prompt = String(localized: "Añadir a Marcadores", bundle: #bundle)
         if panel.runModal() == .OK {
             provider.addBookmarks(for: panel.urls)
             reload()

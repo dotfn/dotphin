@@ -100,10 +100,10 @@ final class GitStatusProviderTests: XCTestCase {
     }
 
     func test_accessibilityDescription_coversEveryCase() {
-        XCTAssertEqual(GitFileStatus.modified.accessibilityDescription, "Modificado")
-        XCTAssertEqual(GitFileStatus.added.accessibilityDescription, "Agregado")
-        XCTAssertEqual(GitFileStatus.deleted.accessibilityDescription, "Eliminado")
-        XCTAssertEqual(GitFileStatus.untracked.accessibilityDescription, "Sin seguimiento")
-        XCTAssertEqual(GitFileStatus.renamed.accessibilityDescription, "Renombrado")
+        XCTAssertEqual(GitFileStatus.modified.accessibilityDescription, appText("Modificado"))
+        XCTAssertEqual(GitFileStatus.added.accessibilityDescription, appText("Agregado"))
+        XCTAssertEqual(GitFileStatus.deleted.accessibilityDescription, appText("Eliminado"))
+        XCTAssertEqual(GitFileStatus.untracked.accessibilityDescription, appText("Sin seguimiento"))
+        XCTAssertEqual(GitFileStatus.renamed.accessibilityDescription, appText("Renombrado"))
     }
 }

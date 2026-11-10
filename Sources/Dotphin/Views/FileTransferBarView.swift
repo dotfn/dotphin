@@ -6,9 +6,12 @@ struct FileTransferBarView: View {
     let transfer: FileTransferProgress
 
     private var title: String {
-        let verb = transfer.kind == .copy ? "Copiando" : "Moviendo"
         let position = min(transfer.completedCount + 1, transfer.totalCount)
-        return "\(verb) \(position) de \(transfer.totalCount) a «\(transfer.destinationName)»"
+        let total = transfer.totalCount
+        let destination = transfer.destinationName
+        return transfer.kind == .copy
+            ? String(localized: "Copiando \(position) de \(total) a «\(destination)»", bundle: #bundle)
+            : String(localized: "Moviendo \(position) de \(total) a «\(destination)»", bundle: #bundle)
     }
 
     var body: some View {
@@ -29,11 +32,11 @@ struct FileTransferBarView: View {
 
             Spacer(minLength: 8)
 
-            Button("Detener", role: .cancel) {
+            Button(String(localized: "Detener", bundle: #bundle), role: .cancel) {
                 transfer.cancel()
             }
             .controlSize(.small)
-            .help("Detener después del ítem en curso; lo ya transferido queda")
+            .help(String(localized: "Detener después del ítem en curso; lo ya transferido queda", bundle: #bundle))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -57,18 +60,18 @@ struct FileConflictDialogModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content.alert(
-            "Ya existe «\(transfer?.pendingConflict?.existing.lastPathComponent ?? "")» en «\(transfer?.destinationName ?? "")»",
+            String(localized: "Ya existe «\(transfer?.pendingConflict?.existing.lastPathComponent ?? "")» en «\(transfer?.destinationName ?? "")»", bundle: #bundle),
             isPresented: isPresented,
             presenting: transfer?.pendingConflict
         ) { _ in
-            Button("Reemplazar", role: .destructive) { answer(.replace) }
-            Button("Conservar ambos") { answer(.keepBoth) }
-            Button("Omitir") { answer(.skip) }
-            Button("Detener", role: .cancel) { answer(.stop) }
+            Button(String(localized: "Reemplazar", bundle: #bundle), role: .destructive) { answer(.replace) }
+            Button(String(localized: "Conservar ambos", bundle: #bundle)) { answer(.keepBoth) }
+            Button(String(localized: "Omitir", bundle: #bundle)) { answer(.skip) }
+            Button(String(localized: "Detener", bundle: #bundle), role: .cancel) { answer(.stop) }
         } message: { _ in
-            Text("Si lo reemplazás, el que ya estaba va a la Papelera y podés deshacerlo.")
+            Text(String(localized: "Si lo reemplazás, el que ya estaba va a la Papelera y podés deshacerlo.", bundle: #bundle))
         }
-        .dialogSuppressionToggle("Aplicar a todos", isSuppressed: $applyToAll)
+        .dialogSuppressionToggle(String(localized: "Aplicar a todos", bundle: #bundle), isSuppressed: $applyToAll)
     }
 
     private func answer(_ resolution: FileConflictResolution) {

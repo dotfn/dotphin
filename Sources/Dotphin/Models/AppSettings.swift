@@ -15,9 +15,9 @@ enum SortingChoice: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .natural: return "Natural (ej. archivo2 antes de archivo10)"
-        case .caseInsensitive: return "Alfabético (sin distinguir mayúsculas)"
-        case .caseSensitive: return "Alfabético (distinguiendo mayúsculas)"
+        case .natural: return String(localized: "Natural (ej. archivo2 antes de archivo10)", bundle: #bundle)
+        case .caseInsensitive: return String(localized: "Alfabético (sin distinguir mayúsculas)", bundle: #bundle)
+        case .caseSensitive: return String(localized: "Alfabético (distinguiendo mayúsculas)", bundle: #bundle)
         }
     }
 
@@ -43,9 +43,9 @@ enum DirectorySizeMode: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .contentCount: return "Cantidad de elementos dentro de la carpeta"
-        case .contentSize: return "Tamaño de los archivos directos"
-        case .none: return "No mostrar tamaño (—)"
+        case .contentCount: return String(localized: "Cantidad de elementos dentro de la carpeta", bundle: #bundle)
+        case .contentSize: return String(localized: "Tamaño de los archivos directos", bundle: #bundle)
+        case .none: return String(localized: "No mostrar tamaño (—)", bundle: #bundle)
         }
     }
 }
@@ -60,9 +60,9 @@ enum PermissionsDisplayFormat: String, Codable, CaseIterable, Identifiable, Send
 
     var title: String {
         switch self {
-        case .symbolic: return "Simbólico (rwxr-xr-x)"
-        case .numeric: return "Numérico octal (755)"
-        case .combined: return "Combinado (rwxr-xr-x (755))"
+        case .symbolic: return String(localized: "Simbólico (rwxr-xr-x)", bundle: #bundle)
+        case .numeric: return String(localized: "Numérico octal (755)", bundle: #bundle)
+        case .combined: return String(localized: "Combinado (rwxr-xr-x (755))", bundle: #bundle)
         }
     }
 }
@@ -77,9 +77,9 @@ enum StatusBarDisplayMode: String, Codable, CaseIterable, Identifiable, Sendable
 
     var title: String {
         switch self {
-        case .fullWidth: return "Ancho completo (con zoom y espacio libre)"
-        case .small: return "Compacta (solo resumen de elementos)"
-        case .disabled: return "Oculta"
+        case .fullWidth: return String(localized: "Ancho completo (con zoom y espacio libre)", bundle: #bundle)
+        case .small: return String(localized: "Compacta (solo resumen de elementos)", bundle: #bundle)
+        case .disabled: return String(localized: "Oculta", bundle: #bundle)
         }
     }
 }
@@ -105,19 +105,19 @@ enum ToolbarActionItem: String, Codable, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .back: return "Atrás"
-        case .forward: return "Adelante"
-        case .up: return "Subir"
-        case .viewMode: return "Vista"
-        case .sort: return "Ordenar"
-        case .newFolder: return "Nueva carpeta"
-        case .rename: return "Renombrar"
-        case .delete: return "Eliminar"
-        case .terminal: return "Terminal"
-        case .split: return "Dividir"
-        case .newTab: return "Pestaña"
-        case .infoPanel: return "Información"
-        case .search: return "Buscar"
+        case .back: return String(localized: "Atrás", bundle: #bundle)
+        case .forward: return String(localized: "Adelante", bundle: #bundle)
+        case .up: return String(localized: "Subir", bundle: #bundle)
+        case .viewMode: return String(localized: "Vista", bundle: #bundle)
+        case .sort: return String(localized: "Ordenar", bundle: #bundle)
+        case .newFolder: return String(localized: "Nueva carpeta", bundle: #bundle)
+        case .rename: return String(localized: "Renombrar", bundle: #bundle)
+        case .delete: return String(localized: "Eliminar", bundle: #bundle)
+        case .terminal: return String(localized: "Terminal", bundle: #bundle)
+        case .split: return String(localized: "Dividir", bundle: #bundle)
+        case .newTab: return String(localized: "Pestaña", bundle: #bundle)
+        case .infoPanel: return String(localized: "Información", bundle: #bundle)
+        case .search: return String(localized: "Buscar", bundle: #bundle)
         }
     }
 

@@ -33,7 +33,7 @@ struct DiskUsageAnalyzerSheetView: View {
                     .font(.system(size: 22))
                     .foregroundStyle(Color.accentColor)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Estadísticas de uso de disco — \(directoryURL.lastPathComponent.isEmpty ? "/" : directoryURL.lastPathComponent)")
+                    Text(String(localized: "Estadísticas de uso de disco — \(directoryURL.lastPathComponent.isEmpty ? "/" : directoryURL.lastPathComponent)", bundle: #bundle))
                         .font(.headline)
                     Text(directoryURL.path)
                         .font(.caption)
@@ -43,7 +43,7 @@ struct DiskUsageAnalyzerSheetView: View {
                 }
                 Spacer()
                 if !isCalculating {
-                    Text("Total: \(Self.byteFormatter.string(fromByteCount: totalBytes))")
+                    Text(String(localized: "Total: \(Self.byteFormatter.string(fromByteCount: totalBytes))", bundle: #bundle))
                         .font(.subheadline.weight(.semibold))
                         .monospacedDigit()
                 }
@@ -54,16 +54,16 @@ struct DiskUsageAnalyzerSheetView: View {
             if isCalculating {
                 VStack(spacing: 10) {
                     ProgressView()
-                    Text("Analizando el uso de espacio en «\(directoryURL.lastPathComponent)»…")
+                    Text(String(localized: "Analizando el uso de espacio en «\(directoryURL.lastPathComponent)»…", bundle: #bundle))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if entries.isEmpty {
                 ContentUnavailableView(
-                    "Carpeta vacía",
+                    String(localized: "Carpeta vacía", bundle: #bundle),
                     systemImage: "folder",
-                    description: Text("No hay elementos con tamaño medible en esta carpeta.")
+                    description: Text(String(localized: "No hay elementos con tamaño medible en esta carpeta.", bundle: #bundle))
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -112,7 +112,7 @@ struct DiskUsageAnalyzerSheetView: View {
                                 Image(systemName: "arrow.right.circle")
                             }
                             .buttonStyle(.plain)
-                            .help("Abrir carpeta en Dolphin")
+                            .help(String(localized: "Abrir carpeta en Dolphin", bundle: #bundle))
                         }
                     }
                     .padding(.vertical, 3)
@@ -121,12 +121,12 @@ struct DiskUsageAnalyzerSheetView: View {
             }
 
             HStack {
-                Button("Abrir Utilidad de Discos…") {
+                Button(String(localized: "Abrir Utilidad de Discos…", bundle: #bundle)) {
                     let diskUtilURL = URL(fileURLWithPath: "/System/Applications/Utilities/Disk Utility.app")
                     NSWorkspace.shared.openApplication(at: diskUtilURL, configuration: NSWorkspace.OpenConfiguration())
                 }
                 Spacer()
-                Button("Cerrar") {
+                Button(String(localized: "Cerrar", bundle: #bundle)) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)

@@ -66,7 +66,7 @@ struct BreadcrumbView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
 
-            TextField("Ubicación", text: $text)
+            TextField(String(localized: "Ubicación", bundle: #bundle), text: $text)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12.5))
                 .focused($isFieldFocused)
@@ -79,7 +79,7 @@ struct BreadcrumbView: View {
                 .onChange(of: isFieldFocused) { _, focused in
                     if !focused { isEditing = false }
                 }
-                .accessibilityLabel("Ubicación")
+                .accessibilityLabel(String(localized: "Ubicación", bundle: #bundle))
 
             Button {
                 commit()
@@ -89,7 +89,7 @@ struct BreadcrumbView: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Ir a la ruta (Intro)")
+            .help(String(localized: "Ir a la ruta (Intro)", bundle: #bundle))
 
             Button {
                 isEditing = false
@@ -99,7 +99,7 @@ struct BreadcrumbView: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Cancelar edición (Esc)")
+            .help(String(localized: "Cancelar edición (Esc)", bundle: #bundle))
         }
         .padding(.horizontal, 8)
         .frame(height: 24)
@@ -148,28 +148,28 @@ struct BreadcrumbView: View {
                     hoveredAncestor = hovering ? ancestor : (hoveredAncestor == ancestor ? nil : hoveredAncestor)
                 }
                 .contextMenu {
-                    Button("Abrir") {
+                    Button(String(localized: "Abrir", bundle: #bundle)) {
                         onNavigate(ancestor)
                     }
                     if let onOpenInNewTab {
-                        Button("Abrir en una pestaña nueva") {
+                        Button(String(localized: "Abrir en una pestaña nueva", bundle: #bundle)) {
                             onOpenInNewTab(ancestor)
                         }
                     }
                     if let onOpenInSplitView {
-                        Button("Abrir en vista dividida") {
+                        Button(String(localized: "Abrir en vista dividida", bundle: #bundle)) {
                             onOpenInSplitView(ancestor)
                         }
                     }
                     Divider()
-                    Button("Copiar ubicación") {
+                    Button(String(localized: "Copiar ubicación", bundle: #bundle)) {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(ancestor.path, forType: .string)
                     }
-                    Button("Añadir a Lugares") {
+                    Button(String(localized: "Añadir a Lugares", bundle: #bundle)) {
                         PlacesProvider().addBookmark(for: ancestor)
                     }
-                    Button("Mostrar en Finder") {
+                    Button(String(localized: "Mostrar en Finder", bundle: #bundle)) {
                         NSWorkspace.shared.activateFileViewerSelecting([ancestor])
                     }
                 }
@@ -199,7 +199,7 @@ struct BreadcrumbView: View {
                 .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24)
                 .contentShape(Rectangle())
                 .onTapGesture { beginEditing() }
-                .help("Clic para editar la ruta (⌘L)")
+                .help(String(localized: "Clic para editar la ruta (⌘L)", bundle: #bundle))
 
             Button {
                 beginEditing()
@@ -215,8 +215,8 @@ struct BreadcrumbView: View {
             }
             .buttonStyle(.plain)
             .onHover { isEditButtonHovered = $0 }
-            .help("Editar ubicación (⌘L)")
-            .accessibilityLabel("Editar ubicación")
+            .help(String(localized: "Editar ubicación (⌘L)", bundle: #bundle))
+            .accessibilityLabel(String(localized: "Editar ubicación", bundle: #bundle))
         }
     }
 
@@ -252,7 +252,7 @@ struct BreadcrumbView: View {
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .fixedSize()
-            .help("Subcarpetas de \(parentURL.lastPathComponent.isEmpty ? "/" : parentURL.lastPathComponent)")
+            .help(String(localized: "Subcarpetas de \(parentURL.lastPathComponent.isEmpty ? "/" : parentURL.lastPathComponent)", bundle: #bundle))
         }
     }
 

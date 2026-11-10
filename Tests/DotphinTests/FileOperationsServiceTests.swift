@@ -241,10 +241,10 @@ final class FileOperationsServiceTests: XCTestCase {
     }
 
     func test_fileOperationError_message_describesEachCase() {
-        XCTAssertEqual(FileOperationError.invalidName.message, "El nombre no es válido.")
+        XCTAssertEqual(FileOperationError.invalidName.message, appText("El nombre no es válido."))
         XCTAssertEqual(
             FileOperationError.nameAlreadyExists(tempDir).message,
-            "Ya existe un ítem con ese nombre."
+            appText("Ya existe un ítem con ese nombre.")
         )
         XCTAssertEqual(FileOperationError.other("motivo específico").message, "motivo específico")
     }

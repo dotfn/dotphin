@@ -695,7 +695,7 @@ final class FileRowCellView: NSTableCellView, NSTextFieldDelegate {
         toolTip = formatter.hoverTooltip(for: item)
 
         if let color = item.colorTag.nsColor {
-            colorTagDot.configure(color: color, diameter: 8, label: "Etiqueta: \(item.colorTag.title)")
+            colorTagDot.configure(color: color, diameter: 8, label: String(localized: "Etiqueta: \(item.colorTag.title)", bundle: #bundle))
         } else {
             colorTagDot.isHidden = true
         }

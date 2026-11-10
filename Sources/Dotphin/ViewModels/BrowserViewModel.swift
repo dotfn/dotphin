@@ -20,9 +20,9 @@ enum FilterPatternMode: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .plainText: return "Texto plano"
-        case .glob: return "Patrón Glob (*, ?)"
-        case .regex: return "Expresión regular"
+        case .plainText: return String(localized: "Texto plano", bundle: #bundle)
+        case .glob: return String(localized: "Patrón Glob (*, ?)", bundle: #bundle)
+        case .regex: return String(localized: "Expresión regular", bundle: #bundle)
         }
     }
 }
@@ -478,7 +478,7 @@ final class BrowserViewModel {
         guard !searchQuery.isEmpty || hasActiveFacets else { return nil }
         let defaultTitle: String = {
             if !searchQuery.isEmpty {
-                return "«\(searchQuery)» en \(currentURL.lastPathComponent)"
+                return String(localized: "«\(searchQuery)» en \(currentURL.lastPathComponent)", bundle: #bundle)
             }
             var parts: [String] = []
             if searchTypeFilter != .all { parts.append(searchTypeFilter.title) }
@@ -987,7 +987,7 @@ final class BrowserViewModel {
         refresh()
         selectedIDs = newSelectedURLs.intersection(Set(items.map(\.id)))
         if !failures.isEmpty {
-            operationError = .other("No se pudieron renombrar: \(failures.joined(separator: ", "))")
+            operationError = .other(String(localized: "No se pudieron renombrar: \(failures.joined(separator: ", "))", bundle: #bundle))
         }
     }
 
@@ -1016,7 +1016,7 @@ final class BrowserViewModel {
                 select(folderItem)
             }
             if !failures.isEmpty {
-                operationError = .other("No se pudieron mover: \(failures.joined(separator: ", "))")
+                operationError = .other(String(localized: "No se pudieron mover: \(failures.joined(separator: ", "))", bundle: #bundle))
             }
         } catch let opError as FileOperationError {
             operationError = opError
@@ -1195,19 +1195,19 @@ final class BrowserViewModel {
         refresh()
         selectedIDs = createdURLs.intersection(Set(items.map(\.id)))
         if !failures.isEmpty {
-            operationError = .other("No se pudieron crear enlaces simbólicos: \(failures.joined(separator: ", "))")
+            operationError = .other(String(localized: "No se pudieron crear enlaces simbólicos: \(failures.joined(separator: ", "))", bundle: #bundle))
         }
     }
 
     /// Resolves a symbolic link's target, navigates to its parent folder, and selects it (`DolphinMainWindow::showTarget`).
     func showSymbolicLinkTarget(_ item: FileItem) {
         guard let targetURL = operations.resolvedSymbolicLinkTarget(of: item.url) else {
-            operationError = .other("No se pudo resolver el destino del enlace simbólico «\(item.name)».")
+            operationError = .other(String(localized: "No se pudo resolver el destino del enlace simbólico «\(item.name)».", bundle: #bundle))
             return
         }
         let parentDir = targetURL.deletingLastPathComponent()
         guard FileManager.default.fileExists(atPath: parentDir.path) else {
-            operationError = .other("El destino «\(targetURL.path)» no existe.")
+            operationError = .other(String(localized: "El destino «\(targetURL.path)» no existe.", bundle: #bundle))
             return
         }
         navigate(to: parentDir)
@@ -1224,7 +1224,7 @@ final class BrowserViewModel {
         // venir de carpetas distintas).
         let byParent = Dictionary(grouping: targets.map(\.url)) { $0.deletingLastPathComponent() }
         for (parent, urls) in byParent {
-            startTransfer(.copy, sources: urls, into: parent, failurePrefix: "No se pudieron duplicar") { [weak self] result in
+            startTransfer(.copy, sources: urls, into: parent, failurePrefix: String(localized: "No se pudieron duplicar", bundle: #bundle)) { [weak self] result in
                 guard let self else { return }
                 self.selectedIDs = Set(result.createdURLs).intersection(Set(self.items.map(\.id)))
             }
@@ -1237,7 +1237,7 @@ final class BrowserViewModel {
             .copy,
             sources: selectedItems.map(\.url),
             into: destinationDirectory,
-            failurePrefix: "No se pudieron copiar"
+            failurePrefix: String(localized: "No se pudieron copiar", bundle: #bundle)
         )
     }
 
@@ -1297,13 +1297,13 @@ final class BrowserViewModel {
 
     func moveDroppedItems(_ urls: [URL], into directory: URL) {
         DebugEventLog.log("drop", "moveDroppedItems(\(DebugEventLog.names(urls)) → \(directory.lastPathComponent))")
-        startTransfer(.move, sources: urls, into: directory, failurePrefix: "No se pudieron mover")
+        startTransfer(.move, sources: urls, into: directory, failurePrefix: String(localized: "No se pudieron mover", bundle: #bundle))
     }
 
     /// Soltar con copia: ⌥ o destino en otro volumen.
     func copyDroppedItems(_ urls: [URL], into directory: URL) {
         DebugEventLog.log("drop", "copyDroppedItems(\(DebugEventLog.names(urls)) → \(directory.lastPathComponent))")
-        startTransfer(.copy, sources: urls, into: directory, failurePrefix: "No se pudieron copiar")
+        startTransfer(.copy, sources: urls, into: directory, failurePrefix: String(localized: "No se pudieron copiar", bundle: #bundle))
     }
 
     // MARK: - Copiar / mover en segundo plano
@@ -1411,7 +1411,7 @@ final class BrowserViewModel {
         }
         record(batch)
         if !failures.isEmpty {
-            operationError = .other("No se pudieron eliminar: \(failures.joined(separator: ", "))")
+            operationError = .other(String(localized: "No se pudieron eliminar: \(failures.joined(separator: ", "))", bundle: #bundle))
         }
         refresh()
     }
@@ -1426,7 +1426,7 @@ final class BrowserViewModel {
             mode == .copy ? .copy : .move,
             sources: urls,
             into: directory,
-            failurePrefix: "No se pudieron pegar"
+            failurePrefix: String(localized: "No se pudieron pegar", bundle: #bundle)
         ) { [weak self] result in
             // Lo cortado se pega una sola vez.
             if mode == .cut && result.failures.isEmpty && !result.wasCancelled {
@@ -1527,7 +1527,7 @@ final class BrowserViewModel {
         selectedIDs = []
         refresh()
         if !failures.isEmpty {
-            operationError = .other("No se pudieron restaurar: \(failures.joined(separator: ", "))")
+            operationError = .other(String(localized: "No se pudieron restaurar: \(failures.joined(separator: ", "))", bundle: #bundle))
         }
     }
 
@@ -1545,7 +1545,7 @@ final class BrowserViewModel {
         selectedIDs = []
         refresh()
         if !failures.isEmpty {
-            operationError = .other("No se pudieron eliminar permanentemente: \(failures.joined(separator: ", "))")
+            operationError = .other(String(localized: "No se pudieron eliminar permanentemente: \(failures.joined(separator: ", "))", bundle: #bundle))
         }
     }
 

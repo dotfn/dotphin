@@ -39,7 +39,7 @@ struct PlacesSidebarView: View {
                     placeRow(place)
                 }
             } header: {
-                Text("Lugares")
+                Text(String(localized: "Lugares", bundle: #bundle))
                     .font(.xsSidebarHeader)
                     .foregroundStyle(.secondary)
             }
@@ -62,17 +62,17 @@ struct PlacesSidebarView: View {
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
-                            Button("Ejecutar búsqueda") {
+                            Button(String(localized: "Ejecutar búsqueda", bundle: #bundle)) {
                                 onSelectSavedSearch?(saved)
                             }
                             Divider()
-                            Button("Quitar búsqueda guardada", role: .destructive) {
+                            Button(String(localized: "Quitar búsqueda guardada", bundle: #bundle), role: .destructive) {
                                 PlacesProvider().removeSavedSearch(id: saved.id)
                             }
                         }
                     }
                 } header: {
-                    Text("Búsquedas guardadas")
+                    Text(String(localized: "Búsquedas guardadas", bundle: #bundle))
                         .font(.xsSidebarHeader)
                         .foregroundStyle(.secondary)
                 }
@@ -84,7 +84,7 @@ struct PlacesSidebarView: View {
                         placeRow(place)
                     }
                 } header: {
-                    Text("Dispositivos")
+                    Text(String(localized: "Dispositivos", bundle: #bundle))
                         .font(.xsSidebarHeader)
                         .foregroundStyle(.secondary)
                 }
@@ -104,7 +104,7 @@ struct PlacesSidebarView: View {
                         onOpenInSplitView: onOpenInSplitView
                     )
                 } header: {
-                    Text("Carpetas")
+                    Text(String(localized: "Carpetas", bundle: #bundle))
                         .font(.xsSidebarHeader)
                         .foregroundStyle(.secondary)
                 }
@@ -118,29 +118,29 @@ struct PlacesSidebarView: View {
             refreshVolumeUsages()
         }
         .alert(
-            "¿Expulsar este volumen?",
+            String(localized: "¿Expulsar este volumen?", bundle: #bundle),
             isPresented: $showsEjectConfirmation,
             presenting: pendingEject
         ) { place in
-            Button("Expulsar") {
+            Button(String(localized: "Expulsar", bundle: #bundle)) {
                 do {
                     try VolumeEjectService().eject(place.url)
                 } catch {
                     ejectError = error.localizedDescription
                 }
             }
-            Button("Cancelar", role: .cancel) {}
+            Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {}
         } message: { place in
-            Text("Se expulsará «\(place.name)».")
+            Text(String(localized: "Se expulsará «\(place.name)».", bundle: #bundle))
         }
         .alert(
-            "No se pudo expulsar",
+            String(localized: "No se pudo expulsar", bundle: #bundle),
             isPresented: Binding(
                 get: { ejectError != nil },
                 set: { if !$0 { ejectError = nil } }
             )
         ) {
-            Button("OK") { ejectError = nil }
+            Button(String(localized: "OK", bundle: #bundle)) { ejectError = nil }
         } message: {
             Text(ejectError ?? "")
         }
@@ -151,7 +151,7 @@ struct PlacesSidebarView: View {
                 set: { if !$0 { infoTarget = nil } }
             )
         ) {
-            Button("OK") { infoTarget = nil }
+            Button(String(localized: "OK", bundle: #bundle)) { infoTarget = nil }
         } message: {
             Text(infoMessage)
         }
@@ -193,8 +193,8 @@ struct PlacesSidebarView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help("Expulsar \(place.localizedDisplayName)")
-                    .accessibilityLabel("Expulsar \(place.localizedDisplayName)")
+                    .help(String(localized: "Expulsar \(place.localizedDisplayName)", bundle: #bundle))
+                    .accessibilityLabel(String(localized: "Expulsar \(place.localizedDisplayName)", bundle: #bundle))
                 }
             }
 
@@ -223,32 +223,32 @@ struct PlacesSidebarView: View {
                 .padding(.horizontal, 4)
         )
         .contextMenu {
-            Button("Abrir") {
+            Button(String(localized: "Abrir", bundle: #bundle)) {
                 onSelect(place)
             }
             if let onOpenInNewTab {
-                Button("Abrir en una pestaña nueva") {
+                Button(String(localized: "Abrir en una pestaña nueva", bundle: #bundle)) {
                     onOpenInNewTab(place.url)
                 }
             }
             if let onOpenInSplitView {
-                Button("Abrir en vista dividida") {
+                Button(String(localized: "Abrir en vista dividida", bundle: #bundle)) {
                     onOpenInSplitView(place.url)
                 }
             }
             if place.kind == .customBookmark {
                 Divider()
-                Button("Quitar de Lugares", role: .destructive) {
+                Button(String(localized: "Quitar de Lugares", bundle: #bundle), role: .destructive) {
                     PlacesProvider().removeBookmark(for: place.url)
                 }
             }
             if place.kind == .volume {
                 Divider()
-                Button("Información") {
+                Button(String(localized: "Información", bundle: #bundle)) {
                     infoTarget = place
                 }
                 if place.isEjectable {
-                    Button("Expulsar") {
+                    Button(String(localized: "Expulsar", bundle: #bundle)) {
                         pendingEject = place
                         showsEjectConfirmation = true
                     }
@@ -282,7 +282,7 @@ struct PlacesSidebarView: View {
         let total = info.totalCapacity.map(Self.sizeFormatter.string(fromByteCount:)) ?? "—"
         let available = info.availableCapacity.map(Self.sizeFormatter.string(fromByteCount:)) ?? "—"
         let format = info.format ?? "—"
-        return "Formato: \(format)\nCapacidad: \(total)\nLibre: \(available)"
+        return String(localized: "Formato: \(format)\nCapacidad: \(total)\nLibre: \(available)", bundle: #bundle)
     }
 }
 

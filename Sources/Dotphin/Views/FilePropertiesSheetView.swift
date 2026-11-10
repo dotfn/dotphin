@@ -23,9 +23,16 @@ struct FilePropertiesSheetView: View {
     @Environment(\.dismiss) private var dismiss
 
     enum PropertiesTab: String, CaseIterable, Identifiable {
-        case general = "General y permisos"
-        case checksums = "Sumas de verificación"
+        case general
+        case checksums
         var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .general: return String(localized: "General y permisos", bundle: #bundle)
+            case .checksums: return String(localized: "Sumas de verificación", bundle: #bundle)
+            }
+        }
     }
 
     @State private var selectedTab: PropertiesTab = .general
@@ -34,7 +41,7 @@ struct FilePropertiesSheetView: View {
     @State private var groupName: String = "—"
     @State private var creationDateText: String = "—"
     @State private var modifiedDateText: String = "—"
-    @State private var calculatedSizeText: String = "Calculando…"
+    @State private var calculatedSizeText: String = String(localized: "Calculando…", bundle: #bundle)
     @State private var isDirectory: Bool = false
     @State private var isSymbolicLink: Bool = false
     @State private var symlinkDestination: String?
@@ -77,9 +84,9 @@ struct FilePropertiesSheetView: View {
             }
 
             if !isDirectory {
-                Picker("", selection: $selectedTab) {
+                Picker(String(localized: "", bundle: #bundle), selection: $selectedTab) {
                     ForEach(PropertiesTab.allCases) { tab in
-                        Text(tab.rawValue).tag(tab)
+                        Text(tab.title).tag(tab)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -97,18 +104,18 @@ struct FilePropertiesSheetView: View {
             Spacer(minLength: 0)
 
             HStack {
-                Button("Mostrar en Finder") {
+                Button(String(localized: "Mostrar en Finder", bundle: #bundle)) {
                     NSWorkspace.shared.activateFileViewerSelecting([url])
                 }
                 if isSymbolicLink, let onNavigateToSymlinkTarget,
                    let resolved = FileOperationsService().resolvedSymbolicLinkTarget(of: url) {
-                    Button("Ir al destino del enlace") {
+                    Button(String(localized: "Ir al destino del enlace", bundle: #bundle)) {
                         dismiss()
                         onNavigateToSymlinkTarget(resolved)
                     }
                 }
                 Spacer()
-                Button("Cerrar") {
+                Button(String(localized: "Cerrar", bundle: #bundle)) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -140,13 +147,13 @@ struct FilePropertiesSheetView: View {
         VStack(alignment: .leading, spacing: 12) {
             Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 7) {
                 GridRow {
-                    Text("Tipo:")
+                    Text(String(localized: "Tipo:", bundle: #bundle))
                         .foregroundStyle(.secondary)
-                    Text(isSymbolicLink ? "Enlace simbólico" : (isDirectory ? "Carpeta" : "Archivo"))
+                    Text(isSymbolicLink ? String(localized: "Enlace simbólico", bundle: #bundle) : (isDirectory ? String(localized: "Carpeta", bundle: #bundle) : String(localized: "Archivo", bundle: #bundle)))
                 }
                 if let symlinkDestination {
                     GridRow {
-                        Text("Apunta a:")
+                        Text(String(localized: "Apunta a:", bundle: #bundle))
                             .foregroundStyle(.secondary)
                         Text(symlinkDestination)
                             .lineLimit(1)
@@ -155,29 +162,29 @@ struct FilePropertiesSheetView: View {
                     }
                 }
                 GridRow {
-                    Text("Tamaño:")
+                    Text(String(localized: "Tamaño:", bundle: #bundle))
                         .foregroundStyle(.secondary)
                     Text(calculatedSizeText)
                         .monospacedDigit()
                 }
                 GridRow {
-                    Text("Creado:")
+                    Text(String(localized: "Creado:", bundle: #bundle))
                         .foregroundStyle(.secondary)
                     Text(creationDateText)
                 }
                 GridRow {
-                    Text("Modificado:")
+                    Text(String(localized: "Modificado:", bundle: #bundle))
                         .foregroundStyle(.secondary)
                     Text(modifiedDateText)
                 }
                 GridRow {
-                    Text("Propietario:")
+                    Text(String(localized: "Propietario:", bundle: #bundle))
                         .foregroundStyle(.secondary)
-                    Text("\(ownerName) : \(groupName)")
+                    Text(String(localized: "\(ownerName) : \(groupName)", bundle: #bundle))
                 }
                 if let perms = posixPermissions {
                     GridRow {
-                        Text("Permisos:")
+                        Text(String(localized: "Permisos:", bundle: #bundle))
                             .foregroundStyle(.secondary)
                         HStack(spacing: 8) {
                             Text(Self.symbolicPermissions(perms))
@@ -194,33 +201,33 @@ struct FilePropertiesSheetView: View {
             if let perms = posixPermissions {
                 Divider()
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Permisos de acceso POSIX")
+                    Text(String(localized: "Permisos de acceso POSIX", bundle: #bundle))
                         .font(.subheadline.weight(.semibold))
 
                     Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 4) {
                         GridRow {
-                            Text("Rol")
+                            Text(String(localized: "Rol", bundle: #bundle))
                                 .foregroundStyle(.secondary)
-                            Text("Lectura (r)")
+                            Text(String(localized: "Lectura (r)", bundle: #bundle))
                                 .foregroundStyle(.secondary)
-                            Text("Escritura (w)")
+                            Text(String(localized: "Escritura (w)", bundle: #bundle))
                                 .foregroundStyle(.secondary)
-                            Text("Ejecución (x)")
+                            Text(String(localized: "Ejecución (x)", bundle: #bundle))
                                 .foregroundStyle(.secondary)
                         }
                         .font(.caption.weight(.medium))
 
-                        permissionRow(label: "Propietario", perms: perms, rBit: 0o400, wBit: 0o200, xBit: 0o100)
-                        permissionRow(label: "Grupo", perms: perms, rBit: 0o040, wBit: 0o020, xBit: 0o010)
-                        permissionRow(label: "Otros", perms: perms, rBit: 0o004, wBit: 0o002, xBit: 0o001)
+                        permissionRow(label: String(localized: "Propietario", bundle: #bundle), perms: perms, rBit: 0o400, wBit: 0o200, xBit: 0o100)
+                        permissionRow(label: String(localized: "Grupo", bundle: #bundle), perms: perms, rBit: 0o040, wBit: 0o020, xBit: 0o010)
+                        permissionRow(label: String(localized: "Otros", bundle: #bundle), perms: perms, rBit: 0o004, wBit: 0o002, xBit: 0o001)
                     }
                     .font(.caption)
 
                     if isDirectory {
-                        Toggle("Aplicar a subcarpetas y su contenido", isOn: $applyPermissionsRecursively)
+                        Toggle(String(localized: "Aplicar a subcarpetas y su contenido", bundle: #bundle), isOn: $applyPermissionsRecursively)
                             .font(.caption)
                         if applyPermissionsRecursively {
-                            Text("Se aplicará el mismo modo a todo el contenido, incluyendo el bit de ejecución en archivos.")
+                            Text(String(localized: "Se aplicará el mismo modo a todo el contenido, incluyendo el bit de ejecución en archivos.", bundle: #bundle))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
@@ -240,11 +247,11 @@ struct FilePropertiesSheetView: View {
     private func permissionRow(label: String, perms: Int, rBit: Int, wBit: Int, xBit: Int) -> some View {
         GridRow {
             Text(label)
-            Toggle("", isOn: Binding(get: { (perms & rBit) != 0 }, set: { _ in togglePermissionBit(rBit) }))
+            Toggle(String(localized: "", bundle: #bundle), isOn: Binding(get: { (perms & rBit) != 0 }, set: { _ in togglePermissionBit(rBit) }))
                 .labelsHidden()
-            Toggle("", isOn: Binding(get: { (perms & wBit) != 0 }, set: { _ in togglePermissionBit(wBit) }))
+            Toggle(String(localized: "", bundle: #bundle), isOn: Binding(get: { (perms & wBit) != 0 }, set: { _ in togglePermissionBit(wBit) }))
                 .labelsHidden()
-            Toggle("", isOn: Binding(get: { (perms & xBit) != 0 }, set: { _ in togglePermissionBit(xBit) }))
+            Toggle(String(localized: "", bundle: #bundle), isOn: Binding(get: { (perms & xBit) != 0 }, set: { _ in togglePermissionBit(xBit) }))
                 .labelsHidden()
         }
     }
@@ -255,7 +262,7 @@ struct FilePropertiesSheetView: View {
                 HStack(spacing: 8) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("Calculando sumas SHA-256, SHA-1 y MD5…")
+                    Text(String(localized: "Calculando sumas SHA-256, SHA-1 y MD5…", bundle: #bundle))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -268,27 +275,27 @@ struct FilePropertiesSheetView: View {
                 Divider()
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Verificar suma de control (pegar hash esperado):")
+                    Text(String(localized: "Verificar suma de control (pegar hash esperado):", bundle: #bundle))
                         .font(.caption.weight(.semibold))
-                    TextField("Pegar SHA-256, SHA-1 o MD5 para comparar…", text: $verificationInput)
+                    TextField(String(localized: "Pegar SHA-256, SHA-1 o MD5 para comparar…", bundle: #bundle), text: $verificationInput)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(size: 11.5, design: .monospaced))
 
                     let trimmed = verificationInput.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !trimmed.isEmpty {
                         if let matchedAlgo = checksums.matches(trimmed) {
-                            Label("Coincide exactamente con \(matchedAlgo)", systemImage: "checkmark.seal.fill")
+                            Label(String(localized: "Coincide exactamente con \(matchedAlgo)", bundle: #bundle), systemImage: "checkmark.seal.fill")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.green)
                         } else {
-                            Label("No coincide con ninguna suma calculada", systemImage: "xmark.octagon.fill")
+                            Label(String(localized: "No coincide con ninguna suma calculada", bundle: #bundle), systemImage: "xmark.octagon.fill")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.red)
                         }
                     }
                 }
             } else {
-                Button("Calcular sumas de verificación") {
+                Button(String(localized: "Calcular sumas de verificación", bundle: #bundle)) {
                     computeChecksumsAsync()
                 }
             }
@@ -306,7 +313,7 @@ struct FilePropertiesSheetView: View {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(value, forType: .string)
                 } label: {
-                    Label("Copiar", systemImage: "doc.on.doc")
+                    Label(String(localized: "Copiar", bundle: #bundle), systemImage: "doc.on.doc")
                         .font(.caption2)
                 }
                 .buttonStyle(.borderless)
@@ -375,7 +382,7 @@ struct FilePropertiesSheetView: View {
             }
             permissionError = failures.isEmpty
                 ? nil
-                : "No se pudo aplicar a \(failures.count) elemento(s); el resto quedó con el modo nuevo."
+                : String(localized: "No se pudo aplicar a \(failures.count) elemento(s); el resto quedó con el modo nuevo.", bundle: #bundle)
             return
         }
         do {

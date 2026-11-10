@@ -23,62 +23,62 @@ struct FileEditCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
-            Button("Nueva pestaña") {
+            Button(String(localized: "Nueva pestaña", bundle: #bundle)) {
                 commands?.perform(.addTab)
             }
             .keyboardShortcut("t", modifiers: .command)
 
-            Button("Duplicar pestaña actual") {
+            Button(String(localized: "Duplicar pestaña actual", bundle: #bundle)) {
                 commands?.perform(.duplicateTab)
             }
 
-            Button("Reabrir pestaña cerrada") {
+            Button(String(localized: "Reabrir pestaña cerrada", bundle: #bundle)) {
                 commands?.perform(.reopenClosedTab)
             }
             .keyboardShortcut("t", modifiers: [.command, .shift])
 
             Divider()
 
-            Button("Nueva carpeta…") {
+            Button(String(localized: "Nueva carpeta…", bundle: #bundle)) {
                 commands?.perform(.createNewFolder)
             }
             .keyboardShortcut("n", modifiers: [.command, .shift])
 
-            Button("Mover selección a carpeta nueva…") {
+            Button(String(localized: "Mover selección a carpeta nueva…", bundle: #bundle)) {
                 commands?.perform(.moveToNewFolder)
             }
             .keyboardShortcut("n", modifiers: [.command, .control])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
-            Button("Crear enlace simbólico aquí") {
+            Button(String(localized: "Crear enlace simbólico aquí", bundle: #bundle)) {
                 viewModel?.createSymbolicLinkToSelected()
             }
             .keyboardShortcut("l", modifiers: [.command, .option])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
-            Button("Cerrar pestaña") {
+            Button(String(localized: "Cerrar pestaña", bundle: #bundle)) {
                 commands?.perform(.closeTab)
             }
             .keyboardShortcut("w", modifiers: .command)
 
-            Button("Cerrar otras pestañas") {
+            Button(String(localized: "Cerrar otras pestañas", bundle: #bundle)) {
                 commands?.perform(.closeOtherTabs)
             }
 
             Divider()
 
-            Button("Vista rápida") {
+            Button(String(localized: "Vista rápida", bundle: #bundle)) {
                 commands?.perform(.quickLookSelectedFiles)
             }
             .keyboardShortcut("y", modifiers: .command)
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
-            Button("Comparar archivos seleccionados…") {
+            Button(String(localized: "Comparar archivos seleccionados…", bundle: #bundle)) {
                 commands?.perform(.compareFiles)
             }
             .keyboardShortcut("c", modifiers: [.command, .option])
 
-            Button("Propiedades…") {
+            Button(String(localized: "Propiedades…", bundle: #bundle)) {
                 commands?.perform(.showProperties)
             }
             .keyboardShortcut("i", modifiers: .command)
@@ -90,25 +90,25 @@ struct FileEditCommands: Commands {
         CommandGroup(after: .pasteboard) {
             Divider()
 
-            Button("Duplicar aquí") {
+            Button(String(localized: "Duplicar aquí", bundle: #bundle)) {
                 viewModel?.duplicateSelected()
             }
             .keyboardShortcut("d", modifiers: .command)
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
-            Button((viewModel?.selectedIDs.count ?? 0) > 1 ? "Copiar ubicaciones" : "Copiar ubicación") {
+            Button((viewModel?.selectedIDs.count ?? 0) > 1 ? String(localized: "Copiar ubicaciones", bundle: #bundle) : String(localized: "Copiar ubicación", bundle: #bundle)) {
                 viewModel?.copySelectedPathsToPasteboard()
             }
             .keyboardShortcut("c", modifiers: [.command, .control, .option])
             .disabled(viewModel == nil)
 
-            Button("Copiar al otro panel dividido") {
+            Button(String(localized: "Copiar al otro panel dividido", bundle: #bundle)) {
                 commands?.perform(.copyToOtherSplitPane)
             }
             .keyboardShortcut(Self.fKey(NSF5FunctionKey), modifiers: [.shift])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
-            Button("Mover al otro panel dividido") {
+            Button(String(localized: "Mover al otro panel dividido", bundle: #bundle)) {
                 commands?.perform(.moveToOtherSplitPane)
             }
             .keyboardShortcut(Self.fKey(NSF6FunctionKey), modifiers: [.shift])
@@ -116,84 +116,84 @@ struct FileEditCommands: Commands {
 
             Divider()
 
-            Button((viewModel?.isSelectionModeActive ?? false) ? "Salir del modo de selección" : "Modo de selección") {
+            Button((viewModel?.isSelectionModeActive ?? false) ? String(localized: "Salir del modo de selección", bundle: #bundle) : String(localized: "Modo de selección", bundle: #bundle)) {
                 viewModel?.isSelectionModeActive.toggle()
             }
             .keyboardShortcut("s", modifiers: [.command, .shift])
 
-            Button("Deseleccionar todo") {
+            Button(String(localized: "Deseleccionar todo", bundle: #bundle)) {
                 viewModel?.deselectAll()
             }
             .keyboardShortcut("a", modifiers: [.command, .shift])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
-            Button("Seleccionar ítems por patrón…") {
+            Button(String(localized: "Seleccionar ítems por patrón…", bundle: #bundle)) {
                 commands?.perform(.selectByPattern)
             }
             .keyboardShortcut("s", modifiers: .command)
 
-            Button("Invertir selección") {
+            Button(String(localized: "Invertir selección", bundle: #bundle)) {
                 viewModel?.invertSelection()
             }
             .keyboardShortcut("i", modifiers: [.command, .shift])
 
             Divider()
 
-            Button("Renombrar…") {
+            Button(String(localized: "Renombrar…", bundle: #bundle)) {
                 commands?.perform(.renameSelectedFiles)
             }
             .keyboardShortcut(Self.fKey(NSF2FunctionKey), modifiers: [])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
-            Button("Mover a la Papelera") {
+            Button(String(localized: "Mover a la Papelera", bundle: #bundle)) {
                 commands?.perform(.deleteSelectedFiles)
             }
             .keyboardShortcut(.delete, modifiers: .command)
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
-            Button("Eliminar permanentemente…") {
+            Button(String(localized: "Eliminar permanentemente…", bundle: #bundle)) {
                 commands?.perform(.permanentDeleteSelectedFiles)
             }
             .keyboardShortcut(.delete, modifiers: [.command, .shift])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
         }
 
-        CommandMenu("Ver") {
-            Button("Modo Iconos") {
+        CommandMenu(String(localized: "Ver", bundle: #bundle)) {
+            Button(String(localized: "Modo Iconos", bundle: #bundle)) {
                 viewModel?.setViewMode(.icons)
             }
             .keyboardShortcut("1", modifiers: .command)
 
-            Button("Modo Compacto") {
+            Button(String(localized: "Modo Compacto", bundle: #bundle)) {
                 viewModel?.setViewMode(.compact)
             }
             .keyboardShortcut("2", modifiers: .command)
 
-            Button("Modo Lista") {
+            Button(String(localized: "Modo Lista", bundle: #bundle)) {
                 viewModel?.setViewMode(.list)
             }
             .keyboardShortcut("3", modifiers: .command)
 
-            Button("Modo Detalles") {
+            Button(String(localized: "Modo Detalles", bundle: #bundle)) {
                 viewModel?.setViewMode(.details)
             }
             .keyboardShortcut("4", modifiers: .command)
 
             Divider()
 
-            Button((viewModel?.viewProperties.showInGroups ?? false) ? "Mostrar en grupos ✓" : "Mostrar en grupos") {
+            Button((viewModel?.viewProperties.showInGroups ?? false) ? "Mostrar en grupos ✓" : String(localized: "Mostrar en grupos", bundle: #bundle)) {
                 viewModel?.toggleShowInGroups()
             }
             .keyboardShortcut("g", modifiers: .command)
 
-            Menu("Agrupar por") {
+            Menu(String(localized: "Agrupar por", bundle: #bundle)) {
                 let props = viewModel?.viewProperties
-                Button(!(props?.showInGroups ?? false) ? "Ninguno ✓" : "Ninguno") {
+                Button(!(props?.showInGroups ?? false) ? "Ninguno ✓" : String(localized: "Ninguno", bundle: #bundle)) {
                     viewModel?.setGroupBy(showInGroups: false, groupFieldOverride: nil)
                 }
                 Button(((props?.showInGroups ?? false) && props?.groupByFieldOverride == nil)
-                    ? "Igual que el criterio de ordenación ✓"
-                    : "Igual que el criterio de ordenación"
+                    ? String(localized: "Igual que el criterio de ordenación ✓", bundle: #bundle)
+                    : String(localized: "Igual que el criterio de ordenación", bundle: #bundle)
                 ) {
                     viewModel?.setGroupBy(showInGroups: true, groupFieldOverride: nil)
                 }
@@ -206,117 +206,117 @@ struct FileEditCommands: Commands {
                 }
             }
 
-            Button((viewModel?.viewProperties.showPreviews ?? true) ? "Mostrar vistas previas ✓" : "Mostrar vistas previas") {
+            Button((viewModel?.viewProperties.showPreviews ?? true) ? "Mostrar vistas previas ✓" : String(localized: "Mostrar vistas previas", bundle: #bundle)) {
                 viewModel?.toggleShowPreviews()
             }
             .keyboardShortcut(Self.fKey(NSF12FunctionKey), modifiers: [])
 
-            Button((viewModel?.effectiveShowsHiddenFiles ?? false) ? "Mostrar archivos ocultos ✓" : "Mostrar archivos ocultos") {
+            Button((viewModel?.effectiveShowsHiddenFiles ?? false) ? "Mostrar archivos ocultos ✓" : String(localized: "Mostrar archivos ocultos", bundle: #bundle)) {
                 viewModel?.toggleShowsHiddenFiles()
             }
             .keyboardShortcut(".", modifiers: [.command, .shift])
 
-            Button("Estilo de visualización de vista…") {
+            Button(String(localized: "Estilo de visualización de vista…", bundle: #bundle)) {
                 commands?.perform(.showViewPropertiesDialog)
             }
             .keyboardShortcut("j", modifiers: .command)
 
-            Button("Restablecer configuración de vista a los valores predeterminados") {
+            Button(String(localized: "Restablecer configuración de vista a los valores predeterminados", bundle: #bundle)) {
                 viewModel?.resetViewPropertiesToDefault()
             }
 
             Divider()
 
-            Button("Aumentar zoom") {
+            Button(String(localized: "Aumentar zoom", bundle: #bundle)) {
                 viewModel?.increaseZoom()
             }
             .keyboardShortcut("+", modifiers: .command)
 
-            Button("Reducir zoom") {
+            Button(String(localized: "Reducir zoom", bundle: #bundle)) {
                 viewModel?.decreaseZoom()
             }
             .keyboardShortcut("-", modifiers: .command)
 
-            Button("Tamaño real (100%)") {
+            Button(String(localized: "Tamaño real (100%)", bundle: #bundle)) {
                 viewModel?.resetZoom()
             }
             .keyboardShortcut("0", modifiers: .command)
 
             Divider()
 
-            Button("Dividir vista") {
+            Button(String(localized: "Dividir vista", bundle: #bundle)) {
                 commands?.perform(.toggleSplit)
             }
             .keyboardShortcut(Self.fKey(NSF3FunctionKey), modifiers: [])
 
-            Button("Enfocar el otro panel dividido") {
+            Button(String(localized: "Enfocar el otro panel dividido", bundle: #bundle)) {
                 commands?.perform(.focusOtherSplitPane)
             }
             .keyboardShortcut(Self.fKey(NSF3FunctionKey), modifiers: [.control])
 
-            Button("Separar vista dividida en pestañas") {
+            Button(String(localized: "Separar vista dividida en pestañas", bundle: #bundle)) {
                 commands?.perform(.moveSplitToTabs)
             }
             .keyboardShortcut(Self.fKey(NSF3FunctionKey), modifiers: [.control, .shift])
 
-            Button("Intercambiar paneles divididos") {
+            Button(String(localized: "Intercambiar paneles divididos", bundle: #bundle)) {
                 commands?.perform(.swapSplitPanes)
             }
 
             Divider()
 
-            Button("Panel de información") {
+            Button(String(localized: "Panel de información", bundle: #bundle)) {
                 commands?.perform(.toggleInfoPanel)
             }
             .keyboardShortcut(Self.fKey(NSF11FunctionKey), modifiers: [])
 
-            Button((viewModel?.isFilterBarVisible ?? false) ? "Barra de filtro ✓" : "Barra de filtro") {
+            Button((viewModel?.isFilterBarVisible ?? false) ? "Barra de filtro ✓" : String(localized: "Barra de filtro", bundle: #bundle)) {
                 commands?.perform(.toggleFilterBar)
             }
             .keyboardShortcut("/", modifiers: [.command])
 
-            Button("Panel de Terminal integrada") {
+            Button(String(localized: "Panel de Terminal integrada", bundle: #bundle)) {
                 commands?.perform(.toggleEmbeddedTerminal)
             }
             .keyboardShortcut(Self.fKey(NSF4FunctionKey), modifiers: [])
 
-            Button("Abrir Terminal externa aquí") {
+            Button(String(localized: "Abrir Terminal externa aquí", bundle: #bundle)) {
                 commands?.perform(.openTerminal)
             }
             .keyboardShortcut(Self.fKey(NSF4FunctionKey), modifiers: [.shift])
 
             Divider()
 
-            Button("Estadísticas de uso de disco…") {
+            Button(String(localized: "Estadísticas de uso de disco…", bundle: #bundle)) {
                 commands?.perform(.showDiskUsageAnalyzer)
             }
             .keyboardShortcut("u", modifiers: .command)
 
-            Button("Refrescar") {
+            Button(String(localized: "Refrescar", bundle: #bundle)) {
                 viewModel?.refresh()
             }
             .keyboardShortcut(Self.fKey(NSF5FunctionKey), modifiers: [])
         }
 
-        CommandMenu("Ir") {
-            Button("Atrás") {
+        CommandMenu(String(localized: "Ir", bundle: #bundle)) {
+            Button(String(localized: "Atrás", bundle: #bundle)) {
                 viewModel?.goBack()
             }
             .keyboardShortcut("[", modifiers: .command)
             .disabled(!(viewModel?.canGoBack ?? false))
 
-            Button("Adelante") {
+            Button(String(localized: "Adelante", bundle: #bundle)) {
                 viewModel?.goForward()
             }
             .keyboardShortcut("]", modifiers: .command)
             .disabled(!(viewModel?.canGoForward ?? false))
 
-            Button("Subir carpeta") {
+            Button(String(localized: "Subir carpeta", bundle: #bundle)) {
                 viewModel?.goUp()
             }
             .keyboardShortcut(.upArrow, modifiers: .command)
 
-            Button("Abrir ítem seleccionado") {
+            Button(String(localized: "Abrir ítem seleccionado", bundle: #bundle)) {
                 guard let viewModel, let item = viewModel.selectedItem else { return }
                 if item.isDirectory {
                     viewModel.navigate(to: item.url)
@@ -329,23 +329,23 @@ struct FileEditCommands: Commands {
 
             Divider()
 
-            Button("Carpeta personal") {
+            Button(String(localized: "Carpeta personal", bundle: #bundle)) {
                 viewModel?.navigate(to: FileManager.default.homeDirectoryForCurrentUser)
             }
             .keyboardShortcut("h", modifiers: [.command, .shift])
 
-            Button("Buscar…") {
+            Button(String(localized: "Buscar…", bundle: #bundle)) {
                 commands?.perform(.focusSearch)
             }
             .keyboardShortcut("f", modifiers: .command)
 
-            Button("Editar ubicación…") {
+            Button(String(localized: "Editar ubicación…", bundle: #bundle)) {
                 commands?.perform(.editLocationBar)
             }
             .keyboardShortcut("l", modifiers: .command)
 
             if let backStack = viewModel?.backStack, !backStack.isEmpty {
-                Menu("Historial hacia atrás") {
+                Menu(String(localized: "Historial hacia atrás", bundle: #bundle)) {
                     ForEach(Array(backStack.enumerated().reversed()), id: \.offset) { idx, entryURL in
                         Button(entryURL.lastPathComponent.isEmpty ? "/" : entryURL.lastPathComponent) {
                             viewModel?.jumpBack(toStackIndex: idx)
@@ -355,7 +355,7 @@ struct FileEditCommands: Commands {
             }
 
             if let forwardStack = viewModel?.forwardStack, !forwardStack.isEmpty {
-                Menu("Historial hacia adelante") {
+                Menu(String(localized: "Historial hacia adelante", bundle: #bundle)) {
                     ForEach(Array(forwardStack.enumerated().reversed()), id: \.offset) { idx, entryURL in
                         Button(entryURL.lastPathComponent.isEmpty ? "/" : entryURL.lastPathComponent) {
                             viewModel?.jumpForward(toStackIndex: idx)
@@ -366,40 +366,40 @@ struct FileEditCommands: Commands {
 
             Divider()
 
-            Button("Pestaña siguiente") {
+            Button(String(localized: "Pestaña siguiente", bundle: #bundle)) {
                 commands?.perform(.selectNextTab)
             }
             .keyboardShortcut("]", modifiers: [.command, .shift])
 
-            Button("Pestaña anterior") {
+            Button(String(localized: "Pestaña anterior", bundle: #bundle)) {
                 commands?.perform(.selectPrevTab)
             }
             .keyboardShortcut("[", modifiers: [.command, .shift])
 
-            Button("Reabrir última pestaña cerrada") {
+            Button(String(localized: "Reabrir última pestaña cerrada", bundle: #bundle)) {
                 commands?.perform(.reopenClosedTab)
             }
         }
 
-        CommandMenu("Marcadores") {
-            Button("Añadir carpeta actual a Lugares") {
+        CommandMenu(String(localized: "Marcadores", bundle: #bundle)) {
+            Button(String(localized: "Añadir carpeta actual a Lugares", bundle: #bundle)) {
                 guard let url = viewModel?.currentURL else { return }
                 PlacesProvider().addBookmark(for: url)
             }
             .keyboardShortcut("b", modifiers: .command)
             .disabled(viewModel == nil)
 
-            Button("Añadir todas las pestañas abiertas a Marcadores") {
+            Button(String(localized: "Añadir todas las pestañas abiertas a Marcadores", bundle: #bundle)) {
                 commands?.perform(.bookmarkAllTabs)
             }
             .keyboardShortcut("d", modifiers: [.command, .shift])
 
-            Button("Abrir todos los marcadores en pestañas") {
+            Button(String(localized: "Abrir todos los marcadores en pestañas", bundle: #bundle)) {
                 commands?.perform(.openAllBookmarksInTabs)
             }
             .disabled(PlacesProvider().customBookmarks().isEmpty)
 
-            Button("Editar marcadores…") {
+            Button(String(localized: "Editar marcadores…", bundle: #bundle)) {
                 commands?.perform(.editBookmarks)
             }
             .keyboardShortcut("b", modifiers: [.command, .option])

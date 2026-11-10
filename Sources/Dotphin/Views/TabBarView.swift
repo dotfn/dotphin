@@ -89,31 +89,31 @@ struct TabBarView: View {
                     removal: .scale(scale: 0.92).combined(with: .opacity)
                 ))
                 .contextMenu {
-                    Button("Duplicar pestaña") {
+                    Button(String(localized: "Duplicar pestaña", bundle: #bundle)) {
                         viewModel.duplicateTab(tab.id)
                     }
-                    Button("Recargar pestaña") {
+                    Button(String(localized: "Recargar pestaña", bundle: #bundle)) {
                         tab.primary.refresh()
                         tab.secondary?.refresh()
                     }
-                    Button("Copiar ubicación") {
+                    Button(String(localized: "Copiar ubicación", bundle: #bundle)) {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(tab.focused.currentURL.path, forType: .string)
                     }
                     Divider()
-                    Button("Cerrar otras pestañas") {
+                    Button(String(localized: "Cerrar otras pestañas", bundle: #bundle)) {
                         viewModel.closeOtherTabs(keeping: tab.id)
                     }
                     .disabled(viewModel.tabs.count <= 1)
 
                     if let idx = viewModel.tabs.firstIndex(where: { $0.id == tab.id }),
                        idx + 1 < viewModel.tabs.count {
-                        Button("Cerrar pestañas a la derecha") {
+                        Button(String(localized: "Cerrar pestañas a la derecha", bundle: #bundle)) {
                             viewModel.closeTabsToTheRight(of: tab.id)
                         }
                     }
 
-                    Button("Cerrar pestaña", role: .destructive) {
+                    Button(String(localized: "Cerrar pestaña", bundle: #bundle), role: .destructive) {
                         viewModel.closeTab(tab.id)
                     }
                     .disabled(viewModel.tabs.count <= 1)
@@ -158,13 +158,13 @@ struct TabBarView: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .help("Nueva pestaña (⌘T)")
-        .accessibilityLabel("Nueva pestaña")
+        .help(String(localized: "Nueva pestaña (⌘T)", bundle: #bundle))
+        .accessibilityLabel(String(localized: "Nueva pestaña", bundle: #bundle))
     }
 
     private var recentlyClosedTabsMenuButton: some View {
         Menu {
-            Button("Vaciar pestañas cerradas recientemente") {
+            Button(String(localized: "Vaciar pestañas cerradas recientemente", bundle: #bundle)) {
                 viewModel.clearRecentlyClosedTabs()
             }
             Divider()
@@ -193,8 +193,8 @@ struct TabBarView: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .frame(width: 26, height: 26)
-        .help("Pestañas cerradas recientemente (⇧⌘T)")
-        .accessibilityLabel("Pestañas cerradas recientemente")
+        .help(String(localized: "Pestañas cerradas recientemente (⇧⌘T)", bundle: #bundle))
+        .accessibilityLabel(String(localized: "Pestañas cerradas recientemente", bundle: #bundle))
     }
 
     private func overviewButton(action: @escaping () -> Void) -> some View {
@@ -214,8 +214,8 @@ struct TabBarView: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .help("Ver todas las pestañas (pellizcar o ⇧⌘\\)")
-        .accessibilityLabel("Ver todas las pestañas")
+        .help(String(localized: "Ver todas las pestañas (pellizcar o ⇧⌘\\)", bundle: #bundle))
+        .accessibilityLabel(String(localized: "Ver todas las pestañas", bundle: #bundle))
     }
 }
 
@@ -247,8 +247,8 @@ private struct TabPillItem: View {
                     }
                     .buttonStyle(.plain)
                     .transition(.scale(scale: 0.8).combined(with: .opacity))
-                    .help("Cerrar pestaña")
-                    .accessibilityLabel("Cerrar pestaña")
+                    .help(String(localized: "Cerrar pestaña", bundle: #bundle))
+                    .accessibilityLabel(String(localized: "Cerrar pestaña", bundle: #bundle))
                 } else {
                     Image(systemName: "folder.fill")
                         .font(.system(size: 11, weight: .medium))

@@ -6,7 +6,7 @@ import XCTest
 final class AboutPanelTests: XCTestCase {
     func test_credits_showTaglineAndLinkToSite() {
         let credits = AboutPanel.credits
-        XCTAssertTrue(credits.string.contains("inspirado en Dolphin"))
+        XCTAssertTrue(credits.string.contains(AppInfo.tagline))
 
         let linkRange = (credits.string as NSString).range(of: "dotfn.dev")
         let link = credits.attribute(.link, at: linkRange.location, effectiveRange: nil) as? URL

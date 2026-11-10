@@ -31,7 +31,12 @@ cat > "$BUNDLE_DIR/Contents/Info.plist" <<EOF
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key>
-    <string>es</string>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>es</string>
+    </array>
     <key>CFBundleExecutable</key>
     <string>Dotphin</string>
     <key>CFBundleIconFile</key>

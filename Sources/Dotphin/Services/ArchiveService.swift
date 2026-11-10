@@ -42,7 +42,7 @@ struct ArchiveService {
             return String(name.dropLast(compound.count))
         }
         let base = (name as NSString).deletingPathExtension
-        return base.isEmpty ? "Extraído" : base
+        return base.isEmpty ? String(localized: "Extraído", bundle: #bundle) : base
     }
 
     /// Compresses `urls` into a `.zip` file inside `directory`.
@@ -58,12 +58,12 @@ struct ArchiveService {
             let single = urls[0]
             defaultBase = single.isFileURL
                 ? (single.lastPathComponent as NSString).deletingPathExtension
-                : "Archivo"
+                : String(localized: "Archivo", bundle: #bundle)
         } else {
-            defaultBase = "Archivo comprimido"
+            defaultBase = String(localized: "Archivo comprimido", bundle: #bundle)
         }
 
-        let cleanBase = defaultBase.isEmpty ? "Archivo" : defaultBase
+        let cleanBase = defaultBase.isEmpty ? String(localized: "Archivo", bundle: #bundle) : defaultBase
         let destination = FileOperationsService().uniqueDestination(
             for: "\(cleanBase).zip",
             in: directory
@@ -176,7 +176,7 @@ struct ArchiveService {
             let message = String(data: errData, encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             throw FileOperationError.other(
-                (message?.isEmpty == false) ? message! : "Error al procesar el archivo comprimido."
+                (message?.isEmpty == false) ? message! : String(localized: "Error al procesar el archivo comprimido.", bundle: #bundle)
             )
         }
     }

@@ -27,7 +27,7 @@ struct ViewPropertiesDialogSheetView: View {
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Color.accentColor)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Estilo de visualización de vista")
+                    Text(String(localized: "Estilo de visualización de vista", bundle: #bundle))
                         .font(.headline)
                     Text(folderURL.path)
                         .font(.caption)
@@ -41,42 +41,42 @@ struct ViewPropertiesDialogSheetView: View {
             Divider()
 
             Form {
-                Section("Propiedades de visualización") {
-                    Picker("Modo de vista:", selection: $draft.mode) {
+                Section(String(localized: "Propiedades de visualización", bundle: #bundle)) {
+                    Picker(String(localized: "Modo de vista:", bundle: #bundle), selection: $draft.mode) {
                         ForEach(ViewMode.allCases, id: \.self) { mode in
                             Label(mode.title, systemImage: mode.systemImage).tag(mode)
                         }
                     }
 
-                    Picker("Ordenar por:", selection: $draft.sortField) {
+                    Picker(String(localized: "Ordenar por:", bundle: #bundle), selection: $draft.sortField) {
                         ForEach(SortField.allCases, id: \.self) { field in
                             Text(field.title).tag(field)
                         }
                     }
 
-                    Picker("Dirección de orden:", selection: $draft.ascending) {
-                        Text("Ascendente (A → Z / Menor a mayor)").tag(true)
-                        Text("Descendente (Z → A / Mayor a menor)").tag(false)
+                    Picker(String(localized: "Dirección de orden:", bundle: #bundle), selection: $draft.ascending) {
+                        Text(String(localized: "Ascendente (A → Z / Menor a mayor)", bundle: #bundle)).tag(true)
+                        Text(String(localized: "Descendente (Z → A / Mayor a menor)", bundle: #bundle)).tag(false)
                     }
 
                     HStack {
-                        Text("Nivel de zoom:")
+                        Text(String(localized: "Nivel de zoom:", bundle: #bundle))
                         Slider(value: $draft.zoomLevel, in: 0.5...2.0, step: 0.1)
-                        Text("\(Int(round(draft.zoomLevel * 100)))%")
+                        Text(String(localized: "\(Int(round(draft.zoomLevel * 100)))%", bundle: #bundle))
                             .monospacedDigit()
                             .frame(width: 44, alignment: .trailing)
                     }
                 }
 
-                Section("Opciones de vista") {
-                    Toggle("Mostrar en grupos", isOn: $draft.showInGroups)
-                    Toggle("Mostrar carpetas primero", isOn: $draft.sortFoldersFirst)
-                    Toggle("Mostrar vistas previas (miniaturas)", isOn: $draft.showPreviews)
-                    Toggle("Mostrar archivos ocultos", isOn: showsHiddenBinding)
-                    Toggle("Mostrar archivos ocultos al final", isOn: $draft.sortHiddenLast)
+                Section(String(localized: "Opciones de vista", bundle: #bundle)) {
+                    Toggle(String(localized: "Mostrar en grupos", bundle: #bundle), isOn: $draft.showInGroups)
+                    Toggle(String(localized: "Mostrar carpetas primero", bundle: #bundle), isOn: $draft.sortFoldersFirst)
+                    Toggle(String(localized: "Mostrar vistas previas (miniaturas)", bundle: #bundle), isOn: $draft.showPreviews)
+                    Toggle(String(localized: "Mostrar archivos ocultos", bundle: #bundle), isOn: showsHiddenBinding)
+                    Toggle(String(localized: "Mostrar archivos ocultos al final", bundle: #bundle), isOn: $draft.sortHiddenLast)
                 }
 
-                Section("Información adicional (columnas en modo Detalles)") {
+                Section(String(localized: "Información adicional (columnas en modo Detalles)", bundle: #bundle)) {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), alignment: .leading)], spacing: 8) {
                         ForEach(DetailsColumn.allCases) { col in
                             Toggle(
@@ -99,30 +99,30 @@ struct ViewPropertiesDialogSheetView: View {
                     }
                 }
 
-                Section("Aplicar propiedades de vista a") {
-                    Picker("Alcance:", selection: $scope) {
+                Section(String(localized: "Aplicar propiedades de vista a", bundle: #bundle)) {
+                    Picker(String(localized: "Alcance:", bundle: #bundle), selection: $scope) {
                         ForEach(ViewPropertiesApplyScope.allCases) { option in
                             Text(option.title).tag(option)
                         }
                     }
                     .pickerStyle(.radioGroup)
 
-                    Toggle("Usar estas propiedades como predeterminadas para carpetas nuevas", isOn: $useAsDefault)
+                    Toggle(String(localized: "Usar estas propiedades como predeterminadas para carpetas nuevas", bundle: #bundle), isOn: $useAsDefault)
                 }
             }
             .formStyle(.grouped)
 
             HStack {
-                Button("Restablecer valores") {
+                Button(String(localized: "Restablecer valores", bundle: #bundle)) {
                     draft = ViewProperties()
                 }
                 Spacer()
-                Button("Cancelar", role: .cancel) {
+                Button(String(localized: "Cancelar", bundle: #bundle), role: .cancel) {
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
 
-                Button("Aplicar") {
+                Button(String(localized: "Aplicar", bundle: #bundle)) {
                     onApply(draft, scope, useAsDefault)
                     dismiss()
                 }
