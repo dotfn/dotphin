@@ -12,6 +12,7 @@ struct DotphinApp: App {
         .windowToolbarStyle(.unified(showsTitle: false))
         .windowResizability(.contentMinSize)
         .commands {
+            AboutCommands()
             SidebarCommands()
             // Visualización → "Personalizar barra de herramientas…" del sistema.
             ToolbarCommands()
