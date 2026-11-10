@@ -992,3 +992,23 @@ actor, continuación para esperar la respuesta del usuario).
 - **Sin verificación de GUI**: las reglas, el destino del drop y el reloj
   del resorte tienen tests; el arrastre real (cursor, apertura de la
   carpeta en pleno arrastre) hay que probarlo a mano. 241 tests en verde.
+
+## 2026-11-09 — Detalles finos: ⌘F, Compartir, columnas de Detalles y código muerto
+
+- **⌘F** ("Ir → Buscar…") lleva el foco al campo de búsqueda nativo
+  (`searchable(isPresented:)`).
+- **Compartir**: ítem de toolbar con `ShareLink` (menú del sistema). No se
+  agregó al menú contextual: los menús son `NSHostingMenu` y no se pudo
+  verificar a ciegas que `ShareLink` funcione ahí.
+- **Columnas de Detalles**: clic derecho en el encabezado muestra u oculta
+  columnas, y AppKit recuerda los anchos (`autosaveTableColumns`). Hay que
+  reactivar el autosave cada vez que se rearman las columnas para que
+  aplique lo guardado; el criterio de orden lo sigue mandando el modelo, no
+  lo que guarda la tabla.
+- **Código muerto borrado**: `ToolbarLayoutEngine`, `ToolbarConfigEntry`,
+  `ToolbarTextPosition`, `ToolbarDropTarget` y los campos `toolbar*` de
+  `AppSettings`, con sus tests. Los ajustes guardados que todavía traen
+  esas claves se decodifican igual (hay test).
+- Queda sin hacer del relevamiento: sección Recientes en Lugares, stash de
+  la vista dividida, separar un panel a ventana nueva y actuar como
+  administrador. 238 tests en verde.

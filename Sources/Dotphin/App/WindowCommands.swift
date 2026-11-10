@@ -35,6 +35,7 @@ enum WindowCommand {
     case editBookmarks
     case openAllBookmarksInTabs
     case editLocationBar
+    case focusSearch
     case toggleTabOverview
 }
 

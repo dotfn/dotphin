@@ -13,6 +13,7 @@ struct DetailsListView: View {
     var sortField: SortField = .name
     var ascending: Bool = true
     var onChangeSort: ((SortField, Bool) -> Void)? = nil
+    var onToggleColumn: ((DetailsColumn) -> Void)? = nil
     let onOpen: (FileItem) -> Void
     var onRename: ((FileItem) -> Void)? = nil
     var onBatchRename: (() -> Void)? = nil
@@ -64,6 +65,7 @@ struct DetailsListView: View {
             sortField: sortField,
             ascending: ascending,
             onChangeSort: onChangeSort,
+            onToggleColumn: onToggleColumn,
             onOpen: onOpen,
             onToggleExpansion: toggleExpansion(for:),
             onMoveDropped: onMoveDropped,

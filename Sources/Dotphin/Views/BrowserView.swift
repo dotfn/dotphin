@@ -325,6 +325,7 @@ struct BrowserView: View {
                         sortField: viewModel.viewProperties.sortField,
                         ascending: viewModel.viewProperties.ascending,
                         onChangeSort: { field, asc in viewModel.setSort(field: field, ascending: asc) },
+                        onToggleColumn: { viewModel.toggleDetailsColumn($0) },
                         onOpen: onOpen,
                         onRename: onRename,
                         onBatchRename: onBatchRename,

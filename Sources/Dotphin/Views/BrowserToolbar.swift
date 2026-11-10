@@ -91,6 +91,14 @@ struct BrowserToolbar: CustomizableToolbarContent {
             button(.delete, action: onDelete)
                 .disabled(!hasSelection)
         }
+        // Menú Compartir del sistema (AirDrop, Mail, Mensajes…).
+        ToolbarItem(id: "share") {
+            ShareLink(items: viewModel?.selectedItems.map(\.url) ?? []) {
+                Label("Compartir", systemImage: "square.and.arrow.up")
+            }
+            .help("Compartir")
+            .disabled(!hasSelection)
+        }
     }
 
     /// Solo aparecen mientras se navega la Papelera.

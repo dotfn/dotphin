@@ -334,6 +334,11 @@ struct FileEditCommands: Commands {
             }
             .keyboardShortcut("h", modifiers: [.command, .shift])
 
+            Button("Buscar…") {
+                commands?.perform(.focusSearch)
+            }
+            .keyboardShortcut("f", modifiers: .command)
+
             Button("Editar ubicación…") {
                 commands?.perform(.editLocationBar)
             }

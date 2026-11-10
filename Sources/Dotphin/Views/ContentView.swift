@@ -33,6 +33,7 @@ struct ContentView: View {
     @State private var comparePair: (left: URL, right: URL)?
     @State private var commands = WindowCommands()
     @State private var locationEditRequest = 0
+    @State private var isSearchPresented = false
 
     private var focusedViewModel: BrowserViewModel? {
         tabsViewModel.selectedTab?.focused
@@ -124,7 +125,7 @@ struct ContentView: View {
                 )
             }
             // Campo de búsqueda nativo de la toolbar: filtra al tipear y busca con Intro.
-            .searchable(text: searchText, placement: .toolbar, prompt: "Buscar o filtrar…")
+            .searchable(text: searchText, isPresented: $isSearchPresented, placement: .toolbar, prompt: "Buscar o filtrar…")
             .onSubmit(of: .search) {
                 guard let focused = focusedViewModel else { return }
                 let query = focused.filterText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -405,6 +406,8 @@ struct ContentView: View {
             }
         case .editLocationBar:
             locationEditRequest += 1
+        case .focusSearch:
+            isSearchPresented = true
         }
     }
 

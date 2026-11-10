@@ -251,6 +251,36 @@ final class FileViewInteractionTests: XCTestCase {
         XCTAssertEqual(vm.selectedItem?.name, "gamma.txt")
     }
 
+    // MARK: Columnas de Detalles
+
+    func test_details_headerMenuTogglesColumns() throws {
+        mount(mode: .details)
+        let table = try XCTUnwrap(find(FileNSTableView.self, in: window.contentView))
+        let menu = try XCTUnwrap(table.headerView?.menu)
+        XCTAssertEqual(menu.items.map(\.title), DetailsColumn.allCases.map(\.title))
+
+        let permissions = try XCTUnwrap(menu.items.first { $0.title == DetailsColumn.permissions.title })
+        XCTAssertEqual(permissions.state, .off)
+        XCTAssertFalse(vm.viewProperties.visibleDetailsColumns.contains(.permissions))
+
+        _ = permissions.target?.perform(permissions.action, with: permissions)
+        pump()
+
+        XCTAssertTrue(vm.viewProperties.visibleDetailsColumns.contains(.permissions))
+        XCTAssertNotNil(table.tableColumn(withIdentifier: NSUserInterfaceItemIdentifier(DetailsColumn.permissions.rawValue)))
+        let updated = try XCTUnwrap(table.headerView?.menu?.items.first { $0.title == DetailsColumn.permissions.title })
+        XCTAssertEqual(updated.state, .on)
+    }
+
+    func test_details_sortStaysDrivenByTheModel_notByAutosave() throws {
+        vm.setSort(field: .size, ascending: false)
+        mount(mode: .details)
+        let table = try XCTUnwrap(find(FileNSTableView.self, in: window.contentView))
+        XCTAssertEqual(table.sortDescriptors.first?.key, SortField.size.rawValue)
+        XCTAssertEqual(vm.viewProperties.sortField, .size)
+        XCTAssertFalse(vm.viewProperties.ascending)
+    }
+
     // MARK: Menú Edición estándar
 
     /// Con una vista de archivos enfocada nadie en la ventana atiende Copiar /

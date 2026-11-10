@@ -33,6 +33,8 @@ struct DetailsTableView: NSViewRepresentable {
     let sortField: SortField
     let ascending: Bool
     let onChangeSort: ((SortField, Bool) -> Void)?
+    /// Clic derecho en el encabezado: mostrar u ocultar una columna.
+    let onToggleColumn: ((DetailsColumn) -> Void)?
     let onOpen: (FileItem) -> Void
     let onToggleExpansion: (URL) -> Void
     let onMoveDropped: ([URL], URL) -> Void
@@ -195,6 +197,37 @@ struct DetailsTableView: NSViewRepresentable {
                 tableView.addTableColumn(column)
             }
             tableView.sizeToFit()
+            tableView.headerView?.menu = makeColumnsMenu(visible: columns)
+
+            // Anchos de columna recordados por AppKit entre sesiones. Hay que
+            // reactivarlo cada vez que se rearman las columnas para que
+            // vuelva a aplicar lo guardado; el orden lo sigue mandando el modelo.
+            isApplyingSort = true
+            tableView.autosaveName = Self.columnsAutosaveName
+            tableView.autosaveTableColumns = false
+            tableView.autosaveTableColumns = true
+            isApplyingSort = false
+        }
+
+        static let columnsAutosaveName = "Dotphin.DetailsColumns"
+
+        /// Menú del encabezado, como en Finder y Dolphin: una entrada por columna opcional.
+        private func makeColumnsMenu(visible: [DetailsColumn]) -> NSMenu {
+            let menu = NSMenu(title: "Columnas")
+            for column in DetailsColumn.allCases {
+                let item = NSMenuItem(title: column.title, action: #selector(toggleColumn(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = column.rawValue
+                item.state = visible.contains(column) ? .on : .off
+                menu.addItem(item)
+            }
+            return menu
+        }
+
+        @objc private func toggleColumn(_ sender: NSMenuItem) {
+            guard let rawValue = sender.representedObject as? String,
+                  let column = DetailsColumn(rawValue: rawValue) else { return }
+            parent.onToggleColumn?(column)
         }
 
         private static func widths(for column: DetailsColumn) -> (CGFloat, CGFloat, CGFloat) {
