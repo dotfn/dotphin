@@ -126,4 +126,79 @@ final class MultiSelectionTests: XCTestCase {
         let size = FilePropertiesSheetView.computeTotalSize(of: tempDir)
         XCTAssertEqual(size, 4) // 4 files of 1 byte each
     }
+
+    func test_applyPermissionsRecursively_appliesModeToEveryDescendant() throws {
+        let root = tempDir.appendingPathComponent("permRoot", isDirectory: true)
+        let sub = root.appendingPathComponent("sub", isDirectory: true)
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        let fileInRoot = root.appendingPathComponent("a.txt")
+        let fileInSub = sub.appendingPathComponent("b.txt")
+        try "x".write(to: fileInRoot, atomically: true, encoding: .utf8)
+        try "y".write(to: fileInSub, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: fileInRoot.path)
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: fileInSub.path)
+
+        let failures = FilePropertiesSheetView.applyPermissionsRecursively(0o755, under: root)
+
+        XCTAssertEqual(failures, [])
+        for path in [root.path, sub.path, fileInRoot.path, fileInSub.path] {
+            let attrs = try FileManager.default.attributesOfItem(atPath: path)
+            let perms = (attrs[.posixPermissions] as? NSNumber)?.intValue ?? 0
+            XCTAssertEqual(perms & 0o777, 0o755, "no se aplicó el modo recursivamente a \(path)")
+        }
+    }
+
+    func test_applyPermissionsRecursively_neverFollowsSymlinksOutOfTheFolder() throws {
+        let root = tempDir.appendingPathComponent("permRoot", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let outside = tempDir.appendingPathComponent("outside.txt")
+        try "secret".write(to: outside, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: outside.path)
+        try FileManager.default.createSymbolicLink(
+            at: root.appendingPathComponent("link-out"),
+            withDestinationURL: outside
+        )
+
+        FilePropertiesSheetView.applyPermissionsRecursively(0o755, under: root)
+
+        let attrs = try FileManager.default.attributesOfItem(atPath: outside.path)
+        XCTAssertEqual(((attrs[.posixPermissions] as? NSNumber)?.intValue ?? 0) & 0o777, 0o600)
+    }
+
+    func test_applyPermissionsRecursively_removingExecuteStillReachesTheWholeTree() throws {
+        let root = tempDir.appendingPathComponent("permRoot", isDirectory: true)
+        let deepDir = root.appendingPathComponent("a/b", isDirectory: true)
+        try FileManager.default.createDirectory(at: deepDir, withIntermediateDirectories: true)
+        let deepFile = deepDir.appendingPathComponent("deep.txt")
+        try "x".write(to: deepFile, atomically: true, encoding: .utf8)
+        let allPaths = [root, root.appendingPathComponent("a"), deepDir, deepFile].map(\.path)
+        defer {
+            // Restore traversal so tearDown can delete the tree.
+            for path in allPaths {
+                try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path)
+            }
+        }
+
+        let failures = FilePropertiesSheetView.applyPermissionsRecursively(0o644, under: root)
+
+        XCTAssertEqual(failures, [])
+        for path in [root.path, root.appendingPathComponent("a").path, deepDir.path] {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path)
+        }
+        let attrs = try FileManager.default.attributesOfItem(atPath: deepFile.path)
+        XCTAssertEqual(((attrs[.posixPermissions] as? NSNumber)?.intValue ?? 0) & 0o777, 0o644)
+    }
+
+    func test_applyPermissionsRecursively_countsUnreadableSubfolderAsFailure() throws {
+        let root = tempDir.appendingPathComponent("permRoot", isDirectory: true)
+        let locked = root.appendingPathComponent("locked", isDirectory: true)
+        try FileManager.default.createDirectory(at: locked, withIntermediateDirectories: true)
+        try "x".write(to: locked.appendingPathComponent("inner.txt"), atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: locked.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path) }
+
+        let failures = FilePropertiesSheetView.applyPermissionsRecursively(0o700, under: root)
+
+        XCTAssertFalse(failures.isEmpty, "una subcarpeta ilegible no puede contar como aplicada")
+    }
 }

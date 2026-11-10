@@ -21,6 +21,7 @@ struct BrowserView: View {
     @State private var showsSelectByPatternPrompt = false
     @State private var patternInput = "*.*"
     @State private var newItemNameInput = ""
+    @State private var pendingTemplateSourceURL: URL?
     @State private var propertiesTargetURL: URL?
     @State private var comparePair: (left: URL, right: URL)?
     @State private var showsViewPropertiesDialog = false
@@ -150,10 +151,9 @@ struct BrowserView: View {
                     newItemNameInput = "Nueva carpeta"
                     showsMoveToNewFolderPrompt = true
                 },
-                onNewFilePrompt: { defaultName in
-                    newItemNameInput = defaultName
-                    showsNewFilePrompt = true
-                },
+                onNewFilePrompt: promptNewFile(named:),
+                onNewFileFromTemplatePrompt: promptNewFile(fromTemplate:),
+                onMountDiskImage: mountDiskImage(_:),
                 onNewSymbolicLinkPrompt: {
                     newItemNameInput = "Nuevo enlace"
                     symlinkTargetInput = viewModel.selectedItem?.url.path ?? ""
@@ -509,8 +509,8 @@ struct BrowserView: View {
         }
         .alert("Nuevo archivo", isPresented: $showsNewFilePrompt) {
             TextField("Nombre", text: $newItemNameInput)
-            Button("Crear") { viewModel.createFile(named: newItemNameInput) }
-            Button("Cancelar", role: .cancel) {}
+            Button("Crear", action: createFileFromPrompt)
+            Button("Cancelar", role: .cancel) { pendingTemplateSourceURL = nil }
         }
         .alert("Nuevo enlace simbólico", isPresented: $showsNewSymlinkPrompt) {
             TextField("Nombre del enlace", text: $newItemNameInput)
@@ -811,16 +811,36 @@ struct BrowserView: View {
         .background(.bar)
     }
 
-    private var operationErrorMessage: String {
-        switch viewModel.operationError {
-        case .nameAlreadyExists:
-            return "Ya existe un ítem con ese nombre."
-        case .invalidName:
-            return "El nombre no es válido."
-        case .other(let message):
-            return message
-        case nil:
-            return ""
+    private func promptNewFile(named defaultName: String) {
+        newItemNameInput = defaultName
+        pendingTemplateSourceURL = nil
+        showsNewFilePrompt = true
+    }
+
+    private func promptNewFile(fromTemplate templateURL: URL) {
+        newItemNameInput = templateURL.lastPathComponent
+        pendingTemplateSourceURL = templateURL
+        showsNewFilePrompt = true
+    }
+
+    private func mountDiskImage(_ item: FileItem) {
+        Task { await viewModel.mountDiskImage(item) }
+    }
+
+    private func createFileFromPrompt() {
+        guard let templateURL = pendingTemplateSourceURL else {
+            viewModel.createFile(named: newItemNameInput)
+            return
         }
+        pendingTemplateSourceURL = nil
+        guard let contents = try? Data(contentsOf: templateURL) else {
+            viewModel.reportOperationError("No se pudo leer la plantilla «\(templateURL.lastPathComponent)».")
+            return
+        }
+        viewModel.createFile(named: newItemNameInput, contents: contents)
+    }
+
+    private var operationErrorMessage: String {
+        viewModel.operationError?.message ?? ""
     }
 }

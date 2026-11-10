@@ -13,6 +13,8 @@ struct BrowserContextMenuActions {
     var onNewFolderPrompt: () -> Void
     var onMoveToNewFolderPrompt: (() -> Void)? = nil
     var onNewFilePrompt: (String) -> Void
+    var onNewFileFromTemplatePrompt: ((URL) -> Void)? = nil
+    var onMountDiskImage: ((FileItem) -> Void)? = nil
     var onNewSymbolicLinkPrompt: (() -> Void)? = nil
     var onRename: (FileItem) -> Void
     var onBatchRename: () -> Void
@@ -111,6 +113,12 @@ struct DotphinItemContextMenu: View {
                 }
             }
             openWithMenu(for: item.url)
+
+            if !item.isDirectory, DiskImageMountService.isDiskImage(item.url), let onMountDiskImage = actions.onMountDiskImage {
+                Button("Montar imagen de disco") {
+                    onMountDiskImage(item)
+                }
+            }
 
             Button("Vista rápida de «\(item.name)»") {
                 ensureTargetItemsSelected()
@@ -471,6 +479,25 @@ struct DotphinItemContextMenu: View {
             Button("Página HTML…") {
                 actions.onNewFilePrompt("index.html")
             }
+            templateMenuItems
+        }
+    }
+
+    /// Custom `~/Templates` entries plus the "open that folder" affordance.
+    @ViewBuilder
+    private var templateMenuItems: some View {
+        let templates = TemplateProvider().customTemplates()
+        if !templates.isEmpty, let onTemplate = actions.onNewFileFromTemplatePrompt {
+            Divider()
+            ForEach(templates, id: \.self) { templateURL in
+                Button(templateURL.lastPathComponent) {
+                    onTemplate(templateURL)
+                }
+            }
+        }
+        Divider()
+        Button("Abrir carpeta de plantillas…") {
+            TemplateProvider().revealOrCreateTemplatesDirectory()
         }
     }
 
@@ -533,6 +560,7 @@ struct DotphinViewportContextMenu: View {
                 Button("Página HTML…") {
                     actions.onNewFilePrompt("index.html")
                 }
+                templateMenuItems
             }
         }
 
@@ -721,6 +749,24 @@ struct DotphinViewportContextMenu: View {
 
         Button("Propiedades…") {
             actions.onShowProperties(actions.viewModel.currentURL)
+        }
+    }
+
+    /// Custom `~/Templates` entries plus the "open that folder" affordance.
+    @ViewBuilder
+    private var templateMenuItems: some View {
+        let templates = TemplateProvider().customTemplates()
+        if !templates.isEmpty, let onTemplate = actions.onNewFileFromTemplatePrompt {
+            Divider()
+            ForEach(templates, id: \.self) { templateURL in
+                Button(templateURL.lastPathComponent) {
+                    onTemplate(templateURL)
+                }
+            }
+        }
+        Divider()
+        Button("Abrir carpeta de plantillas…") {
+            TemplateProvider().revealOrCreateTemplatesDirectory()
         }
     }
 }

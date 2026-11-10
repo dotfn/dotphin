@@ -1111,6 +1111,35 @@ final class BrowserViewModel {
         }
     }
 
+    /// Mounts a `.iso`/`.dmg`/`.cdr`/`.img` via `hdiutil` (Dolphin's explicit "Montar" action).
+    /// On success, refreshes the Places sidebar's volume list the same way adding/removing
+    /// a bookmark does, so the newly-mounted volume shows up without relaunching the app.
+    /// `hdiutil` verifies the image before mounting (seconds for large images), so it runs
+    /// off the main actor; only the result comes back here.
+    @MainActor
+    func mountDiskImage(_ item: FileItem) async {
+        let url = item.url
+        let failure: String? = await Task.detached(priority: .userInitiated) {
+            do {
+                try DiskImageMountService().mount(url)
+                return nil
+            } catch {
+                return (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            }
+        }.value
+        if let failure {
+            operationError = .other(failure)
+        } else {
+            NotificationCenter.default.post(name: .placesBookmarksDidChange, object: nil)
+        }
+    }
+
+    /// Lets the view report a failure that happened before reaching the view model
+    /// (e.g. a template file that vanished between opening the menu and pressing Crear).
+    func reportOperationError(_ message: String) {
+        operationError = .other(message)
+    }
+
     /// Creates a symbolic link in `currentURL` pointing to `targetPath` (`DolphinNewFileMenu`).
     func createSymbolicLink(named linkName: String, pointingTo targetPath: String) {
         do {
@@ -1279,14 +1308,16 @@ final class BrowserViewModel {
                 if destination != url {
                     batch.append(.moved(from: url, to: destination))
                 }
+            } catch let error as FileOperationError {
+                failures.append("\(url.lastPathComponent): \(error.message)")
             } catch {
-                failures.append(url.lastPathComponent)
+                failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
             }
         }
         record(batch)
         DebugEventLog.log("drop", "movidos=\(batch.count) fallaron=\(failures.isEmpty ? "∅" : failures.joined(separator: ", "))")
         if !failures.isEmpty {
-            operationError = .other("No se pudieron mover: \(failures.joined(separator: ", "))")
+            operationError = .other("No se pudieron mover: \(failures.joined(separator: "; "))")
         }
     }
 

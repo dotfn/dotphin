@@ -192,6 +192,63 @@ final class FileOperationsServiceTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: folder.path))
     }
 
+    func test_move_folderDroppedOntoItself_viaSymlinkAlias_isNoOp() throws {
+        let folder = tempDir.appendingPathComponent("realFolder", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let aliasLink = tempDir.appendingPathComponent("aliasLink")
+        try FileManager.default.createSymbolicLink(at: aliasLink, withDestinationURL: folder)
+
+        let result = try FileOperationsService().move(folder, toDirectory: aliasLink)
+
+        XCTAssertEqual(result, folder)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: folder.path))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path), [])
+    }
+
+    func test_move_symlinkToFolder_intoThatFoldersSubfolder_movesTheLinkItself() throws {
+        let target = tempDir.appendingPathComponent("A", isDirectory: true)
+        let sub = target.appendingPathComponent("sub", isDirectory: true)
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        let link = tempDir.appendingPathComponent("Alink")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
+
+        let result = try FileOperationsService().move(link, toDirectory: sub)
+
+        XCTAssertEqual(result, sub.appendingPathComponent("Alink"))
+        XCTAssertEqual(
+            try FileManager.default.destinationOfSymbolicLink(atPath: result.path),
+            target.path
+        )
+        XCTAssertTrue(FileManager.default.fileExists(atPath: target.path), "el destino del enlace no se toca")
+    }
+
+    func test_move_symlinkToFile_intoItsTargetsFolder_reportsNameConflict() throws {
+        let realDir = tempDir.appendingPathComponent("C", isDirectory: true)
+        let linkDir = tempDir.appendingPathComponent("B", isDirectory: true)
+        try FileManager.default.createDirectory(at: realDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: linkDir, withIntermediateDirectories: true)
+        let realFile = realDir.appendingPathComponent("g.txt")
+        try "x".write(to: realFile, atomically: true, encoding: .utf8)
+        let link = linkDir.appendingPathComponent("g.txt")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: realFile)
+
+        XCTAssertThrowsError(try FileOperationsService().move(link, toDirectory: realDir)) { error in
+            guard case FileOperationError.nameAlreadyExists = error else {
+                XCTFail("esperaba nameAlreadyExists, fue \(error)")
+                return
+            }
+        }
+    }
+
+    func test_fileOperationError_message_describesEachCase() {
+        XCTAssertEqual(FileOperationError.invalidName.message, "El nombre no es válido.")
+        XCTAssertEqual(
+            FileOperationError.nameAlreadyExists(tempDir).message,
+            "Ya existe un ítem con ese nombre."
+        )
+        XCTAssertEqual(FileOperationError.other("motivo específico").message, "motivo específico")
+    }
+
     func test_move_intoOwnDescendant_throws() throws {
         let folder = tempDir.appendingPathComponent("folder", isDirectory: true)
         let sub = folder.appendingPathComponent("sub", isDirectory: true)

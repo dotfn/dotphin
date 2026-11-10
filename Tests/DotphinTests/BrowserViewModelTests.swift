@@ -395,5 +395,28 @@ final class BrowserViewModelTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: okFile.path), "el que no tenía conflicto se movió igual")
         XCTAssertTrue(FileManager.default.fileExists(atPath: conflictFile.path), "el que tenía conflicto se quedó donde estaba")
         XCTAssertNotNil(vm.operationError)
+        let message = vm.operationError?.message ?? ""
+        XCTAssertTrue(
+            message.contains("Ya existe un ítem con ese nombre."),
+            "el mensaje debe llevar el motivo real del fallo, no solo el nombre del archivo: \(message)"
+        )
+    }
+
+    @MainActor
+    func test_mountDiskImage_whenImageDoesNotExist_reportsErrorWithoutCrashing() async {
+        let vm = BrowserViewModel(startingAt: tempDir)
+        let missingImage = FileItem(
+            url: tempDir.appendingPathComponent("\(UUID().uuidString).iso"),
+            name: "missing.iso",
+            isDirectory: false,
+            isSymbolicLink: false,
+            size: nil,
+            modificationDate: nil
+        )
+
+        await vm.mountDiskImage(missingImage)
+
+        XCTAssertNotNil(vm.operationError)
+        XCTAssertFalse((vm.operationError?.message ?? "").isEmpty)
     }
 }

@@ -39,6 +39,7 @@ struct FilePropertiesSheetView: View {
     @State private var isSymbolicLink: Bool = false
     @State private var symlinkDestination: String?
     @State private var permissionError: String?
+    @State private var applyPermissionsRecursively = false
     @State private var checksums: FileChecksums?
     @State private var isComputingChecksums: Bool = false
     @State private var verificationInput: String = ""
@@ -215,6 +216,16 @@ struct FilePropertiesSheetView: View {
                     }
                     .font(.caption)
 
+                    if isDirectory {
+                        Toggle("Aplicar a subcarpetas y su contenido", isOn: $applyPermissionsRecursively)
+                            .font(.caption)
+                        if applyPermissionsRecursively {
+                            Text("Se aplicará el mismo modo a todo el contenido, incluyendo el bit de ejecución en archivos.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
                     if let permissionError {
                         Text(permissionError)
                             .font(.caption)
@@ -357,6 +368,16 @@ struct FilePropertiesSheetView: View {
     private func togglePermissionBit(_ bit: Int) {
         guard let current = posixPermissions else { return }
         let updated = (current & bit) != 0 ? (current & ~bit) : (current | bit)
+        if isDirectory && applyPermissionsRecursively {
+            let failures = Self.applyPermissionsRecursively(updated, under: url)
+            if !failures.contains(url) {
+                posixPermissions = updated
+            }
+            permissionError = failures.isEmpty
+                ? nil
+                : "No se pudo aplicar a \(failures.count) elemento(s); el resto quedó con el modo nuevo."
+            return
+        }
         do {
             try FileManager.default.setAttributes([.posixPermissions: updated], ofItemAtPath: url.path)
             posixPermissions = updated
@@ -364,6 +385,40 @@ struct FilePropertiesSheetView: View {
         } catch {
             permissionError = error.localizedDescription
         }
+    }
+
+    /// Applies `mode` to `url` and every descendant. Mirrors the exact POSIX mode, including
+    /// the execute bit on regular files (unlike Finder's simplified "Apply to enclosed items").
+    /// Symlinks are skipped: chmod follows them, so they'd change files outside the folder.
+    /// The whole tree is listed before anything changes, then applied deepest-first with `url`
+    /// last, so removing a folder's x/r bits can't make the rest of the tree unreachable.
+    /// Returns every item that couldn't be listed or changed, `url` included.
+    @discardableResult
+    nonisolated static func applyPermissionsRecursively(_ mode: Int, under url: URL) -> [URL] {
+        var failures: [URL] = []
+        var targets: [URL] = []
+        let enumerator = FileManager.default.enumerator(
+            at: url,
+            includingPropertiesForKeys: [.isSymbolicLinkKey],
+            errorHandler: { failedURL, _ in
+                failures.append(failedURL)
+                return true
+            }
+        )
+        while let childURL = enumerator?.nextObject() as? URL {
+            if (try? childURL.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true {
+                continue
+            }
+            targets.append(childURL)
+        }
+        for target in targets.reversed() + [url] {
+            do {
+                try FileManager.default.setAttributes([.posixPermissions: mode], ofItemAtPath: target.path)
+            } catch {
+                failures.append(target)
+            }
+        }
+        return failures
     }
 
     nonisolated static func symbolicPermissions(_ mode: Int) -> String {
