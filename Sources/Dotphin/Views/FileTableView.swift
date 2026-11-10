@@ -67,6 +67,9 @@ struct FileTableView: NSViewRepresentable {
         tableView.itemAtRow = { [weak coordinator = context.coordinator] row in
             coordinator?.item(at: row)
         }
+        tableView.onDragLeft = { [weak coordinator = context.coordinator] in
+            coordinator?.dragLeft()
+        }
         tableView.onRenamingEnded = { [weak coordinator = context.coordinator] in
             guard let coordinator else { return }
             coordinator.apply(coordinator.parent)
@@ -274,29 +277,32 @@ struct FileTableView: NSViewRepresentable {
 
         // MARK: Soltar (destino)
 
+        private let drops = FileDropController()
+
+        /// Carpeta bajo el cursor cuando el drop es "sobre" una fila.
+        private func dropFolder(row: Int, dropOperation: NSTableView.DropOperation) -> FileItem? {
+            guard dropOperation == .on, let item = item(at: row), item.isDirectory else { return nil }
+            return item
+        }
+
         func tableView(
             _ tableView: NSTableView,
             validateDrop info: any NSDraggingInfo,
             proposedRow row: Int,
             proposedDropOperation dropOperation: NSTableView.DropOperation
         ) -> NSDragOperation {
-            let urls = Self.fileURLs(from: info)
-            guard !urls.isEmpty else { return [] }
-
-            // Sobre una carpeta (que no sea una de las arrastradas): ahí.
-            if dropOperation == .on, rows.indices.contains(row), let item = rows[row].item, item.isDirectory,
-               !urls.contains(where: { $0.standardizedFileURL == item.url.standardizedFileURL }) {
-                return .move
+            let proposal = drops.validate(
+                info,
+                folder: dropFolder(row: row, dropOperation: dropOperation),
+                currentURL: parent.currentURL,
+                onSpringOpen: { [weak self] folder in self?.parent.onOpen(folder) }
+            )
+            guard let proposal else { return [] }
+            if case .currentDirectory = proposal.target {
+                // Resalta toda la tabla: cae en la carpeta que se está mostrando.
+                tableView.setDropRow(-1, dropOperation: .on)
             }
-
-            // En cualquier otro lugar: la carpeta actual, resaltando toda la tabla.
-            guard let currentURL = parent.currentURL else { return [] }
-            let alreadyHere = urls.allSatisfy {
-                $0.deletingLastPathComponent().standardizedFileURL == currentURL.standardizedFileURL
-            }
-            guard !alreadyHere else { return [] }
-            tableView.setDropRow(-1, dropOperation: .on)
-            return .move
+            return proposal.operation
         }
 
         func tableView(
@@ -305,25 +311,19 @@ struct FileTableView: NSViewRepresentable {
             row: Int,
             dropOperation: NSTableView.DropOperation
         ) -> Bool {
-            let urls = Self.fileURLs(from: info)
-            let destination: URL?
-            if row >= 0, rows.indices.contains(row), let item = rows[row].item, item.isDirectory {
-                destination = item.url
-            } else {
-                destination = parent.currentURL
-            }
-            DebugEventLog.log("drop", "Lista (NSTableView): soltar \(DebugEventLog.names(urls)) → \(destination?.lastPathComponent ?? "nil")")
-            guard let destination, !urls.isEmpty else { return false }
-            parent.onMoveDropped(urls, destination)
-            return true
+            drops.accept(
+                info,
+                folder: row >= 0 ? dropFolder(row: row, dropOperation: dropOperation) : nil,
+                currentURL: parent.currentURL,
+                source: "Lista (NSTableView)",
+                onMove: parent.onMoveDropped,
+                onCopy: { urls, destination in self.tableView?.interaction.onCopyDropped(urls, destination) }
+            )
         }
 
-        private static func fileURLs(from info: any NSDraggingInfo) -> [URL] {
-            let objects = info.draggingPasteboard.readObjects(
-                forClasses: [NSURL.self],
-                options: [.urlReadingFileURLsOnly: true]
-            ) ?? []
-            return objects.compactMap { $0 as? URL }
+        /// El arrastre salió de la tabla o terminó: se desarma el resorte.
+        func dragLeft() {
+            drops.springLoading.cancel()
         }
     }
 }
@@ -336,8 +336,10 @@ final class FileNSTableView: NSTableView, FileViewResponder, QuickLookSourceProv
     var itemAtRow: (Int) -> FileItem? = { _ in nil }
     /// Se llama al terminar una edición en línea (para aplicar recargas pospuestas).
     var onRenamingEnded: (() -> Void)?
+    /// El arrastre salió de la tabla o terminó.
+    var onDragLeft: (() -> Void)?
     private(set) var isRenaming = false
-    private var interaction = FileViewInteraction()
+    private(set) var interaction = FileViewInteraction()
     private var isActivePane = true
 
     // MARK: Foco y panel activo
@@ -387,6 +389,16 @@ final class FileNSTableView: NSTableView, FileViewResponder, QuickLookSourceProv
             interaction.onActivate()
         }
         super.mouseDown(with: event)
+    }
+
+    override func draggingExited(_ sender: (any NSDraggingInfo)?) {
+        super.draggingExited(sender)
+        onDragLeft?()
+    }
+
+    override func draggingEnded(_ sender: any NSDraggingInfo) {
+        super.draggingEnded(sender)
+        onDragLeft?()
     }
 
     // MARK: Teclado

@@ -120,6 +120,7 @@ struct FileCollectionView: NSViewRepresentable {
         collectionView.menuProvider = { [weak coordinator] in coordinator?.menu(forClickedIndexPath: $0) }
         collectionView.onOpenItem = { [weak coordinator] in coordinator?.open(at: $0) }
         collectionView.onUserChangedSelection = { [weak coordinator] in coordinator?.pushSelection() }
+        collectionView.onDragLeft = { [weak coordinator] in coordinator?.dragLeft() }
         collectionView.onRenamingEnded = { [weak coordinator] in
             guard let coordinator else { return }
             coordinator.apply(coordinator.parent)
@@ -371,30 +372,32 @@ struct FileCollectionView: NSViewRepresentable {
 
         // MARK: Soltar (destino)
 
+        private let drops = FileDropController()
+
+        /// Carpeta bajo el cursor cuando el drop es "sobre" un ítem.
+        private func dropFolder(at indexPath: IndexPath, dropOperation: NSCollectionView.DropOperation) -> FileItem? {
+            guard dropOperation == .on, let item = item(at: indexPath), item.isDirectory else { return nil }
+            return item
+        }
+
         func collectionView(
             _ collectionView: NSCollectionView,
             validateDrop draggingInfo: any NSDraggingInfo,
             proposedIndexPath proposedDropIndexPath: AutoreleasingUnsafeMutablePointer<NSIndexPath>,
             dropOperation proposedDropOperation: UnsafeMutablePointer<NSCollectionView.DropOperation>
         ) -> NSDragOperation {
-            let urls = Self.fileURLs(from: draggingInfo)
-            guard !urls.isEmpty else { return [] }
-
-            // Sobre una carpeta (que no sea una de las arrastradas): ahí.
-            if proposedDropOperation.pointee == .on,
-               let item = item(at: proposedDropIndexPath.pointee as IndexPath), item.isDirectory,
-               !urls.contains(where: { $0.standardizedFileURL == item.url.standardizedFileURL }) {
-                return .move
+            let proposal = drops.validate(
+                draggingInfo,
+                folder: dropFolder(at: proposedDropIndexPath.pointee as IndexPath, dropOperation: proposedDropOperation.pointee),
+                currentURL: parent.currentURL,
+                onSpringOpen: { [weak self] folder in self?.parent.onOpen(folder) }
+            )
+            guard let proposal else { return [] }
+            if case .currentDirectory = proposal.target {
+                // No es sobre una carpeta: que no resalte un archivo como destino.
+                proposedDropOperation.pointee = .before
             }
-
-            // En cualquier otro lugar: la carpeta actual.
-            let currentURL = parent.currentURL.standardizedFileURL
-            let alreadyHere = urls.allSatisfy {
-                $0.deletingLastPathComponent().standardizedFileURL == currentURL
-            }
-            guard !alreadyHere else { return [] }
-            proposedDropOperation.pointee = .before
-            return .move
+            return proposal.operation
         }
 
         func collectionView(
@@ -403,25 +406,19 @@ struct FileCollectionView: NSViewRepresentable {
             indexPath: IndexPath,
             dropOperation: NSCollectionView.DropOperation
         ) -> Bool {
-            let urls = Self.fileURLs(from: draggingInfo)
-            let destination: URL
-            if dropOperation == .on, let item = item(at: indexPath), item.isDirectory {
-                destination = item.url
-            } else {
-                destination = parent.currentURL
-            }
-            DebugEventLog.log("drop", "Grilla (NSCollectionView): soltar \(DebugEventLog.names(urls)) → \(destination.lastPathComponent)")
-            guard !urls.isEmpty else { return false }
-            parent.onMoveDropped(urls, destination)
-            return true
+            drops.accept(
+                draggingInfo,
+                folder: dropFolder(at: indexPath, dropOperation: dropOperation),
+                currentURL: parent.currentURL,
+                source: "Grilla (NSCollectionView)",
+                onMove: parent.onMoveDropped,
+                onCopy: { urls, destination in self.collectionView?.interaction.onCopyDropped(urls, destination) }
+            )
         }
 
-        private static func fileURLs(from info: any NSDraggingInfo) -> [URL] {
-            let objects = info.draggingPasteboard.readObjects(
-                forClasses: [NSURL.self],
-                options: [.urlReadingFileURLsOnly: true]
-            ) ?? []
-            return objects.compactMap { $0 as? URL }
+        /// El arrastre salió de la grilla o terminó: se desarma el resorte.
+        func dragLeft() {
+            drops.springLoading.cancel()
         }
     }
 }
@@ -510,9 +507,11 @@ final class FileNSCollectionView: NSCollectionView, FileViewResponder, QuickLook
     var onRenamingEnded: (() -> Void)?
     var isSelectionModeActive = false
     var metrics = FileGridMetrics()
+    /// El arrastre salió de la grilla o terminó.
+    var onDragLeft: (() -> Void)?
     var isRenaming: Bool { renameField != nil }
 
-    private var interaction = FileViewInteraction()
+    private(set) var interaction = FileViewInteraction()
     private var isActivePane = true
     private var renameField: NSTextField?
     private var renamingID: FileItem.ID?
@@ -582,6 +581,16 @@ final class FileNSCollectionView: NSCollectionView, FileViewResponder, QuickLook
         if event.clickCount == 2, let hit, !isSelectionModeActive {
             onOpenItem?(hit)
         }
+    }
+
+    override func draggingExited(_ sender: (any NSDraggingInfo)?) {
+        super.draggingExited(sender)
+        onDragLeft?()
+    }
+
+    override func draggingEnded(_ sender: any NSDraggingInfo) {
+        super.draggingEnded(sender)
+        onDragLeft?()
     }
 
     override func menu(for event: NSEvent) -> NSMenu? {

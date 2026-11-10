@@ -973,3 +973,22 @@ actor, continuación para esperar la respuesta del usuario).
 - Queda pendiente (deuda previa): la lectura del directorio sigue siendo
   síncrona en el main actor; con el observador ahora se relee más seguido.
   233 tests en verde.
+
+## 2026-11-09 — Slice 21: arrastre completo (copiar/mover como Finder, carpetas con resorte)
+
+- `FileDropPolicy`: mismo volumen → mover, otro volumen → copiar, ⌥ fuerza
+  copiar, ⌘ fuerza mover. Se apoya en `draggingSourceOperationMask`, que
+  AppKit ya ajusta según las teclas; al devolver `.copy` el cursor muestra
+  el "+" verde del sistema.
+- ⌥ + soltar en la misma carpeta ahora duplica (antes el drop se rechazaba).
+- `FileDropController` unifica validación y aceptación del drop para la
+  tabla (Lista/Detalles) y la grilla (Iconos/Compacta); antes estaba
+  copiada tres veces.
+- **Carpetas con resorte** (`SpringLoadingTimer`): un arrastre quieto 1 s
+  sobre una carpeta la abre. No "vuelve" sola si el arrastre sale, a
+  diferencia de Finder.
+- No se hizo el menú "Mover aquí / Copiar aquí / Enlazar aquí" de Dolphin:
+  en macOS esa elección va por teclas modificadoras.
+- **Sin verificación de GUI**: las reglas, el destino del drop y el reloj
+  del resorte tienen tests; el arrastre real (cursor, apertura de la
+  carpeta en pleno arrastre) hay que probarlo a mano. 241 tests en verde.

@@ -16,6 +16,8 @@ struct FileViewInteraction {
     /// Letra tipeada en la grilla: saltar al ítem que empieza así. (Las
     /// tablas usan la búsqueda al tipear propia de `NSTableView`.)
     var onTypeAhead: @MainActor (String) -> Void = { _ in }
+    /// Soltar con copia (⌥ o entre volúmenes distintos); mover sigue por `onMoveDropped`.
+    var onCopyDropped: @MainActor ([URL], URL) -> Void = { _, _ in }
     /// Fin de la edición en línea; `nil` = cancelada.
     var onEndRename: @MainActor (FileItem.ID, String?) -> Void = { _, _ in }
 }

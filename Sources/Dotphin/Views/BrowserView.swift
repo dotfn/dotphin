@@ -58,6 +58,9 @@ struct BrowserView: View {
         interaction.onTypeAhead = { characters in
             _ = viewModel.selectItemByTypeAhead(characters)
         }
+        interaction.onCopyDropped = { urls, directory in
+            viewModel.copyDroppedItems(urls, into: directory)
+        }
         interaction.onEndRename = { id, newName in
             viewModel.endRenaming(id, newName: newName)
         }

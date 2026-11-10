@@ -1300,6 +1300,12 @@ final class BrowserViewModel {
         startTransfer(.move, sources: urls, into: directory, failurePrefix: "No se pudieron mover")
     }
 
+    /// Soltar con copia: ⌥ o destino en otro volumen.
+    func copyDroppedItems(_ urls: [URL], into directory: URL) {
+        DebugEventLog.log("drop", "copyDroppedItems(\(DebugEventLog.names(urls)) → \(directory.lastPathComponent))")
+        startTransfer(.copy, sources: urls, into: directory, failurePrefix: "No se pudieron copiar")
+    }
+
     // MARK: - Copiar / mover en segundo plano
 
     /// Lanza la transferencia fuera del main actor. Si ya hay una corriendo,
