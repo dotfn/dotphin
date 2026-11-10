@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 
 /// One reversible filesystem step. A user action (e.g. pasting 3 files) is a batch of these.
-enum FileOperationRecord: Equatable {
+enum FileOperationRecord: Equatable, Sendable {
     case moved(from: URL, to: URL)
     case copied(source: URL, to: URL)
     case createdFolder(URL)

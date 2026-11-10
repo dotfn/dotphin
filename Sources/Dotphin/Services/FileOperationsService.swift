@@ -1,6 +1,6 @@
 import Foundation
 
-enum FileOperationError: Error, Equatable {
+enum FileOperationError: Error, Equatable, Sendable {
     case nameAlreadyExists(URL)
     case invalidName
     case other(String)
@@ -17,7 +17,7 @@ enum FileOperationError: Error, Equatable {
     }
 }
 
-struct FileOperationsService {
+struct FileOperationsService: Sendable {
     private func validate(_ name: String) throws {
         if name.trimmingCharacters(in: .whitespaces).isEmpty || name.contains("/") || name.hasPrefix(".") {
             throw FileOperationError.invalidName
@@ -81,19 +81,51 @@ struct FileOperationsService {
     }
 
     func copy(_ sourceURL: URL, toDirectory destinationDirectory: URL) throws -> URL {
-        let sourcePath = sourceURL.standardizedFileURL.path
-        let destinationDirectoryPath = destinationDirectory.standardizedFileURL.path
-        guard destinationDirectoryPath != sourcePath,
-              !destinationDirectoryPath.hasPrefix(sourcePath + "/") else {
-            throw FileOperationError.other("No se puede copiar una carpeta dentro de sí misma.")
-        }
         let destination = uniqueDestination(for: sourceURL.lastPathComponent, in: destinationDirectory)
+        try copy(sourceURL, to: destination)
+        return destination
+    }
+
+    /// Copia a un destino exacto; falla si ya existe.
+    func copy(_ sourceURL: URL, to destination: URL) throws {
+        try validateTransfer(of: sourceURL, to: destination, kind: .copy)
+        guard !FileManager.default.fileExists(atPath: destination.path) else {
+            throw FileOperationError.nameAlreadyExists(destination)
+        }
         do {
             try FileManager.default.copyItem(at: sourceURL, to: destination)
         } catch {
             throw FileOperationError.other(error.localizedDescription)
         }
-        return destination
+    }
+
+    /// Mueve a un destino exacto (que puede tener otro nombre); falla si ya existe.
+    func move(_ sourceURL: URL, to destination: URL) throws {
+        try validateTransfer(of: sourceURL, to: destination, kind: .move)
+        guard !FileManager.default.fileExists(atPath: destination.path) else {
+            throw FileOperationError.nameAlreadyExists(destination)
+        }
+        do {
+            try FileManager.default.moveItem(at: sourceURL, to: destination)
+        } catch {
+            throw FileOperationError.other(error.localizedDescription)
+        }
+    }
+
+    /// Una carpeta no puede ir a parar dentro de sí misma, ni un ítem
+    /// reemplazarse a sí mismo. Los symlinks de las carpetas padre se
+    /// resuelven para que un alias (p. ej. /tmp → /private/tmp) no esquive
+    /// el chequeo; la hoja no: un symlink que se mueve es el enlace en sí.
+    func validateTransfer(of sourceURL: URL, to destination: URL, kind: FileTransferKind) throws {
+        let sourcePath = Self.resolvingParentSymlinks(of: sourceURL)
+        let destinationPath = Self.resolvingParentSymlinks(of: destination)
+        let verb = kind == .copy ? "copiar" : "mover"
+        guard destinationPath != sourcePath else {
+            throw FileOperationError.other("No se puede \(verb) un ítem sobre sí mismo.")
+        }
+        guard !destinationPath.hasPrefix(sourcePath + "/") else {
+            throw FileOperationError.other("No se puede \(verb) una carpeta dentro de sí misma.")
+        }
     }
 
     /// Undoes `record`. Throws if the filesystem no longer allows it.

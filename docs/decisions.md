@@ -926,3 +926,32 @@ deshacer, modo selección, doble clic). Lo que no se puede probar así: la
 selección por clic y el recuadro de `NSCollectionView` (dependen del estado
 real del mouse), el arrastre, y el aspecto de la toolbar nativa.
 192 tests en verde.
+
+## 2026-11-09 — Slice 19: copiar y mover en segundo plano, con progreso y conflictos
+
+Consultado axiom-concurrency (`@concurrent` para sacar el trabajo del main
+actor, continuación para esperar la respuesta del usuario).
+
+- `FileTransferService.run` (`@concurrent`) copia o mueve un lote ítem por
+  ítem. Lo usan pegar, copiar/mover al otro panel, soltar y duplicar, que
+  antes corrían en el main actor y congelaban la ventana.
+- **Conflicto de nombre**: diálogo Reemplazar / Conservar ambos / Omitir /
+  Detener, con "Aplicar a todos" (`dialogSuppressionToggle`). Reemplazar
+  manda el existente a la Papelera antes de poner el nuevo, así queda en el
+  mismo lote de deshacer. Copiar dentro de la misma carpeta sigue siendo
+  "duplicar" y no pregunta.
+- **Sin vista que pregunte** (`presentsConflictPrompts == false`, p. ej. en
+  tests): se conserva el comportamiento anterior — copiar deja ambos, mover
+  informa "Ya existe un ítem con ese nombre".
+- **Progreso**: barra inferior solo si la operación pasa los 400 ms, con
+  botón Detener. Dos operaciones seguidas se encolan.
+- Al terminar se refrescan también los otros paneles que muestran una
+  carpeta afectada (registro débil de view models). Es provisorio: el
+  observador de carpetas del slice 20 lo reemplaza.
+- **Límites aceptados**: el avance es por ítem, no por bytes, y la
+  cancelación es entre ítems (`FileManager.copyItem` no se puede cortar a la
+  mitad): un único archivo enorme muestra "1 de 1" hasta terminar. Si se
+  cierra la pestaña con el diálogo de conflicto abierto, esa operación
+  queda esperando.
+- Tests que llamaban a estas operaciones ahora esperan con
+  `waitForBackgroundWork()`. 227 tests en verde.

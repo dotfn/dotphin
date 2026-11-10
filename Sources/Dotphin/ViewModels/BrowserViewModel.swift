@@ -260,6 +260,15 @@ final class BrowserViewModel {
     }
 
     private(set) var operationError: FileOperationError?
+    /// Copia o movimiento en curso (corre fuera del main actor).
+    private(set) var activeTransfer: FileTransferProgress?
+    /// `true` cuando hay una vista que puede preguntar qué hacer ante un
+    /// nombre repetido. Sin ella: copiar conserva ambos y mover informa error.
+    @ObservationIgnored var presentsConflictPrompts = false
+    @ObservationIgnored private var transferTask: Task<Void, Never>?
+    @ObservationIgnored private let transfers = FileTransferService()
+    /// Para refrescar los otros paneles que muestran una carpeta afectada.
+    private static let liveViewModels = NSHashTable<BrowserViewModel>.weakObjects()
 
     var searchQuery: String = "" {
         didSet {
@@ -331,6 +340,7 @@ final class BrowserViewModel {
         self.gitStatus = gitStatus
         self.viewProperties = store.properties(for: url)
         load(url)
+        Self.liveViewModels.add(self)
     }
 
     func navigate(to url: URL) {
@@ -439,6 +449,7 @@ final class BrowserViewModel {
     func waitForBackgroundWork() async {
         await searchTask?.value
         await gitTask?.value
+        await transferTask?.value
     }
 
     func resetSearchAndFilters() {
@@ -1201,46 +1212,25 @@ final class BrowserViewModel {
     func duplicateSelected() {
         let targets = selectedItems
         guard !targets.isEmpty else { return }
-        var batch: [FileOperationRecord] = []
-        var createdURLs = Set<URL>()
-        var failures: [String] = []
-        for item in targets {
-            let parent = item.url.deletingLastPathComponent()
-            do {
-                let copyURL = try operations.copy(item.url, toDirectory: parent)
-                batch.append(.copied(source: item.url, to: copyURL))
-                createdURLs.insert(copyURL)
-            } catch {
-                failures.append(item.name)
+        // Cada ítem se duplica al lado suyo (en resultados de búsqueda pueden
+        // venir de carpetas distintas).
+        let byParent = Dictionary(grouping: targets.map(\.url)) { $0.deletingLastPathComponent() }
+        for (parent, urls) in byParent {
+            startTransfer(.copy, sources: urls, into: parent, failurePrefix: "No se pudieron duplicar") { [weak self] result in
+                guard let self else { return }
+                self.selectedIDs = Set(result.createdURLs).intersection(Set(self.items.map(\.id)))
             }
-        }
-        record(batch)
-        refresh()
-        selectedIDs = createdURLs.intersection(Set(items.map(\.id)))
-        if !failures.isEmpty {
-            operationError = .other("No se pudieron duplicar: \(failures.joined(separator: ", "))")
         }
     }
 
     /// Dolphin's Split View "Copy to Inactive Split View" (F5 in Dolphin).
     func copySelected(to destinationDirectory: URL) {
-        let targets = selectedItems
-        guard !targets.isEmpty else { return }
-        var batch: [FileOperationRecord] = []
-        var failures: [String] = []
-        for item in targets {
-            do {
-                let copyURL = try operations.copy(item.url, toDirectory: destinationDirectory)
-                batch.append(.copied(source: item.url, to: copyURL))
-            } catch {
-                failures.append(item.name)
-            }
-        }
-        record(batch)
-        refresh()
-        if !failures.isEmpty {
-            operationError = .other("No se pudieron copiar al otro panel: \(failures.joined(separator: ", "))")
-        }
+        startTransfer(
+            .copy,
+            sources: selectedItems.map(\.url),
+            into: destinationDirectory,
+            failurePrefix: "No se pudieron copiar"
+        )
     }
 
     /// Dolphin's Split View "Move to Inactive Split View" (F6 in Dolphin).
@@ -1299,26 +1289,70 @@ final class BrowserViewModel {
 
     func moveDroppedItems(_ urls: [URL], into directory: URL) {
         DebugEventLog.log("drop", "moveDroppedItems(\(DebugEventLog.names(urls)) → \(directory.lastPathComponent))")
-        defer { refresh() }
-        var failures: [String] = []
-        var batch: [FileOperationRecord] = []
-        for url in urls {
-            do {
-                let destination = try operations.move(url, toDirectory: directory)
-                if destination != url {
-                    batch.append(.moved(from: url, to: destination))
-                }
-            } catch let error as FileOperationError {
-                failures.append("\(url.lastPathComponent): \(error.message)")
-            } catch {
-                failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
+        startTransfer(.move, sources: urls, into: directory, failurePrefix: "No se pudieron mover")
+    }
+
+    // MARK: - Copiar / mover en segundo plano
+
+    /// Lanza la transferencia fuera del main actor. Si ya hay una corriendo,
+    /// esta espera su turno. Al terminar registra el lote para deshacer,
+    /// refresca este panel y los demás que muestren una carpeta afectada.
+    private func startTransfer(
+        _ kind: FileTransferKind,
+        sources: [URL],
+        into directory: URL,
+        failurePrefix: String,
+        onFinished: (@MainActor (FileTransferResult) -> Void)? = nil
+    ) {
+        guard !sources.isEmpty else { return }
+        let previous = transferTask
+        let progress = FileTransferProgress(
+            kind: kind,
+            totalCount: sources.count,
+            destinationName: directory.lastPathComponent.isEmpty ? "/" : directory.lastPathComponent
+        )
+        let task = Task { [weak self] in
+            await previous?.value
+            guard let self, !Task.isCancelled else { return }
+            self.activeTransfer = progress
+            let slowTimer = Task {
+                try? await Task.sleep(for: .milliseconds(400))
+                if !Task.isCancelled { progress.markLongRunning() }
             }
+            let asksUser = self.presentsConflictPrompts
+            let result = await self.transfers.run(
+                kind,
+                sources: sources,
+                into: directory,
+                onProgress: { completed, current in
+                    await progress.update(completed: completed, current: current)
+                },
+                resolveConflict: { conflict in
+                    guard asksUser else {
+                        return FileConflictDecision(resolution: kind == .copy ? .keepBoth : .reportError)
+                    }
+                    return await progress.ask(conflict)
+                }
+            )
+            slowTimer.cancel()
+            if self.activeTransfer === progress {
+                self.activeTransfer = nil
+            }
+            self.record(result.records)
+            self.refresh()
+            let affected = Set(([directory] + sources.map { $0.deletingLastPathComponent() }).map(\.standardizedFileURL))
+            for other in Self.liveViewModels.allObjects
+            where other !== self && affected.contains(other.currentURL.standardizedFileURL) {
+                other.refresh()
+            }
+            DebugEventLog.log("transfer", "hechos=\(result.records.count) fallaron=\(result.failures.count) cancelada=\(result.wasCancelled)")
+            if !result.failures.isEmpty {
+                self.operationError = .other("\(failurePrefix): \(result.failures.joined(separator: "; "))")
+            }
+            onFinished?(result)
         }
-        record(batch)
-        DebugEventLog.log("drop", "movidos=\(batch.count) fallaron=\(failures.isEmpty ? "∅" : failures.joined(separator: ", "))")
-        if !failures.isEmpty {
-            operationError = .other("No se pudieron mover: \(failures.joined(separator: "; "))")
-        }
+        progress.task = task
+        transferTask = task
     }
 
     // MARK: - Clipboard (Copiar / Cortar / Pegar)
@@ -1374,31 +1408,16 @@ final class BrowserViewModel {
 
     func paste(into directory: URL) {
         guard let (urls, mode) = clipboard.read() else { return }
-        defer { refresh() }
-        var failures: [String] = []
-        var batch: [FileOperationRecord] = []
-        for url in urls {
-            do {
-                switch mode {
-                case .copy:
-                    let created = try operations.copy(url, toDirectory: directory)
-                    batch.append(.copied(source: url, to: created))
-                case .cut:
-                    let destination = try operations.move(url, toDirectory: directory)
-                    if destination != url {
-                        batch.append(.moved(from: url, to: destination))
-                    }
-                }
-            } catch {
-                failures.append(url.lastPathComponent)
+        startTransfer(
+            mode == .copy ? .copy : .move,
+            sources: urls,
+            into: directory,
+            failurePrefix: "No se pudieron pegar"
+        ) { [weak self] result in
+            // Lo cortado se pega una sola vez.
+            if mode == .cut && result.failures.isEmpty && !result.wasCancelled {
+                self?.clipboard.clear()
             }
-        }
-        record(batch)
-        if mode == .cut && failures.isEmpty {
-            clipboard.clear()
-        }
-        if !failures.isEmpty {
-            operationError = .other("No se pudieron pegar: \(failures.joined(separator: ", "))")
         }
     }
 

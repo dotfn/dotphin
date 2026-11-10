@@ -337,6 +337,12 @@ struct BrowserView: View {
                 }
             }
 
+            if let transfer = viewModel.activeTransfer, transfer.isLongRunning {
+                Divider()
+                FileTransferBarView(transfer: transfer)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
             if viewModel.isSelectionModeActive {
                 Divider()
                 SelectionModeBottomBarView(
@@ -403,7 +409,10 @@ struct BrowserView: View {
         .environment(\.fileViewInteraction, fileViewInteraction)
         .onChange(of: ObjectIdentifier(viewModel), initial: true) { _, _ in
             viewModel.undoManager = undoManager
+            // Esta vista puede mostrar el diálogo de nombres repetidos.
+            viewModel.presentsConflictPrompts = true
         }
+        .modifier(FileConflictDialogModifier(transfer: viewModel.activeTransfer))
         .onChange(of: undoManager) { _, newValue in
             viewModel.undoManager = newValue
         }

@@ -90,10 +90,11 @@ final class MultiSelectionTests: XCTestCase {
         XCTAssertEqual(Set(vm.items.map(\.name)), ["a.txt", "b.txt", "c.txt", "d.txt"])
     }
 
-    func test_duplicateSelected_createsCopiesSelectsThemAndUndoRestores() {
+    func test_duplicateSelected_createsCopiesSelectsThemAndUndoRestores() async {
         vm.select(item("a.txt"))
         vm.toggleSelection(item("c.txt"))
         vm.duplicateSelected()
+        await vm.waitForBackgroundWork()
         XCTAssertTrue(vm.items.map(\.name).contains("a copy.txt"))
         XCTAssertTrue(vm.items.map(\.name).contains("c copy.txt"))
         XCTAssertEqual(Set(vm.selectedItems.map(\.name)), ["a copy.txt", "c copy.txt"])

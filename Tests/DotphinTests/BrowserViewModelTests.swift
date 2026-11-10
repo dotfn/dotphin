@@ -366,7 +366,7 @@ final class BrowserViewModelTests: XCTestCase {
         XCTAssertEqual(vm.gitStatuses["new.txt"], .untracked)
     }
 
-    func test_moveDroppedItems_movesFileIntoTargetDirectory() throws {
+    func test_moveDroppedItems_movesFileIntoTargetDirectory() async throws {
         let fileURL = tempDir.appendingPathComponent("a.txt")
         try "x".write(to: fileURL, atomically: true, encoding: .utf8)
         let destDir = tempDir.appendingPathComponent("dest", isDirectory: true)
@@ -374,13 +374,14 @@ final class BrowserViewModelTests: XCTestCase {
         let vm = BrowserViewModel(startingAt: tempDir)
 
         vm.moveDroppedItems([fileURL], into: destDir)
+        await vm.waitForBackgroundWork()
 
         XCTAssertFalse(FileManager.default.fileExists(atPath: fileURL.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: destDir.appendingPathComponent("a.txt").path))
         XCTAssertNil(vm.operationError)
     }
 
-    func test_moveDroppedItems_whenOneFails_reportsErrorButMovesTheRest() throws {
+    func test_moveDroppedItems_whenOneFails_reportsErrorButMovesTheRest() async throws {
         let okFile = tempDir.appendingPathComponent("ok.txt")
         try "x".write(to: okFile, atomically: true, encoding: .utf8)
         let conflictFile = tempDir.appendingPathComponent("conflict.txt")
@@ -391,6 +392,7 @@ final class BrowserViewModelTests: XCTestCase {
         let vm = BrowserViewModel(startingAt: tempDir)
 
         vm.moveDroppedItems([okFile, conflictFile], into: destDir)
+        await vm.waitForBackgroundWork()
 
         XCTAssertFalse(FileManager.default.fileExists(atPath: okFile.path), "el que no tenía conflicto se movió igual")
         XCTAssertTrue(FileManager.default.fileExists(atPath: conflictFile.path), "el que tenía conflicto se quedó donde estaba")
