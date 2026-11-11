@@ -127,6 +127,7 @@ struct ContentView: View {
         // Cerrar la ventana termina su shell (y los trabajos en segundo plano).
         .onDisappear {
             embeddedTerminalSession.stop()
+            tabsViewModel.closeAllPanes()
         }
     }
 

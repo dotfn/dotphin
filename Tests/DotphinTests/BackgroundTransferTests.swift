@@ -172,4 +172,57 @@ final class BackgroundTransferTests: XCTestCase {
         }
         XCTFail("la condición no se cumplió a tiempo")
     }
+
+    // MARK: Panel cerrado con un conflicto pendiente (#4)
+
+    func test_conflict_closingThePaneWhileAsking_stopsInsteadOfWaitingForever() async throws {
+        try "viejo".write(to: destDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let source = makeViewModel(at: sourceDir)
+        source.presentsConflictPrompts = true
+        source.selectAll()
+
+        source.moveSelected(to: destDir)
+        _ = try await waitForConflict(in: source)
+        source.close()
+        await source.waitForBackgroundWork()
+
+        XCTAssertNil(source.activeTransfer)
+        XCTAssertEqual(text("a.txt", in: destDir), "viejo")
+        XCTAssertEqual(text("a.txt", in: sourceDir), "nuevo")
+        XCTAssertEqual(text("b.txt", in: sourceDir), "B", "lo que venía después tampoco se movió")
+    }
+
+    func test_conflict_afterThePaneWasClosed_stopsWithoutAsking() async throws {
+        try "viejo".write(to: destDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let source = makeViewModel(at: sourceDir)
+        source.presentsConflictPrompts = true
+        source.selectAll()
+        source.close()
+
+        source.copySelected(to: destDir)
+        await source.waitForBackgroundWork()
+
+        XCTAssertNil(source.activeTransfer)
+        XCTAssertEqual(text("a.txt", in: destDir), "viejo")
+        XCTAssertNil(text("b.txt", in: destDir))
+    }
+
+    func test_closingATab_stopsItsPendingConflict() async throws {
+        try "viejo".write(to: destDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let tabs = TabsViewModel(startingAt: root)
+        tabs.addTab(startingAt: sourceDir)
+        let tab = try XCTUnwrap(tabs.selectedTab)
+        let source = tab.primary
+        await source.waitForBackgroundWork()
+        source.presentsConflictPrompts = true
+        source.selectAll()
+
+        source.copySelected(to: destDir)
+        _ = try await waitForConflict(in: source)
+        tabs.closeTab(tab.id)
+        await source.waitForBackgroundWork()
+
+        XCTAssertNil(source.activeTransfer)
+        XCTAssertEqual(text("a.txt", in: destDir), "viejo")
+    }
 }

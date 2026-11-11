@@ -278,11 +278,21 @@ final class TabsViewModel {
         }
 
         tabs.remove(at: index)
+        closing.primary.close()
+        closing.secondary?.close()
         if selectedTabID == id {
             let newIndex = min(index, tabs.count - 1)
             selectedTabID = tabs[newIndex].id
         }
         saveSessionSnapshot()
+    }
+
+    /// La ventana se cerró: ningún panel puede seguir esperando una respuesta.
+    func closeAllPanes() {
+        for tab in tabs {
+            tab.primary.close()
+            tab.secondary?.close()
+        }
     }
 
     func reopenLastClosedTab() {
@@ -319,6 +329,7 @@ final class TabsViewModel {
     func toggleSplit(for id: Tab.ID) {
         guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
         if tabs[index].isSplit {
+            tabs[index].secondary?.close()
             tabs[index].secondary = nil
             tabs[index].focusedPaneIndex = 0
         } else {

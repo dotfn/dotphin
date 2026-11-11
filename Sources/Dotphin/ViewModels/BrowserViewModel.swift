@@ -272,6 +272,17 @@ final class BrowserViewModel {
     /// `true` cuando hay una vista que puede preguntar qué hacer ante un
     /// nombre repetido. Sin ella: copiar conserva ambos y mover informa error.
     @ObservationIgnored var presentsConflictPrompts = false
+    /// El panel se cerró (su pestaña, la vista dividida o la ventana): ya no
+    /// queda vista que pueda preguntar por un nombre repetido.
+    @ObservationIgnored private(set) var isClosed = false
+
+    /// Lo llama quien descarta el panel. Una copia o movimiento que esperaba
+    /// respuesta se detiene (lo ya transferido queda); si no, quedaba
+    /// suspendida para siempre y las siguientes se encolaban detrás.
+    func close() {
+        isClosed = true
+        activeTransfer?.resolve(.stop)
+    }
     @ObservationIgnored private var transferTask: Task<Void, Never>?
     /// Lo prende la vista que muestra este panel: la carpeta actual se
     /// vuelve a leer sola cuando cambia en disco (FSEvents).
@@ -1417,6 +1428,10 @@ final class BrowserViewModel {
                 resolveConflict: { conflict in
                     guard asksUser else {
                         return FileConflictDecision(resolution: kind == .copy ? .keepBoth : .reportError)
+                    }
+                    // Con el panel cerrado nadie va a responder.
+                    if await self.isClosed {
+                        return FileConflictDecision(resolution: .stop)
                     }
                     return await progress.ask(conflict)
                 }
