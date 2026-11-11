@@ -1310,3 +1310,37 @@ Reportado por el usuario al probar.
   color de acento cuando soltar ya navega.
 - `NSEvent.isTouchSwipeNavigationEnabled` (macOS 27) es para pantallas
   táctiles, no para el trackpad.
+
+## 2026-11-11 — Auditoría de APIs nativas: ocultos, tipo, paquetes y sesión
+
+Salió de una auditoría de lo que la app hacía a mano teniendo API del sistema
+(issues #15 a #34). Acá, los cuatro que eran bugs.
+
+- Ocultos (#15): `DirectoryReader` y `FolderTreeProvider` leen `isHiddenKey`.
+  Además de los nombres con punto y `.hidden`, queda oculto lo que lleva la
+  marca del sistema (`~/Library`, `/usr`…). El conteo de ítems de una carpeta
+  usa `.skipsHiddenFiles`. El autocompletado de la barra de ubicación sigue
+  mirando solo el punto: `~/Lib` + Tab tiene que completar `Library`.
+- Tipo (#16): `localizedTypeDescriptionKey`, guardado en
+  `FileItem.typeDescription`; `kindDescription` cae a la extensión si no se
+  leyó (ítems armados a mano en los tests). Medido: ~15 ms más en `/usr/bin`
+  (932 entradas).
+- Paquetes (#17): `isPackageKey`. `FileItem.opensAsFolder` (carpeta que no es
+  paquete) decide abrir, ordenar con las carpetas, desplegar en Detalles y los
+  ítems de menú de carpeta; «Mostrar contenido del paquete» entra igual. La
+  búsqueda no baja a los paquetes (`.skipsPackageDescendants`). Queda como
+  carpeta para soltar, pegar adentro y «Abrir terminal aquí».
+- Sesión de pestañas (#18): `TabSessionStore` guarda una sesión por ventana
+  (`tabsSessions.v2`, las 12 más recientes). La ventana se identifica con
+  `@SceneStorage("tabSessionID")`: si el sistema la restaura, vuelve con su
+  id y sus pestañas. Sin restauración, solo la primera ventana del proceso
+  retoma la última sesión usada (`claimLaunchSession`); las de ⌘N empiezan
+  de cero. No se guardan las pestañas en `@SceneStorage` porque, con «Cerrar
+  ventanas al salir de una app» (el valor por defecto), macOS lo descarta al
+  salir y se perdería "recordar pestañas". La clave vieja
+  (`tabsSessionSnapshot.v1`) se sigue leyendo como sesión inicial.
+- `ArchiveService.runProcess` leía stderr después de `waitUntilExit()`: mismo
+  bloqueo que el del slice 10. La salida que nadie lee va a `/dev/null`.
+- Sin verificar en la app real: la restauración de varias ventanas por el
+  sistema (los tests cubren `TabSessionStore` y `beginSession`, no el enganche
+  con `@SceneStorage`).
