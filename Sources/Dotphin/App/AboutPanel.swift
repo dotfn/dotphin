@@ -32,7 +32,7 @@ enum AppInfo {
 struct AboutCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
-            Button(String(localized: "Acerca de \(AppInfo.name)", bundle: #bundle)) {
+            Button(String(localized: "Acerca de \(AppInfo.name)", bundle: #bundle), menuIcon: "info.circle") {
                 AboutPanel.show()
             }
         }

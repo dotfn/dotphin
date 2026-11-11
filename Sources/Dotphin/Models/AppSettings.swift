@@ -164,7 +164,7 @@ struct AppSettings: Codable, Equatable {
     var useRelativeDates: Bool = true
     var expandableFoldersInDetails: Bool = true
     var browseThroughArchives: Bool = false
-    /// Íconos a la izquierda de los ítems de los menús contextuales (Dolphin los muestra).
+    /// Íconos a la izquierda de los ítems de los menús (Dolphin los muestra).
     var showsMenuIcons: Bool = true
 
     private enum CodingKeys: String, CodingKey {

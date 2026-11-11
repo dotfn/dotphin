@@ -61,6 +61,7 @@ struct SettingsView: View {
                         Text(String(localized: "Detalles", bundle: #bundle)).tag(ViewMode.details)
                     }
                     Toggle(String(localized: "Mostrar archivos ocultos por defecto", bundle: #bundle), isOn: $model.settings.showsHiddenFiles)
+                    Toggle(String(localized: "Mostrar íconos en los menús", bundle: #bundle), isOn: $model.settings.showsMenuIcons)
                     Toggle(String(localized: "Carpetas desplegables en modo Detalles", bundle: #bundle), isOn: $model.settings.expandableFoldersInDetails)
                     Toggle(String(localized: "Abrir archivos comprimidos como carpetas (BrowseThroughArchives)", bundle: #bundle), isOn: $model.settings.browseThroughArchives)
                 }
@@ -101,7 +102,6 @@ struct SettingsView: View {
                 }
 
                 Section(String(localized: "Menú contextual", bundle: #bundle)) {
-                    Toggle(String(localized: "Mostrar íconos en los menús", bundle: #bundle), isOn: $model.settings.showsMenuIcons)
                     Toggle(String(localized: "Mostrar comando «Eliminar permanentemente» en el menú contextual", bundle: #bundle), isOn: $model.settings.showPermanentDeleteCommand)
                 }
             }

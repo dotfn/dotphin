@@ -89,7 +89,7 @@ struct TabBarView: View {
                     removal: .scale(scale: 0.92).combined(with: .opacity)
                 ))
                 .contextMenu {
-                    Button(String(localized: "Duplicar pestaña", bundle: #bundle), menuIcon: "plus.square.on.square") {
+                    Button(String(localized: "Duplicar pestaña", bundle: #bundle), menuIcon: "square.on.square") {
                         viewModel.duplicateTab(tab.id)
                     }
                     Button(String(localized: "Recargar pestaña", bundle: #bundle), menuIcon: "arrow.clockwise") {

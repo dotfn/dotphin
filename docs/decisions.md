@@ -1249,3 +1249,10 @@ Reportado por el usuario al probar.
   plantillas, apps de "Abrir con") ni botones de diálogos. Los íconos del
   menú "Icono de carpeta" se ven siempre: son el contenido.
 - Un test comprueba que cada `menuIcon:` del código es un SF Symbol real.
+- Después, a pedido del usuario, también la barra de menús (Archivo, Edición,
+  Visualización, Ir, Marcadores, Acerca de): mismos símbolos que la barra de
+  herramientas. La opción pasa a "Comportamiento de visualización", porque ya
+  no es solo del menú contextual. Duplicar (archivo o pestaña) usa
+  `square.on.square`; "pestaña nueva", `plus.square.on.square`. Los ítems
+  estándar del sistema (Cortar, Copiar, Pegar…) los pone macOS y no dependen
+  de esta opción.

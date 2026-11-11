@@ -193,7 +193,7 @@ struct DotphinItemContextMenu: View {
 
         Divider()
 
-        Button(String(localized: "Duplicar aquí", bundle: #bundle), menuIcon: "plus.square.on.square") {
+        Button(String(localized: "Duplicar aquí", bundle: #bundle), menuIcon: "square.on.square") {
             ensureTargetItemsSelected()
             actions.viewModel.duplicateSelected()
         }

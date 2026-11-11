@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Texto de un ítem de menú con su ícono a la izquierda, como en Dolphin y en
-/// los menús de macOS 26. El ícono se puede apagar en Configuración
-/// (`showsMenuIcons`); las casillas (`Toggle`) no llevan: la marca ya es su ícono.
+/// Texto de un ítem de menú (barra de menús y menús contextuales) con su ícono
+/// a la izquierda, como en Dolphin y en los menús de macOS 26. El ícono se puede
+/// apagar en Configuración (`showsMenuIcons`); las casillas (`Toggle`) no
+/// llevan: la marca ya es su ícono.
 struct MenuItemLabel: View {
     let title: String
     let systemImage: String

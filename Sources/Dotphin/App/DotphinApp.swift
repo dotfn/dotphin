@@ -53,7 +53,7 @@ private struct AppSettingsCommands: Commands {
 
     var body: some Commands {
         CommandGroup(after: .appSettings) {
-            Button(String(localized: "Mostrar todas las pestañas", bundle: #bundle)) {
+            Button(String(localized: "Mostrar todas las pestañas", bundle: #bundle), menuIcon: "square.grid.2x2") {
                 commands?.perform(.toggleTabOverview)
             }
             .keyboardShortcut("\\", modifiers: [.command, .shift])
