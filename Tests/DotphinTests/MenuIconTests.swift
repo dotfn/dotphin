@@ -75,7 +75,9 @@ final class MenuIconTests: XCTestCase {
         XCTAssertGreaterThan(withIcons.values.filter { $0 }.count, 8)
 
         settings.settings.showsMenuIcons = false
-        let withoutIcons = try menuImages()
+        // «Compartir…» trae el ícono del sistema (`ShareLink`); a ese lo oculta
+        // `MenuImageVisibility`, como a Cortar o Copiar.
+        let withoutIcons = try menuImages().filter { $0.key != "Share…" && $0.key != "Compartir…" }
         XCTAssertEqual(withoutIcons.values.filter { $0 }.count, 0, "con la opción apagada no debe haber íconos: \(withoutIcons)")
     }
 

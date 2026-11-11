@@ -245,8 +245,13 @@ struct DotphinItemContextMenu: View {
 
         Divider()
 
-        // Dolphin Item Actions: Color Tags, Folder Icons, Hide/Unhide (.hidden), Bookmarks
-        colorTagMenu
+        // Como Finder: Compartir (AirDrop, Mail, Mensajes…) y la fila de colores.
+        ShareLink(items: targetItems.map(\.url))
+        colorTagPalette
+
+        Divider()
+
+        // Dolphin Item Actions: Folder Icons, Hide/Unhide (.hidden), Bookmarks
 
         if let item = singleItem, item.isDirectory {
             folderIconMenu(for: item.url)
@@ -391,24 +396,33 @@ struct DotphinItemContextMenu: View {
         }
     }
 
+    /// La fila de círculos de colores de Finder (`.palette`). Con varios ítems no
+    /// hay una etiqueta "actual": ninguno va marcado. Los círculos se tiñen con
+    /// `tint` en un `Label`: con `foregroundStyle` el menú los dibuja grises.
     @ViewBuilder
-    private var colorTagMenu: some View {
-        Menu(String(localized: "Etiqueta de color", bundle: #bundle), menuIcon: "tag") {
-            // Con varios ítems no hay una etiqueta "actual": ninguna va marcada.
-            Picker(selection: Binding(
-                get: { singleItem?.colorTag },
-                set: { tag in
-                    if let tag { actions.viewModel.setColorTag(tag, for: targetItems) }
-                }
-            )) {
-                ForEach(FinderColorTag.allCases) { tag in
-                    Text(tag.title).tag(Optional(tag))
-                }
-            } label: {
-                EmptyView()
+    private var colorTagPalette: some View {
+        let current = singleItem?.colorTag
+        let anyTagged = targetItems.contains { $0.colorTag != .none }
+        Picker(selection: Binding<FinderColorTag?>(
+            get: { current == FinderColorTag.none ? nil : current },
+            set: { tag in
+                guard let tag else { return }
+                actions.viewModel.setColorTag(FinderColorTag.tagToApply(choosing: tag, current: current), for: targetItems)
             }
-            .pickerStyle(.inline)
+        )) {
+            ForEach(FinderColorTag.finderPaletteOrder) { tag in
+                SwiftUI.Label(tag.title, systemImage: "circle.fill")
+                    .tint(Color(nsColor: tag.nsColor ?? .systemGray))
+                    .tag(Optional(tag))
+            }
+            if anyTagged {
+                SwiftUI.Label(FinderColorTag.none.title, systemImage: "xmark.circle")
+                    .tag(Optional(FinderColorTag.none))
+            }
+        } label: {
+            Text(String(localized: "Etiqueta de color", bundle: #bundle))
         }
+        .pickerStyle(.palette)
     }
 
     @ViewBuilder

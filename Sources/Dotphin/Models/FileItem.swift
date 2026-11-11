@@ -27,6 +27,15 @@ enum FinderColorTag: Int, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// Qué etiqueta queda al elegir `chosen` en la fila de colores: como en
+    /// Finder, volver a elegir el color que ya tiene lo quita.
+    static func tagToApply(choosing chosen: FinderColorTag, current: FinderColorTag?) -> FinderColorTag {
+        chosen == current ? .none : chosen
+    }
+
+    /// Los colores en el orden de la fila de Finder.
+    static let finderPaletteOrder: [FinderColorTag] = [.red, .orange, .yellow, .green, .blue, .purple, .gray]
+
     var nsColor: NSColor? {
         switch self {
         case .none: return nil

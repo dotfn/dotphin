@@ -1264,3 +1264,22 @@ Reportado por el usuario al probar.
   según la opción; con la opción apagada también oculta los íconos que pone
   el sistema. SwiftUI no tiene modificador para esto. El test falla sin el
   coordinador (todos los ítems quedan en "automático").
+
+## 2026-11-11 — Compartir y fila de colores en el menú contextual (como Finder)
+
+- Pedido del usuario (y issue #6): «Compartir…» con AirDrop, Mail, Mensajes,
+  y la fila de círculos de colores de Finder.
+- Compartir: `ShareLink(items:)` dentro del menú; `NSHostingMenu` lo convierte
+  en el ítem estándar del sistema (`_performStandardShareMenuItem`), el mismo
+  de Finder. Sirve para varios archivos.
+- Colores: `Picker` con `.pickerStyle(.palette)` → submenú con
+  `presentationStyle = .palette`, que AppKit dibuja como la fila en línea.
+  Orden de Finder (rojo… gris). Los círculos van como `Label(...).tint(color)`:
+  con `foregroundStyle` el menú los convierte en plantilla y salen grises (un
+  test dibuja cada círculo y mide su color). Reemplaza al submenú «Etiqueta de
+  color». Volver a elegir el color actual lo quita (`tagToApply`); además, si
+  hay etiqueta, una ✕ para quitarla.
+- `MenuImageVisibility` deja siempre visibles las imágenes de una paleta: son
+  el contenido, no un adorno, aunque se apaguen los íconos de los menús.
+- No se pudo automatizar el clic: `performActionForItem` no dispara los ítems
+  de `NSHostingMenu` fuera de un menú abierto de verdad.

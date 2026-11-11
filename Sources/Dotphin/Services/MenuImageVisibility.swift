@@ -53,7 +53,8 @@ final class MenuImageVisibility {
     }
 
     private func apply(to item: NSMenuItem) {
-        let wanted = wantedVisibility
+        // En una paleta (los colores de las etiquetas) la imagen es el ítem: siempre visible.
+        let wanted = item.menu?.presentationStyle == .palette ? .visible : wantedVisibility
         // Cambiar la visibilidad vuelve a avisar `didChangeItem`: solo si hace falta.
         if item.preferredImageVisibility != wanted {
             item.preferredImageVisibility = wanted
