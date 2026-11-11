@@ -4,7 +4,7 @@
 
 <h1 align="center">Dotphin</h1>
 
-<p align="center">A native macOS file manager, built with SwiftUI, that brings KDE Dolphin's file-exploration workflow to the Mac.</p>
+<p align="center">A native macOS file manager, built with SwiftUI: tabs, split panes, an embedded terminal and Git status on every file.</p>
 
 <p align="center">
   <img src="screenshot.png" alt="Dotphin main window" width="900">
@@ -12,7 +12,7 @@
 
 ## What it is
 
-Dotphin is a from-scratch macOS file manager inspired by [KDE Dolphin](https://apps.kde.org/dolphin/)'s feature set, restyled to Apple's Human Interface Guidelines and Liquid Glass rather than cloned pixel-for-pixel. It does not share code with Dolphin — only the UX ideas it's worth porting.
+Dotphin is a from-scratch macOS file manager for people who spend their day in folders, designed to Apple's Human Interface Guidelines and Liquid Glass. Its shortcuts follow macOS and Finder.
 
 ## Features
 
@@ -24,7 +24,7 @@ Dotphin is a from-scratch macOS file manager inspired by [KDE Dolphin](https://a
 - File operations: copy/move/rename, batch rename, undo/redo, archives (zip), file compare
 - Info panel with Quick Look thumbnails and rich metadata
 - Trash as a navigable location, with external volume eject support
-- Embedded terminal panel (F4) synced to the active folder: a full xterm-compatible terminal with 256-color and truecolor support, `vim`/`less`/`htop`, and mouse support
+- Embedded terminal panel (⌃`) synced to the active folder: a full xterm-compatible terminal with 256-color and truecolor support, `vim`/`less`/`htop`, and mouse support
 - Configurable toolbar and a Settings window (default view, startup location, hidden files)
 
 ## Install
@@ -69,3 +69,7 @@ Tests/DotphinTests/
 ```
 
 The only dependency is [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) (MIT), the terminal engine behind the embedded terminal panel.
+
+## Acknowledgements
+
+Thanks to [KDE Dolphin](https://apps.kde.org/dolphin/) for showing what a file manager can be. Dotphin shares no code with it and isn't affiliated with KDE.
