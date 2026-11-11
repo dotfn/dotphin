@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 APP_NAME="Dotphin"
 BUNDLE_DIR="${1:-$ROOT_DIR/.build/${APP_NAME}.app}"
+# Versión de marketing (CFBundleShortVersionString solo admite números, sin "-beta").
+APP_VERSION="${APP_VERSION:-0.1.0}"
+BUILD_NUMBER="${BUILD_NUMBER:-1}"
 
 echo "Compilando Dotphin (release)..."
 cd "$ROOT_DIR"
@@ -52,11 +55,11 @@ cat > "$BUNDLE_DIR/Contents/Info.plist" <<EOF
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>${APP_VERSION}</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>${BUILD_NUMBER}</string>
     <key>LSMinimumSystemVersion</key>
-    <string>26.0</string>
+    <string>27.0</string>
     <key>NSHumanReadableCopyright</key>
     <string>© 2026 ●fn</string>
     <key>NSHighResolutionCapable</key>

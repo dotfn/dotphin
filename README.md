@@ -27,10 +27,18 @@ Dotphin is a from-scratch macOS file manager inspired by [KDE Dolphin](https://a
 - Embedded terminal panel synced to the active folder
 - Configurable toolbar and a Settings window (default view, startup location, hidden files)
 
+## Install
+
+```sh
+brew install --cask dotfn/tap/dotphin
+```
+
+Dotphin is still in beta and isn't notarized yet; the cask clears the download quarantine so macOS lets it open.
+
 ## Requirements
 
 - macOS 27 or later
-- Xcode 27 / Swift 6.4 toolchain
+- Xcode 27 / Swift 6.4 toolchain (to build from source)
 
 ## Build & run
 
