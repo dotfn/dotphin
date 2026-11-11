@@ -24,11 +24,13 @@ struct DotphinApp: App {
         }
     }
 
-    /// Safely resolves `AppIcon.icns` from either an `.app` bundle or the SPM resource bundle
+    /// Gives the bare SPM executable (`swift run`) a Dock icon from the SPM resource bundle,
     /// without invoking `Bundle.module`'s `fatalError` if the bundle was relocated.
+    /// Inside the `.app` the system already draws the Icon Composer icon from Assets.car;
+    /// overriding it with the `.icns` would put it back in the gray macOS 26 frame.
     fileprivate static func applyAppIcon() {
+        guard Bundle.main.bundleURL.pathExtension != "app" else { return }
         let candidates: [URL?] = [
-            Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
             Bundle.main.resourceURL?
                 .appendingPathComponent("Dotphin_Dotphin.bundle")
                 .appendingPathComponent("AppIcon.icns"),

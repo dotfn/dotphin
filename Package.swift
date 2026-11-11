@@ -21,10 +21,11 @@ let package = Package(
         .executableTarget(
             name: "Dotphin",
             path: "Sources/Dotphin",
+            // AppIcon.icon (Icon Composer) lo compila actool en el .app; ver
+            // scripts/build_app_bundle.sh. AppIcon.icns es su salida, para `swift run`.
+            exclude: ["Resources/AppIcon.icon"],
             resources: [
                 .copy("Resources/AppIcon.icns"),
-                .copy("Resources/AppIcon.icon"),
-                .process("Resources/Assets.xcassets"),
                 .process("Resources/Localizable.xcstrings"),
             ],
             linkerSettings: [

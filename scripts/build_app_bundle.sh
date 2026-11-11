@@ -24,9 +24,14 @@ cp "$EXECUTABLE" "$BUNDLE_DIR/Contents/MacOS/Dotphin"
 if [ -d "$RESOURCE_BUNDLE" ]; then
     cp -R "$RESOURCE_BUNDLE" "$BUNDLE_DIR/Contents/Resources/"
 fi
-if [ -f "$ROOT_DIR/Sources/Dotphin/Resources/AppIcon.icns" ]; then
-    cp "$ROOT_DIR/Sources/Dotphin/Resources/AppIcon.icns" "$BUNDLE_DIR/Contents/Resources/AppIcon.icns"
-fi
+# Ícono de Icon Composer: actool genera Assets.car (lo que usa macOS 26+, con
+# la forma, sombra y brillo del sistema) y AppIcon.icns de respaldo. Un .icns
+# suelto queda encerrado en un cuadrado gris desde macOS 26.
+xcrun actool "$ROOT_DIR/Sources/Dotphin/Resources/AppIcon.icon" \
+    --compile "$BUNDLE_DIR/Contents/Resources" \
+    --platform macosx --minimum-deployment-target 27.0 \
+    --app-icon AppIcon \
+    --output-partial-info-plist "$(mktemp -d)/actool.plist" >/dev/null
 
 cat > "$BUNDLE_DIR/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -43,6 +48,8 @@ cat > "$BUNDLE_DIR/Contents/Info.plist" <<EOF
     <key>CFBundleExecutable</key>
     <string>Dotphin</string>
     <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.dotphin.app</string>

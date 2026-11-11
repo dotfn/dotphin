@@ -1097,3 +1097,24 @@ Reportado por el usuario al probar.
 - Verificado: `brew style`, `brew audit --cask --strict --online`,
   `brew livecheck`, y `brew install --cask dotfn/tap/dotphin` real; la app
   instalada abre con `open`.
+
+## 2026-11-10 — Ícono nativo de macOS 26+ (Icon Composer)
+
+- El ícono aparecía dentro de un cuadrado gris. Desde macOS 26, un `.icns`
+  suelto que no sigue la forma del sistema queda encerrado así. El
+  `AppIcon.icon` de Icon Composer estaba en el repo pero nunca se compilaba.
+- `build_app_bundle.sh` corre `actool` sobre `AppIcon.icon`: genera
+  `Assets.car` (el ícono que usa macOS, con la forma, sombra y brillo del
+  sistema) y `AppIcon.icns` de respaldo, y el Info.plist declara
+  `CFBundleIconName`.
+- El dibujo traía un fondo redondeado propio, no cuadrado, con bordes
+  transparentes. Se rehízo a sangre completa (fondo claro hasta el borde, la
+  carpeta al 80% del lienzo) para que el sistema le aplique su forma.
+- `applyAppIcon()` solo pone el ícono a mano en `swift run`, sin `.app`.
+  Dentro del `.app` reemplazaba el de Assets.car por el `.icns` y volvía a
+  aparecer el cuadrado gris en el Dock.
+- Se borran `Assets.xcassets` y `scripts/make_icons.swift`: eran el sistema
+  viejo de imágenes con margen y sombra propios. El README usa `docs/icon.png`.
+- Verificado pidiendo a macOS el ícono como lo dibuja Finder
+  (`NSWorkspace.icon(forFile:)`): antes, el cuadrado gris; ahora, la forma del
+  sistema.

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Sources/Dotphin/Resources/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="128" height="128" alt="Dotphin icon">
+  <img src="docs/icon.png" width="128" height="128" alt="Dotphin icon">
 </p>
 
 <h1 align="center">Dotphin</h1>
