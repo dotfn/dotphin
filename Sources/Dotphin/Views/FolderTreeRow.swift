@@ -1,43 +1,40 @@
 import AppKit
 import SwiftUI
 
+/// Una carpeta del árbol "Carpetas". Lo desplegado y las subcarpetas viven en
+/// `FolderTreeModel`, no en la fila (ver ahí por qué).
 struct FolderTreeRow: View {
     let url: URL
+    let model: FolderTreeModel
     var currentURL: URL? = nil
     var showsHiddenFiles: Binding<Bool>? = nil
     var limitToHomeDirectory: Binding<Bool>? = nil
-    var depth: Int = 0
     let onSelect: (URL) -> Void
     var onOpenInNewTab: ((URL) -> Void)? = nil
     var onOpenInSplitView: ((URL) -> Void)? = nil
-
-    @State private var children: [URL]?
-    @State private var isExpanded = false
 
     private var isSelected: Bool {
         guard let currentURL else { return false }
         return url.standardizedFileURL.path == currentURL.standardizedFileURL.path
     }
 
-    private var isAncestorOfCurrentURL: Bool {
-        guard let currentURL, depth < 5 else { return false }
-        let selfPath = url.standardizedFileURL.path
-        let targetPath = currentURL.standardizedFileURL.path
-        guard targetPath != selfPath else { return false }
-        let prefix = selfPath.hasSuffix("/") ? selfPath : selfPath + "/"
-        return targetPath.hasPrefix(prefix)
+    private var isExpanded: Binding<Bool> {
+        Binding(
+            get: { model.isExpanded(url) },
+            set: { model.setExpanded($0, for: url) }
+        )
     }
 
     var body: some View {
-        DisclosureGroup(isExpanded: $isExpanded) {
-            if let children {
+        DisclosureGroup(isExpanded: isExpanded) {
+            if let children = model.children(of: url) {
                 ForEach(children, id: \.self) { child in
                     FolderTreeRow(
                         url: child,
+                        model: model,
                         currentURL: currentURL,
                         showsHiddenFiles: showsHiddenFiles,
                         limitToHomeDirectory: limitToHomeDirectory,
-                        depth: depth + 1,
                         onSelect: onSelect,
                         onOpenInNewTab: onOpenInNewTab,
                         onOpenInSplitView: onOpenInSplitView
@@ -105,30 +102,5 @@ struct FolderTreeRow: View {
                 }
             }
         }
-        .onAppear {
-            if isAncestorOfCurrentURL && !isExpanded {
-                isExpanded = true
-            }
-        }
-        .onChange(of: currentURL) { _, _ in
-            if isAncestorOfCurrentURL && !isExpanded {
-                isExpanded = true
-            }
-        }
-        .onChange(of: isExpanded) { _, expanded in
-            if expanded {
-                reloadChildren()
-            }
-        }
-        .onChange(of: showsHiddenFiles?.wrappedValue ?? false) { _, _ in
-            if isExpanded {
-                reloadChildren()
-            }
-        }
-    }
-
-    private func reloadChildren() {
-        let showHidden = showsHiddenFiles?.wrappedValue ?? false
-        children = FolderTreeProvider(showsHiddenFiles: showHidden).subdirectories(of: url)
     }
 }

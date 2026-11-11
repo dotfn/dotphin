@@ -17,6 +17,11 @@ struct PlacesSidebarView: View {
     @State private var cachedVolumeUsages: [URL: Double] = [:]
     @State private var folderTreeShowsHiddenFiles = false
     @State private var folderTreeLimitToHome = true
+    @State private var folderTree = FolderTreeModel()
+
+    private var folderTreeRoot: URL {
+        folderTreeLimitToHome ? FileManager.default.homeDirectoryForCurrentUser : URL(fileURLWithPath: "/")
+    }
 
     private static let sizeFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
@@ -93,9 +98,8 @@ struct PlacesSidebarView: View {
             if let onSelectFolder {
                 Section {
                     FolderTreeRow(
-                        url: folderTreeLimitToHome
-                            ? FileManager.default.homeDirectoryForCurrentUser
-                            : URL(fileURLWithPath: "/"),
+                        url: folderTreeRoot,
+                        model: folderTree,
                         currentURL: currentURL,
                         showsHiddenFiles: $folderTreeShowsHiddenFiles,
                         limitToHomeDirectory: $folderTreeLimitToHome,
@@ -113,6 +117,16 @@ struct PlacesSidebarView: View {
         .listStyle(.sidebar)
         .onAppear {
             refreshVolumeUsages()
+            folderTree.reveal(currentURL, under: folderTreeRoot)
+        }
+        .onChange(of: currentURL) { _, newURL in
+            folderTree.reveal(newURL, under: folderTreeRoot)
+        }
+        .onChange(of: folderTreeLimitToHome) { _, _ in
+            folderTree.reveal(currentURL, under: folderTreeRoot)
+        }
+        .onChange(of: folderTreeShowsHiddenFiles) { _, showsHidden in
+            folderTree.setShowsHiddenFiles(showsHidden)
         }
         .onChange(of: places) { _, _ in
             refreshVolumeUsages()

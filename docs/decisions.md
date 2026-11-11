@@ -1406,3 +1406,24 @@ Salió de una auditoría de lo que la app hacía a mano teniendo API del sistema
 - F2 (renombrar) y ⌃⇧F3 (separar en pestañas) quedan en el menú: no chocan.
 - Sin verificar en la app real: que los atajos nuevos y las teclas F con fn
   disparen la acción (solo probado con menús de prueba en tests).
+
+## 2026-11-11 — Árbol "Carpetas": lo desplegado vive en un modelo
+
+- Aborto de SwiftUI (`TableViewListCore_Mac2.swift:5538`,
+  `ViewListTree.visitItem`) al plegar y desplegar carpetas del árbol del panel
+  lateral, a veces recién en el siguiente pase de alturas de filas.
+- Causa (backtrace con lldb sobre un test que lo reproduce): cada
+  `FolderTreeRow` guardaba `isExpanded` y sus subcarpetas en `@State`. Al plegar
+  un padre, SwiftUI descarta las filas hijas y su estado, pero el
+  `NSOutlineView` las sigue recordando desplegadas; en el siguiente plegado
+  recursivo pide una fila que SwiftUI ya no tiene. Las subcarpetas además
+  llegaban en un `onChange` posterior, con la lista cambiando a mitad de la
+  expansión.
+- Consultado axiom-swiftui (containers): árbol = estado en datos. Ahora
+  `FolderTreeModel` (`@Observable`, en `PlacesSidebarView`) guarda lo
+  desplegado y las subcarpetas por URL; lee las subcarpetas antes de marcar la
+  carpeta como desplegada. La expansión automática hacia la carpeta actual
+  (`reveal`, hasta 5 niveles) también pasó al modelo.
+- Test: clics rápidos en los triángulos reales con una secuencia fija. Con el
+  código anterior abortó en 2 de 3 corridas (depende del tiempo, no es
+  determinista); con el modelo, 0 de 8.
