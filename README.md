@@ -24,7 +24,7 @@ Dotphin is a from-scratch macOS file manager inspired by [KDE Dolphin](https://a
 - File operations: copy/move/rename, batch rename, undo/redo, archives (zip), file compare
 - Info panel with Quick Look thumbnails and rich metadata
 - Trash as a navigable location, with external volume eject support
-- Embedded terminal panel synced to the active folder
+- Embedded terminal panel (F4) synced to the active folder: a full xterm-compatible terminal with 256-color and truecolor support, `vim`/`less`/`htop`, and mouse support
 - Configurable toolbar and a Settings window (default view, startup location, hidden files)
 
 ## Install
@@ -67,3 +67,5 @@ Sources/Dotphin/
   Views/      # SwiftUI views
 Tests/DotphinTests/
 ```
+
+The only dependency is [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) (MIT), the terminal engine behind the embedded terminal panel.

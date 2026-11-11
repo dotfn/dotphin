@@ -1118,3 +1118,32 @@ Reportado por el usuario al probar.
 - Verificado pidiendo a macOS el ícono como lo dibuja Finder
   (`NSWorkspace.icon(forFile:)`): antes, el cuadrado gris; ahora, la forma del
   sistema.
+
+## 2026-11-10 — Terminal integrada sobre SwiftTerm (slice 22)
+
+- El panel F4 tenía un emulador propio (`TerminalScreenBuffer`) que tiraba los
+  colores, no tenía pantalla alterna (`vim`, `less`, `htop` no andaban), fijaba
+  220 columnas y escribía en un `TextField` aparte (sin Tab ni Ctrl+R). Se
+  reemplaza por SwiftTerm (MIT, `from: "1.99.3"`), la primera dependencia
+  externa del paquete, elegida por el usuario. Descartados: libghostty (API de
+  embebido no estable, build con Zig), xterm.js en WKWebView (no nativo).
+- Axiom consultado: `axiom-macos` → `appkit-interop.md`.
+- `EmbeddedTerminalSession` es dueña de la `DotphinTerminalView`
+  (`LocalProcessTerminalView`): la shell sobrevive a ocultar el panel. Si la
+  shell termina, una barra ofrece "Reiniciar", que crea una vista nueva.
+- El `keyDown` de SwiftTerm no se puede sobrescribir desde otro módulo: un
+  monitor local de teclado, activo solo con la terminal enfocada, le da F4/⇧F4
+  al menú y marca el Intro como "el usuario ejecutó un comando".
+- Shell → Dotphin: `proc_pidinfo` tras cada lote de salida (a lo sumo una
+  consulta pendiente a la vez) y OSC 7 si la shell lo emite. Se compara con
+  `realpath`, así una carpeta vista por un enlace (`/tmp`) no rebota como otra
+  (`/private/tmp`).
+- `optionAsMetaKey = false`: Option compone caracteres (la @ en teclados
+  latinoamericanos), como en Terminal.app.
+- Ya no se fuerzan `PROMPT`, `PROMPT_EOL_MARK` ni `nopromptsp`: eran parches
+  para el emulador viejo; ahora se ve el prompt propio del usuario. `COLUMNS` y
+  `LINES` se quitan del entorno para que mande el tamaño real del pty.
+- Verificado con tests de la shell real (arranca en la carpeta, sigue a
+  Dotphin, informa el `cd` del usuario, F4 e Intro por `NSApp.sendEvent`).
+  No verificado a mano: el aspecto de colores, `vim` y el mouse en pantalla
+  (este entorno no puede mirar la pantalla).
