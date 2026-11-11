@@ -207,7 +207,7 @@ struct BrowserView: View {
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-            } else if viewModel.isLoadingDirectory {
+            } else if viewModel.showsLoadingIndicator {
                 ProgressView(String(localized: "Cargando carpeta…", bundle: #bundle))
                     .controlSize(.small)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -419,11 +419,10 @@ struct BrowserView: View {
             viewModel.undoManager = undoManager
             // Esta vista puede mostrar el diálogo de nombres repetidos.
             viewModel.presentsConflictPrompts = true
-            viewModel.watchesCurrentDirectory = true
         }
         // Solo la pestaña visible observa su carpeta; al volver se pone al día.
-        .onAppear { viewModel.watchesCurrentDirectory = true }
-        .onDisappear { viewModel.watchesCurrentDirectory = false }
+        .onAppear { viewModel.viewDidAppear() }
+        .onDisappear { viewModel.viewDidDisappear() }
         .modifier(FileConflictDialogModifier(transfer: viewModel.activeTransfer))
         .onChange(of: undoManager) { _, newValue in
             viewModel.undoManager = newValue

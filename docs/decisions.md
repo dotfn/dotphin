@@ -1199,3 +1199,16 @@ Reportado por el usuario al probar.
   aparecen sin ninguna cerca y coinciden con compilaciones en la máquina. Al
   arrancar queda uno de ~900 ms que ya no es de leer carpetas (la lectura en
   segundo plano tarda 8 ms); falta perfilarlo.
+- Revisión independiente, corregido:
+  - Al abrir o cerrar la vista dividida (o mover el panel a otra pestaña),
+    SwiftUI llama al `onAppear` de la vista nueva antes que al `onDisappear`
+    de la vieja: con un booleano el panel visible dejaba de observar. Ahora
+    se cuentan las vistas visibles (`viewDidAppear`/`viewDidDisappear`); un
+    test montado lo prueba y falla con el booleano.
+  - Los eventos por archivo de todo el árbol (en `~`: cachés, navegadores)
+    llegaban al hilo principal. Se filtran en una cola propia; al main actor
+    solo llegan las entradas directas.
+  - El indicador "Cargando carpeta…" aparece recién a los 200 ms; volver a la
+    misma carpeta no vacía la lista.
+  - Etiquetas, Finder info y dueño de una subcarpeta sí provocan relectura.
+  - Sin relectura extra al arrancar; contadores de tests solo en DEBUG.

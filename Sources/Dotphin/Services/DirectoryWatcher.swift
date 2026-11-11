@@ -1,5 +1,6 @@
 import CoreServices
 import Foundation
+import Synchronization
 
 /// Avisa cuando cambia el contenido de una carpeta (altas, bajas, renombres,
 /// archivos modificados), venga el cambio de esta app o de cualquier otra.
@@ -44,7 +45,10 @@ final class DirectoryWatcher {
             latency,
             flags
         ) else { return }
-        FSEventStreamSetDispatchQueue(stream, .main)
+        // Con eventos por archivo, FSEvents avisa de cada escritura en todo el
+        // árbol (en la carpeta personal: cachés, navegadores, compilaciones). Se
+        // descartan en esta cola; al main actor solo llega lo de esta carpeta.
+        FSEventStreamSetDispatchQueue(stream, Self.eventQueue)
         guard FSEventStreamStart(stream) else {
             FSEventStreamInvalidate(stream)
             FSEventStreamRelease(stream)
@@ -63,7 +67,10 @@ final class DirectoryWatcher {
         return String(cString: resolved)
     }
 
+    private static let eventQueue = DispatchQueue(label: "dev.dotfn.dotphin.directory-watcher", qos: .utility)
+
     func stop() {
+        box?.deactivate()
         if let stream {
             FSEventStreamStop(stream)
             FSEventStreamInvalidate(stream)
@@ -85,6 +92,8 @@ private final class DirectoryWatcherBox: Sendable {
     let watchedPath: String
     let ignoring: (@MainActor (String) -> Bool)?
     let handler: @MainActor () -> Void
+    /// Un aviso ya encolado hacia el main actor no debe llegar después de `stop()`.
+    private let isActive = Mutex(true)
 
     init(watchedPath: String, ignoring: (@MainActor (String) -> Bool)?, handler: @escaping @MainActor () -> Void) {
         self.watchedPath = watchedPath
@@ -92,43 +101,65 @@ private final class DirectoryWatcherBox: Sendable {
         self.handler = handler
     }
 
-    /// Solo interesan las entradas directas de la carpeta observada, no lo que
-    /// pasa dentro de sus subcarpetas (FSEvents observa el árbol entero).
-    @MainActor
+    func deactivate() {
+        isActive.withLock { $0 = false }
+    }
+
+    private enum Relevance {
+        case none
+        case reload
+        case entries([String])
+    }
+
+    /// Corre en la cola del stream. Solo interesan las entradas directas de la
+    /// carpeta observada, no lo que pasa dentro de sus subcarpetas (FSEvents
+    /// observa el árbol entero).
     func handle(events: [(path: String, flags: FSEventStreamEventFlags)]) {
+        let relevance = relevance(of: events)
+        if case .none = relevance { return }
+        DispatchQueue.main.async { [self] in
+            MainActor.assumeIsolated {
+                guard isActive.withLock({ $0 }) else { return }
+                if case .entries(let names) = relevance, let ignoring, names.allSatisfy(ignoring) {
+                    return
+                }
+                handler()
+            }
+        }
+    }
+
+    private func relevance(of events: [(path: String, flags: FSEventStreamEventFlags)]) -> Relevance {
         var changedNames: [String] = []
         for event in events {
             let path = event.path.hasSuffix("/") ? String(event.path.dropLast()) : event.path
             let flags = Int(event.flags)
             if flags & kFSEventStreamEventFlagMustScanSubDirs != 0 {
                 // El sistema perdió eventos: hay que releer sin saber qué cambió.
-                handler()
-                return
+                return .reload
             }
-            let isDirectory = flags & kFSEventStreamEventFlagItemIsDir != 0
             let addedOrRemoved = flags & (kFSEventStreamEventFlagItemCreated
                 | kFSEventStreamEventFlagItemRemoved
                 | kFSEventStreamEventFlagItemRenamed) != 0
             if path == watchedPath {
                 // La carpeta misma: solo importa si la borraron o la movieron.
-                if addedOrRemoved {
-                    handler()
-                    return
-                }
+                if addedOrRemoved { return .reload }
                 continue
             }
             guard (path as NSString).deletingLastPathComponent == watchedPath else { continue }
-            // Una subcarpeta "modificada" es un cambio adentro de ella, no de esta lista.
-            if isDirectory && !addedOrRemoved { continue }
+            // Una subcarpeta solo "modificada" es un cambio adentro de ella, no de
+            // esta lista; sus etiquetas o su dueño sí se ven acá.
+            let isDirectory = flags & kFSEventStreamEventFlagItemIsDir != 0
+            let shownDirectoryChange = addedOrRemoved || flags & (kFSEventStreamEventFlagItemXattrMod
+                | kFSEventStreamEventFlagItemFinderInfoMod
+                | kFSEventStreamEventFlagItemChangeOwner) != 0
+            if isDirectory && !shownDirectoryChange { continue }
             changedNames.append((path as NSString).lastPathComponent)
         }
-        guard !changedNames.isEmpty else { return }
-        if let ignoring, changedNames.allSatisfy(ignoring) { return }
-        handler()
+        return changedNames.isEmpty ? .none : .entries(changedNames)
     }
 }
 
-/// Corre en la cola principal (ver `FSEventStreamSetDispatchQueue`).
+/// Corre en `DirectoryWatcher.eventQueue` (ver `FSEventStreamSetDispatchQueue`).
 private let directoryWatcherCallback: FSEventStreamCallback = { _, info, count, eventPaths, eventFlags, _ in
     guard let info else { return }
     let box = Unmanaged<DirectoryWatcherBox>.fromOpaque(info).takeUnretainedValue()
@@ -136,7 +167,5 @@ private let directoryWatcherCallback: FSEventStreamCallback = { _, info, count, 
     let events = paths.prefix(count).enumerated().map { index, path in
         (path: path, flags: eventFlags[index])
     }
-    MainActor.assumeIsolated {
-        box.handle(events: events)
-    }
+    box.handle(events: events)
 }

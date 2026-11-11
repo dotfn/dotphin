@@ -87,9 +87,16 @@ final class DirectoryWatcherTests: XCTestCase {
 
     func test_reportsSubfolderCreationButNotItsContents() async throws {
         let watcher = try await startWatching()
-        try FileManager.default.createDirectory(at: dir.appendingPathComponent("nueva"), withIntermediateDirectories: false)
-        let notified = try await waitForNotification()
+        let nueva = dir.appendingPathComponent("nueva")
+        try FileManager.default.createDirectory(at: nueva, withIntermediateDirectories: false)
+        var notified = try await waitForNotification()
         XCTAssertTrue(notified)
+
+        try await Task.sleep(for: .milliseconds(300))
+        notifications = 0
+        try "x".write(to: nueva.appendingPathComponent("adentro.txt"), atomically: true, encoding: .utf8)
+        notified = try await waitForNotification(timeout: .seconds(1))
+        XCTAssertFalse(notified, "lo que pasa adentro de una subcarpeta no cambia esta lista")
         watcher.stop()
     }
 

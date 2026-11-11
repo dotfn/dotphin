@@ -1,4 +1,6 @@
+import AppKit
 import Observation
+import SwiftUI
 import Synchronization
 import XCTest
 @testable import Dotphin
@@ -183,5 +185,75 @@ final class DirectoryLoadingTests: XCTestCase {
         vm.watchesCurrentDirectory = true
         let caughtUp = try await waitUntil { vm.items.map(\.name).contains("mientras.txt") }
         XCTAssertTrue(caughtUp, "al volver a mostrarse se pone al día")
+    }
+
+    // MARK: - Visibilidad
+
+    func test_visibilityIsCounted_soARebuiltViewDoesNotStopWatching() {
+        let vm = makeViewModel(at: dirA)
+        vm.viewDidAppear()
+        // La vista nueva aparece antes de que desaparezca la vieja.
+        vm.viewDidAppear()
+        vm.viewDidDisappear()
+        XCTAssertTrue(vm.watchesCurrentDirectory)
+        vm.viewDidDisappear()
+        XCTAssertFalse(vm.watchesCurrentDirectory)
+    }
+
+    func test_togglingSplitView_keepsTheVisiblePaneWatching_andHiddenTabsStop() async throws {
+        struct Host: View {
+            let tabs: TabsViewModel
+            var body: some View {
+                if let tab = tabs.selectedTab {
+                    SplitBrowserView(tab: tab, onFocusPane: { _ in })
+                }
+            }
+        }
+        let suite = "test.loading.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let tabs = TabsViewModel(startingAt: dirA, defaults: defaults)
+        let window = NSWindow(contentViewController: NSHostingController(rootView: Host(tabs: tabs).frame(width: 900, height: 500)))
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+        let settle = { RunLoop.main.run(until: Date().addingTimeInterval(0.3)) }
+        settle()
+
+        let firstTab = try XCTUnwrap(tabs.selectedTab)
+        XCTAssertTrue(firstTab.primary.watchesCurrentDirectory)
+
+        tabs.toggleSplit(for: firstTab.id)
+        settle()
+        XCTAssertTrue(firstTab.primary.watchesCurrentDirectory, "abrir la vista dividida")
+        XCTAssertEqual(tabs.selectedTab?.secondary?.watchesCurrentDirectory, true)
+
+        tabs.toggleSplit(for: firstTab.id)
+        settle()
+        XCTAssertTrue(firstTab.primary.watchesCurrentDirectory, "cerrar la vista dividida")
+
+        tabs.addTab(startingAt: dirB)
+        settle()
+        XCTAssertFalse(firstTab.primary.watchesCurrentDirectory, "una pestaña oculta no observa")
+        XCTAssertEqual(tabs.selectedTab?.primary.watchesCurrentDirectory, true)
+        for tab in tabs.tabs { await tab.primary.waitForBackgroundWork() }
+    }
+
+    // MARK: - Indicador de carga
+
+    func test_loadingIndicator_staysHiddenForQuickLoads() async {
+        let vm = makeViewModel(at: dirA, background: true)
+        XCTAssertFalse(vm.showsLoadingIndicator)
+        await vm.waitForBackgroundWork()
+        try? await Task.sleep(for: .milliseconds(300))
+        XCTAssertFalse(vm.showsLoadingIndicator)
+    }
+
+    func test_navigatingToTheSameFolder_keepsTheListOnScreen() async {
+        let vm = makeViewModel(at: dirA, background: true)
+        await vm.waitForBackgroundWork()
+        vm.navigate(to: dirA)
+        XCTAssertEqual(vm.items.map(\.name), ["uno.txt"])
+        XCTAssertFalse(vm.isLoadingDirectory)
+        await vm.waitForBackgroundWork()
     }
 }

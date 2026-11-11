@@ -278,26 +278,52 @@ final class BrowserViewModel {
     @ObservationIgnored var watchesCurrentDirectory = false {
         didSet {
             guard watchesCurrentDirectory != oldValue else { return }
+            if !watchesCurrentDirectory {
+                mayHaveMissedChanges = true
+            }
             updateDirectoryWatcher()
             // Una pestaña que vuelve a mostrarse se pone al día con lo que
             // cambió mientras no se observaba.
-            if watchesCurrentDirectory, didFinishFirstLoad {
+            if watchesCurrentDirectory, mayHaveMissedChanges {
+                mayHaveMissedChanges = false
                 loadInBackground(currentURL, clearingFirst: false)
             }
         }
     }
-    /// `true` mientras se lee la carpeta en segundo plano (la vista muestra progreso).
+    @ObservationIgnored private var mayHaveMissedChanges = false
+    /// Vistas en pantalla que muestran este panel. Se cuentan porque al
+    /// reconstruir una vista (abrir o cerrar la vista dividida, mover el panel a
+    /// otra pestaña) SwiftUI llama al `onAppear` de la nueva antes que al
+    /// `onDisappear` de la vieja: con un booleano el panel visible dejaba de observar.
+    @ObservationIgnored private var visibleViewCount = 0
+
+    func viewDidAppear() {
+        visibleViewCount += 1
+        watchesCurrentDirectory = true
+    }
+
+    func viewDidDisappear() {
+        visibleViewCount = max(0, visibleViewCount - 1)
+        watchesCurrentDirectory = visibleViewCount > 0
+    }
+
+    /// `true` mientras se lee la carpeta en segundo plano.
     private(set) var isLoadingDirectory = false
+    /// La vista muestra progreso solo si la lectura tarda: casi siempre son
+    /// pocos ms y un indicador de un cuadro solo parpadea.
+    private(set) var showsLoadingIndicator = false
+    @ObservationIgnored private var loadingIndicatorTask: Task<Void, Never>?
     /// La app lee las carpetas fuera del hilo principal; los tests que crean un
     /// view model suelto las leen al instante para poder mirar `items` enseguida.
     @ObservationIgnored private let loadsInBackground: Bool
     /// Cada carga se numera: el resultado de una lectura vieja se descarta.
     @ObservationIgnored private var loadGeneration = 0
     @ObservationIgnored private var loadTask: Task<Void, Never>?
-    @ObservationIgnored private var didFinishFirstLoad = false
     /// Ítem a seleccionar cuando termine de cargar la carpeta a la que se navega.
     @ObservationIgnored private var pendingSelectionURL: URL?
+    #if DEBUG
     @ObservationIgnored private(set) var loadCountForTesting = 0
+    #endif
     @ObservationIgnored private let directoryWatcher = DirectoryWatcher()
     @ObservationIgnored private let transfers = FileTransferService()
     /// Para refrescar al instante los otros paneles que muestran una carpeta
@@ -376,7 +402,7 @@ final class BrowserViewModel {
         self.gitStatus = gitStatus
         self.loadsInBackground = loadsInBackground
         self.viewProperties = store.properties(for: url)
-        loadForNavigation(url)
+        loadForNavigation(url, clearingFirst: true)
         Self.liveViewModels.add(self)
     }
 
@@ -424,6 +450,7 @@ final class BrowserViewModel {
     }
 
     private func applyNavigation(to url: URL, selecting itemURL: URL? = nil) {
+        let isSameFolder = url.standardizedFileURL.path == currentURL.standardizedFileURL.path
         currentURL = url
         pendingSelectionURL = itemURL
         viewProperties = store.properties(for: url)
@@ -437,7 +464,8 @@ final class BrowserViewModel {
         searchSizeFilter = .any
         searchColorTagFilter = .none
         cancelSearch()
-        loadForNavigation(url)
+        // Volver a la misma carpeta (clic en el lugar actual) la relee sin vaciar la lista.
+        loadForNavigation(url, clearingFirst: !isSameFolder)
     }
 
     private func cancelSearch() {
@@ -486,7 +514,11 @@ final class BrowserViewModel {
 
     /// Espera a que terminen la búsqueda y la carga de git en curso (para tests).
     func waitForBackgroundWork() async {
-        await loadTask?.value
+        // Una lectura puede reemplazar a otra mientras se espera (cambio en disco).
+        while let task = loadTask {
+            await task.value
+            if loadTask == nil || task == loadTask { break }
+        }
         await searchTask?.value
         await gitTask?.value
         await transferTask?.value
@@ -1666,12 +1698,12 @@ final class BrowserViewModel {
 
     /// Navegar: en la app la carpeta se lee fuera del hilo principal (la primera
     /// lectura de la carpeta personal llegó a tardar 3 s y trababa la ventana).
-    private func loadForNavigation(_ url: URL) {
+    private func loadForNavigation(_ url: URL, clearingFirst: Bool) {
         guard loadsInBackground else {
             load(url)
             return
         }
-        loadInBackground(url, clearingFirst: true)
+        loadInBackground(url, clearingFirst: clearingFirst)
     }
 
     /// `clearingFirst`: al llegar a otra carpeta no quedan a la vista (ni
@@ -1682,6 +1714,11 @@ final class BrowserViewModel {
             items = []
             error = nil
             isLoadingDirectory = true
+            loadingIndicatorTask = Task { [weak self] in
+                try? await Task.sleep(for: .milliseconds(200))
+                guard !Task.isCancelled, let self, generation == self.loadGeneration, self.isLoadingDirectory else { return }
+                self.showsLoadingIndicator = true
+            }
         }
         let request = makeLoadRequest(for: url)
         loadTask = Task { [weak self] in
@@ -1700,6 +1737,8 @@ final class BrowserViewModel {
         loadGeneration &+= 1
         loadTask?.cancel()
         loadTask = nil
+        loadingIndicatorTask?.cancel()
+        loadingIndicatorTask = nil
         return loadGeneration
     }
 
@@ -1720,8 +1759,9 @@ final class BrowserViewModel {
     }
 
     private func apply(_ result: DirectoryLoadResult) {
+        #if DEBUG
         loadCountForTesting += 1
-        didFinishFirstLoad = true
+        #endif
         switch result.contents {
         case .success(let loaded):
             // `@Observable` no avisa si el valor es igual, pero el `didSet` de
@@ -1740,6 +1780,9 @@ final class BrowserViewModel {
             }
         }
         isLoadingDirectory = false
+        showsLoadingIndicator = false
+        loadingIndicatorTask?.cancel()
+        loadingIndicatorTask = nil
         DebugEventLog.measure("carga", "  git") { loadGitState(for: result.url) }
         availableCapacity = result.availableCapacity
         isCurrentDirectoryWritable = result.isWritable
@@ -1775,9 +1818,11 @@ final class BrowserViewModel {
         loadInBackground(currentURL, clearingFirst: false)
     }
 
+    #if DEBUG
     func resetLoadCountForTesting() {
         loadCountForTesting = 0
     }
+    #endif
 }
 
 /// Qué carpeta leer y cómo ordenarla; se arma en el main actor y se lee en
