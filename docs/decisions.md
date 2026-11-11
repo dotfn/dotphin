@@ -1356,3 +1356,32 @@ Salió de una auditoría de lo que la app hacía a mano teniendo API del sistema
 - #14: reproducido en un test — con Tipo y Tamaño guardados, al mostrar
   «Extensión» AppKit la restauraba al final. `restoreCanonicalOrder` reacomoda
   las columnas después de reactivar el autoguardado; los anchos se conservan.
+
+## 2026-11-11 — El panel de información es un `.inspector` (#10)
+
+- El bucle de "Update Constraints" no era de una vista de Dotphin: se aisló
+  con vistas de prueba hechas solo de colores. Junto al `.inspector` entran
+  en bucle (o tiran el proceso):
+  1. un `HSplitView` envuelto en `GeometryReader` + `frame` exacto (el viejo
+     `fillingAvailableSpaceExactly`), y también envuelto en un `Layout` propio;
+  2. `frame(minWidth:)` sobre un `VSplitView` que contiene un `HSplitView`;
+  3. `frame(minWidth:)` sobre el `NavigationSplitView`, aunque sea constante.
+- Sin esos parches, el `HSplitView` de SwiftUI informa como mínimo el ancho
+  natural de sus paneles: la ventana no bajaba de ~1180 pt con vista dividida
+  ni de ~1910 pt con el panel abierto, y redimensionar daba tirones (visto en
+  la app real). `idealWidth` en los paneles no cambia nada.
+- Vista dividida: `PaneSplitView`, un `NSSplitView` propio con un
+  `NSHostingView` por panel (`sizingOptions = []`). El tamaño lo decide
+  SwiftUI (`sizeThatFits`), el reparto AppKit; arranca 50/50, mínimo 180 pt
+  por panel. El entorno de SwiftUI se pasa a mano
+  (`.environment(\.self, context.environment)`).
+- Mínimo de la ventana: `frame(minWidth: 430)` sobre el contenido de la
+  columna (`detailMainStack`), único lugar donde no entra en bucle. La columna
+  ocupa también el ancho del panel lateral, que se suma: 840 pt sin panel de
+  información y ~1085 pt con él (antes 840 / 1000, forzados a mano).
+- El `HSplitView` exterior desapareció (solo alojaba el panel). La terminal
+  sigue en un `VSplitView` de SwiftUI, sin ancho mínimo propio.
+- Medido en test (6 pestañas, dividida, Detalles): redimensionar cuesta
+  ~29 ms por paso, como antes (~25 ms). No llega a 60 fps; queda pendiente.
+- Verificado por el usuario en la app. Sin revisar: animaciones que crucen
+  el borde de `PaneSplitView` (cada panel es otro árbol de SwiftUI).

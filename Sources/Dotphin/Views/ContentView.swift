@@ -88,10 +88,12 @@ struct ContentView: View {
         } detail: {
             detailColumn
         }
-        // Los mínimos de los paneles dentro de los divisores no llegan al mínimo de
-        // la ventana: con el panel de información abierto, en menos de ~1000 pt el
-        // contenido no entraba y se cortaba en los dos bordes.
-        .frame(minWidth: showsInfoPanel ? Self.minimumWidthWithInfoPanel : Self.minimumWidth, minHeight: 540)
+        // Sin ancho mínimo acá: un `minWidth` sobre el `NavigationSplitView` entra
+        // en bucle de "Update Constraints" con el `.inspector` (#10). El mínimo de
+        // la ventana sale de las columnas (panel lateral, contenido — ver
+        // `detailWithSheets` — e inspector): abrir el panel de información la
+        // agranda sola.
+        .frame(minHeight: 540)
         .focusedSceneValue(\.browserViewModel, focusedViewModel)
         .focusedSceneValue(\.windowCommands, commands)
         .environment(\.locationEditRequest, locationEditRequest)
@@ -131,8 +133,26 @@ struct ContentView: View {
         }
     }
 
+    private var infoPanel: some View {
+        InfoPanelView(
+            item: focusedViewModel?.selectedItem,
+            selectedCount: focusedViewModel?.selectedItems.count ?? 0,
+            selectedTotalBytes: focusedViewModel?.selectedItems.compactMap(\.size).reduce(0, +),
+            onShowProperties: { url in
+                propertiesTargetURL = url
+            },
+            onColorTagChanged: { _ in
+                focusedViewModel?.refresh()
+            }
+        )
+    }
+
     private var detailColumn: some View {
         detailWithAlerts
+            .inspector(isPresented: $showsInfoPanel) {
+                infoPanel
+                    .inspectorColumnWidth(min: 190, ideal: 245, max: 380)
+            }
             .navigationTitle(windowTitle)
             .toolbar(removing: .title)
             .toolbar(id: "dotphin.browser") {
@@ -445,6 +465,12 @@ struct ContentView: View {
 
     private var detailWithSheets: some View {
         detailMainStack
+            // El mínimo de la columna va acá, sobre el contenido: sin él, la ventana
+            // tomaba como mínimo el ancho natural de lo que hubiera adentro y no se
+            // dejaba achicar. La columna ocupa también el ancho del panel lateral
+            // (contenido a tamaño completo), que se suma a este mínimo: con el
+            // panel lateral en 205 pt la ventana baja hasta ~840 pt.
+            .frame(minWidth: 430, maxWidth: .infinity)
             .navigationSplitViewColumnWidth(min: 600, ideal: 760)
             .overlay {
                 tabOverviewOverlay
@@ -515,6 +541,62 @@ struct ContentView: View {
             }
     }
 
+    /// Los paneles de archivos de la pestaña actual.
+    @ViewBuilder
+    private var browserArea: some View {
+        if let tab = tabsViewModel.selectedTab {
+            SplitBrowserView(
+                tab: tab,
+                onOpenInNewTab: { url in
+                    tabsViewModel.addTab(
+                        startingAt: url,
+                        afterCurrentTab: !settingsModel.settings.openNewTabAfterLastTab,
+                        splitView: settingsModel.settings.startInSplitView
+                    )
+                },
+                onOpenInSplitView: { url in
+                    tabsViewModel.openInSplitView(url, for: tab.id)
+                },
+                onOpenTerminal: { url in
+                    focusedViewModel?.navigate(to: url)
+                    withAnimation(.snappy(duration: 0.2)) {
+                        showsEmbeddedTerminal = true
+                    }
+                }
+            ) { index in
+                tabsViewModel.setFocusedPane(index, for: tab.id)
+            }
+            .frame(minHeight: 180, maxHeight: .infinity)
+        }
+    }
+
+    private func terminalPanel(for focused: BrowserViewModel) -> some View {
+        EmbeddedTerminalPanelView(
+            session: embeddedTerminalSession,
+            currentDirectory: focused.currentURL,
+            onDirectoryChanged: { newDir in
+                focusedViewModel?.navigate(to: newDir)
+            },
+            onOpenExternalTerminal: {
+                do {
+                    try TerminalLauncher().openTerminal(at: focused.currentURL)
+                } catch {
+                    terminalError = error.localizedDescription
+                }
+            },
+            onClose: {
+                withAnimation(.snappy(duration: 0.2)) {
+                    showsEmbeddedTerminal = false
+                }
+            }
+        )
+        .frame(
+            minHeight: EmbeddedTerminalPanelView.minHeight,
+            idealHeight: EmbeddedTerminalPanelView.defaultHeight,
+            maxHeight: EmbeddedTerminalPanelView.maxHeight
+        )
+    }
+
     private var detailMainStack: some View {
         VStack(spacing: 0) {
             VStack(spacing: 4) {
@@ -561,78 +643,16 @@ struct ContentView: View {
 
             Divider()
 
-            // Divisores nativos (`NSSplitView`): panel de información a la
-            // derecha y terminal integrada abajo.
-            HSplitView {
-                    VSplitView {
-                    if let tab = tabsViewModel.selectedTab {
-                        SplitBrowserView(
-                            tab: tab,
-                            onOpenInNewTab: { url in
-                                tabsViewModel.addTab(
-                                    startingAt: url,
-                                    afterCurrentTab: !settingsModel.settings.openNewTabAfterLastTab,
-                                    splitView: settingsModel.settings.startInSplitView
-                                )
-                            },
-                            onOpenInSplitView: { url in
-                                tabsViewModel.openInSplitView(url, for: tab.id)
-                            },
-                            onOpenTerminal: { url in
-                                focusedViewModel?.navigate(to: url)
-                                withAnimation(.snappy(duration: 0.2)) {
-                                    showsEmbeddedTerminal = true
-                                }
-                            }
-                        ) { index in
-                            tabsViewModel.setFocusedPane(index, for: tab.id)
-                        }
-                        .frame(minHeight: 180, maxHeight: .infinity)
-                    }
-
-                    if showsEmbeddedTerminal, let focused = focusedViewModel {
-                        EmbeddedTerminalPanelView(
-                            session: embeddedTerminalSession,
-                            currentDirectory: focused.currentURL,
-                            onDirectoryChanged: { newDir in
-                                focusedViewModel?.navigate(to: newDir)
-                            },
-                            onOpenExternalTerminal: {
-                                do {
-                                    try TerminalLauncher().openTerminal(at: focused.currentURL)
-                                } catch {
-                                    terminalError = error.localizedDescription
-                                }
-                            },
-                            onClose: {
-                                withAnimation(.snappy(duration: 0.2)) {
-                                    showsEmbeddedTerminal = false
-                                }
-                            }
-                        )
-                        .frame(
-                            minHeight: EmbeddedTerminalPanelView.minHeight,
-                            idealHeight: EmbeddedTerminalPanelView.defaultHeight,
-                            maxHeight: EmbeddedTerminalPanelView.maxHeight
-                        )
-                    }
-                }
-                .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
-
-                if showsInfoPanel {
-                    InfoPanelView(
-                        item: focusedViewModel?.selectedItem,
-                        selectedCount: focusedViewModel?.selectedItems.count ?? 0,
-                        selectedTotalBytes: focusedViewModel?.selectedItems.compactMap(\.size).reduce(0, +),
-                        onShowProperties: { url in
-                            propertiesTargetURL = url
-                        },
-                        onColorTagChanged: { _ in
-                            focusedViewModel?.refresh()
-                        }
-                    )
-                    .frame(minWidth: 190, idealWidth: 245, maxWidth: 380, maxHeight: .infinity)
-                    .background(.bar)
+            // Divisor nativo (`NSSplitView`) para la terminal integrada, abajo; el
+            // panel de información es el `.inspector` de la columna.
+            //
+            // Sin ancho mínimo propio: un `VSplitView` con `minWidth` que contiene
+            // un `HSplitView` (la vista dividida) entra en bucle de "Update
+            // Constraints" junto al inspector (#10). El mínimo ya lo dan los paneles.
+            VSplitView {
+                browserArea
+                if showsEmbeddedTerminal, let focused = focusedViewModel {
+                    terminalPanel(for: focused)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

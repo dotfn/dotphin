@@ -12,13 +12,11 @@ struct SplitBrowserView: View {
         Group {
             if tab.isSplit, let secondary = tab.secondary {
                 // Divisor nativo: arrastre, cursor y límites son los de AppKit.
-                HSplitView {
+                PaneSplitView(minPaneWidth: 180) {
                     paneView(viewModel: tab.primary, index: 0, showSplitHeader: true)
-                        .frame(minWidth: 180, idealWidth: 480, maxWidth: .infinity, maxHeight: .infinity)
+                } trailing: {
                     paneView(viewModel: secondary, index: 1, showSplitHeader: true)
-                        .frame(minWidth: 180, idealWidth: 480, maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .fillingAvailableSpaceExactly()
             } else {
                 paneView(viewModel: tab.primary, index: 0, showSplitHeader: false)
             }
@@ -82,13 +80,85 @@ struct SplitBrowserView: View {
     }
 }
 
-extension View {
-    /// Para `HSplitView`/`VSplitView`: con un ancho máximo no redistribuyen los
-    /// paneles cuando el espacio es justo (quedaban más angostos que la ventana,
-    /// o más anchos y cortados en los dos bordes); con un tamaño exacto, sí.
-    func fillingAvailableSpaceExactly() -> some View {
-        GeometryReader { proxy in
-            frame(width: proxy.size.width, height: proxy.size.height)
+/// Dos paneles lado a lado en un `NSSplitView` propio.
+///
+/// El `HSplitView` de SwiftUI informa mal su tamaño mínimo (la ventana no se
+/// dejaba achicar) y, corregido con `GeometryReader` o `frame(minWidth:)`,
+/// entra en bucle de "Update Constraints" junto al `.inspector` (#10). Acá el
+/// tamaño lo decide SwiftUI (`sizeThatFits`) y el reparto, AppKit.
+struct PaneSplitView<Leading: View, Trailing: View>: NSViewRepresentable {
+    var minPaneWidth: CGFloat
+    @ViewBuilder var leading: Leading
+    @ViewBuilder var trailing: Trailing
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(minPaneWidth: minPaneWidth)
+    }
+
+    func makeNSView(context: Context) -> NSSplitView {
+        let splitView = EvenSplitView()
+        splitView.isVertical = true
+        splitView.dividerStyle = .thin
+        splitView.delegate = context.coordinator
+        for root in roots(context) {
+            let host = NSHostingView(rootView: root)
+            // El tamaño lo manda el divisor, no el contenido de cada panel.
+            host.sizingOptions = []
+            splitView.addArrangedSubview(host)
         }
+        return splitView
+    }
+
+    func updateNSView(_ splitView: NSSplitView, context: Context) {
+        context.coordinator.minPaneWidth = minPaneWidth
+        for (host, root) in zip(splitView.arrangedSubviews, roots(context)) {
+            (host as? NSHostingView<AnyView>)?.rootView = root
+        }
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSSplitView, context: Context) -> CGSize? {
+        let minWidth = minPaneWidth * 2 + nsView.dividerThickness
+        return CGSize(
+            width: max(minWidth, proposal.width ?? minWidth * 2),
+            height: max(0, proposal.height ?? 400)
+        )
+    }
+
+    /// Los paneles viven en su propio `NSHostingView`: el entorno de SwiftUI
+    /// (panel activo, pedidos de la ventana…) se les pasa a mano.
+    private func roots(_ context: Context) -> [AnyView] {
+        [
+            AnyView(leading.environment(\.self, context.environment)),
+            AnyView(trailing.environment(\.self, context.environment)),
+        ]
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, NSSplitViewDelegate {
+        var minPaneWidth: CGFloat
+
+        init(minPaneWidth: CGFloat) {
+            self.minPaneWidth = minPaneWidth
+        }
+
+        func splitView(_ splitView: NSSplitView, constrainMinCoordinate proposedMinimumPosition: CGFloat, ofSubviewAt dividerIndex: Int) -> CGFloat {
+            proposedMinimumPosition + minPaneWidth
+        }
+
+        func splitView(_ splitView: NSSplitView, constrainMaxCoordinate proposedMaximumPosition: CGFloat, ofSubviewAt dividerIndex: Int) -> CGFloat {
+            proposedMaximumPosition - minPaneWidth
+        }
+    }
+}
+
+/// `NSSplitView` que arranca con los paneles a la mitad.
+final class EvenSplitView: NSSplitView {
+    private var didSetInitialPosition = false
+
+    override func layout() {
+        super.layout()
+        guard !didSetInitialPosition, bounds.width > 0, arrangedSubviews.count == 2 else { return }
+        didSetInitialPosition = true
+        setPosition((bounds.width - dividerThickness) / 2, ofDividerAt: 0)
     }
 }
