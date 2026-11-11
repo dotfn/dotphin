@@ -209,7 +209,21 @@ struct DetailsTableView: NSViewRepresentable {
             tableView.autosaveName = Self.columnsAutosaveName
             tableView.autosaveTableColumns = false
             tableView.autosaveTableColumns = true
+            Self.restoreCanonicalOrder(of: columns, in: tableView)
             isApplyingSort = false
+        }
+
+        /// AppKit guarda también el orden de las columnas: una que se muestra
+        /// después de guardar (p. ej. «Extensión», entre Tipo y Tamaño) volvía
+        /// al final. Se reacomodan a Nombre + el orden de `columns`.
+        static func restoreCanonicalOrder(of columns: [DetailsColumn], in tableView: NSTableView) {
+            let identifiers = [nameColumnID] + columns.map { NSUserInterfaceItemIdentifier($0.rawValue) }
+            for (index, identifier) in identifiers.enumerated() {
+                let current = tableView.column(withIdentifier: identifier)
+                if current >= 0, current != index {
+                    tableView.moveColumn(current, toColumn: index)
+                }
+            }
         }
 
         static let columnsAutosaveName = "Dotphin.DetailsColumns"
