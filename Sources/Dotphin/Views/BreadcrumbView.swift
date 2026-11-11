@@ -194,6 +194,10 @@ struct BreadcrumbView: View {
                     crumbRow
                 }
             }
+            // Sin prioridad, el HStack repartía el ancho a medias con el espacio
+            // clicable de al lado y, en paneles medianos, las migas recibían menos
+            // de lo que medían: pasaban a desplazarse y el último segmento se cortaba.
+            .layoutPriority(1)
 
             Color.clear
                 .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24)
