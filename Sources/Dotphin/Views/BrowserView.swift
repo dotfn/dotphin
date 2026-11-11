@@ -415,6 +415,12 @@ struct BrowserView: View {
         .animation(.snappy(duration: 0.16), value: viewModel.typeAheadBuffer.isEmpty)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(\.fileViewInteraction, fileViewInteraction)
+        .environment(\.swipeNavigation, SwipeNavigation(
+            canGoBack: { [viewModel] in viewModel.canGoBack },
+            canGoForward: { [viewModel] in viewModel.canGoForward },
+            goBack: { [viewModel] in viewModel.goBack() },
+            goForward: { [viewModel] in viewModel.goForward() }
+        ))
         .onChange(of: ObjectIdentifier(viewModel), initial: true) { _, _ in
             viewModel.undoManager = undoManager
             // Esta vista puede mostrar el diálogo de nombres repetidos.

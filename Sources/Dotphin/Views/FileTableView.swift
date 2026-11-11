@@ -57,7 +57,9 @@ struct FileTableView: NSViewRepresentable {
         tableView.setDraggingSourceOperationMask([.copy, .generic], forLocal: false)
         tableView.draggingDestinationFeedbackStyle = .regular
 
-        let scrollView = NSScrollView()
+        // Deslizar con el trackpad: atrás / adelante del historial, como Safari.
+        let scrollView = SwipeNavigationScrollView()
+        scrollView.navigation = context.environment.swipeNavigation
         scrollView.documentView = tableView
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
@@ -83,6 +85,7 @@ struct FileTableView: NSViewRepresentable {
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        (scrollView as? SwipeNavigationScrollView)?.navigation = context.environment.swipeNavigation
         // El coordinator vive todo el ciclo; hay que refrescarle los callbacks
         // y el binding en cada update o escribe sobre estado viejo (axiom-macos).
         context.coordinator.parent = self

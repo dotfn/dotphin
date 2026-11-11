@@ -1292,3 +1292,21 @@ Reportado por el usuario al probar.
   ícono del archivo que se tocó (`ShareAnchor`, lo arma la vista al hacer clic
   derecho), del lado izquierdo y apuntándolo, como Finder. Sin ancla, junto
   al puntero. Se abre en el turno siguiente, con el menú ya cerrado.
+
+## 2026-11-11 — Gesto de deslizar para el historial (como Safari)
+
+- Las tres vistas de archivos usan `SwipeNavigationScrollView` (subclase de
+  `NSScrollView`). La navegación les llega por el entorno
+  (`\.swipeNavigation`, lo pone `BrowserView`), sin sumar parámetros.
+- Dos dedos: `trackSwipeEvent` del sistema (rebote y animación nativos), solo
+  si `NSEvent.isSwipeTrackingFromScrollEventsEnabled` (Ajustes → Trackpad →
+  «Deslizar entre páginas»), el gesto empieza horizontal, sin inercia, y el
+  contenido no puede desplazarse más hacia ese lado (Detalles con columnas
+  anchas se desplaza primero). Hacia un lado sin historial, rebota.
+- Tres dedos: `swipe(with:)`. Signos como WebKit/Safari: `deltaX` y
+  `gestureAmount` positivos = atrás (la documentación y otras fuentes no
+  coinciden en la dirección física; queda para verificar en el trackpad).
+- Indicador: flecha en el borde que entra con el gesto y se pinta con el
+  color de acento cuando soltar ya navega.
+- `NSEvent.isTouchSwipeNavigationEnabled` (macOS 27) es para pantallas
+  táctiles, no para el trackpad.

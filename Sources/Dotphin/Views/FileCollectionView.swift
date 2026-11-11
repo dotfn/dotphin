@@ -127,7 +127,9 @@ struct FileCollectionView: NSViewRepresentable {
             coordinator.apply(coordinator.parent)
         }
 
-        let scrollView = NSScrollView()
+        // Deslizar con el trackpad: atrás / adelante del historial, como Safari.
+        let scrollView = SwipeNavigationScrollView()
+        scrollView.navigation = context.environment.swipeNavigation
         scrollView.documentView = collectionView
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
@@ -143,6 +145,7 @@ struct FileCollectionView: NSViewRepresentable {
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        (scrollView as? SwipeNavigationScrollView)?.navigation = context.environment.swipeNavigation
         context.coordinator.parent = self
         context.coordinator.apply(self)
         context.coordinator.collectionView?.update(
