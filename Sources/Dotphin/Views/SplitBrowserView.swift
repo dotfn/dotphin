@@ -39,7 +39,7 @@ struct SplitBrowserView: View {
                     BreadcrumbView(
                         url: viewModel.currentURL,
                         editableByDefault: false,
-                        onNavigate: viewModel.navigate,
+                        onNavigate: { viewModel.navigate(to: $0) },
                         onOpenInNewTab: onOpenInNewTab,
                         onOpenInSplitView: onOpenInSplitView
                     )

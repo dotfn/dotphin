@@ -276,8 +276,28 @@ final class BrowserViewModel {
     /// Lo prende la vista que muestra este panel: la carpeta actual se
     /// vuelve a leer sola cuando cambia en disco (FSEvents).
     @ObservationIgnored var watchesCurrentDirectory = false {
-        didSet { updateDirectoryWatcher() }
+        didSet {
+            guard watchesCurrentDirectory != oldValue else { return }
+            updateDirectoryWatcher()
+            // Una pestaña que vuelve a mostrarse se pone al día con lo que
+            // cambió mientras no se observaba.
+            if watchesCurrentDirectory, didFinishFirstLoad {
+                loadInBackground(currentURL, clearingFirst: false)
+            }
+        }
     }
+    /// `true` mientras se lee la carpeta en segundo plano (la vista muestra progreso).
+    private(set) var isLoadingDirectory = false
+    /// La app lee las carpetas fuera del hilo principal; los tests que crean un
+    /// view model suelto las leen al instante para poder mirar `items` enseguida.
+    @ObservationIgnored private let loadsInBackground: Bool
+    /// Cada carga se numera: el resultado de una lectura vieja se descarta.
+    @ObservationIgnored private var loadGeneration = 0
+    @ObservationIgnored private var loadTask: Task<Void, Never>?
+    @ObservationIgnored private var didFinishFirstLoad = false
+    /// Ítem a seleccionar cuando termine de cargar la carpeta a la que se navega.
+    @ObservationIgnored private var pendingSelectionURL: URL?
+    @ObservationIgnored private(set) var loadCountForTesting = 0
     @ObservationIgnored private let directoryWatcher = DirectoryWatcher()
     @ObservationIgnored private let transfers = FileTransferService()
     /// Para refrescar al instante los otros paneles que muestran una carpeta
@@ -344,7 +364,8 @@ final class BrowserViewModel {
         search: SearchService = SearchService(),
         trashURL: URL = (try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false))
             ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash"),
-        gitStatus: GitStatusProvider = GitStatusProvider()
+        gitStatus: GitStatusProvider = GitStatusProvider(),
+        loadsInBackground: Bool = false
     ) {
         self.currentURL = url
         self.reader = reader
@@ -353,17 +374,19 @@ final class BrowserViewModel {
         self.search = search
         self.trashURL = trashURL
         self.gitStatus = gitStatus
+        self.loadsInBackground = loadsInBackground
         self.viewProperties = store.properties(for: url)
-        load(url)
+        loadForNavigation(url)
         Self.liveViewModels.add(self)
     }
 
-    func navigate(to url: URL) {
+    /// Con `selecting`, ese ítem queda seleccionado en cuanto termina de cargar la carpeta.
+    func navigate(to url: URL, selecting itemURL: URL? = nil) {
         if url.standardizedFileURL.path != currentURL.standardizedFileURL.path {
             backStack.append(currentURL)
             forwardStack.removeAll()
         }
-        applyNavigation(to: url)
+        applyNavigation(to: url, selecting: itemURL)
     }
 
     func goBack() {
@@ -400,8 +423,9 @@ final class BrowserViewModel {
         applyNavigation(to: target)
     }
 
-    private func applyNavigation(to url: URL) {
+    private func applyNavigation(to url: URL, selecting itemURL: URL? = nil) {
         currentURL = url
+        pendingSelectionURL = itemURL
         viewProperties = store.properties(for: url)
         selectedIDs = []
         if !isFilterLocked {
@@ -413,7 +437,7 @@ final class BrowserViewModel {
         searchSizeFilter = .any
         searchColorTagFilter = .none
         cancelSearch()
-        load(url)
+        loadForNavigation(url)
     }
 
     private func cancelSearch() {
@@ -462,6 +486,7 @@ final class BrowserViewModel {
 
     /// Espera a que terminen la búsqueda y la carga de git en curso (para tests).
     func waitForBackgroundWork() async {
+        await loadTask?.value
         await searchTask?.value
         await gitTask?.value
         await transferTask?.value
@@ -531,10 +556,7 @@ final class BrowserViewModel {
     func openContainingFolder(of item: FileItem) {
         let parent = item.url.deletingLastPathComponent()
         guard FileManager.default.fileExists(atPath: parent.path) else { return }
-        navigate(to: parent)
-        if let match = items.first(where: { $0.url.standardizedFileURL == item.url.standardizedFileURL }) {
-            select(match)
-        }
+        navigate(to: parent, selecting: item.url)
     }
 
     func select(_ item: FileItem?) {
@@ -1232,10 +1254,7 @@ final class BrowserViewModel {
             operationError = .other(String(localized: "El destino «\(targetURL.path)» no existe.", bundle: #bundle))
             return
         }
-        navigate(to: parentDir)
-        if let targetItem = items.first(where: { $0.url.standardizedFileURL == targetURL.standardizedFileURL }) {
-            select(targetItem)
-        }
+        navigate(to: parentDir, selecting: targetURL)
     }
 
     /// Dolphin's "Duplicate Here" (Ctrl+D / ⌘D): copies every selected item into its own parent directory.
@@ -1636,9 +1655,95 @@ final class BrowserViewModel {
         }
     }
 
+    /// Lectura inmediata: la usa `refresh()` después de una operación propia,
+    /// así lo recién creado ya está en `items` para seleccionarlo.
     private func load(_ url: URL) {
-        DebugEventLog.measure("carga", "load(\(url.lastPathComponent))") { loadNow(url) }
-        DebugEventLog.log("carga", "\(items.count) ítems en \(url.lastPathComponent)")
+        startNewLoad()
+        let request = makeLoadRequest(for: url)
+        let result = DebugEventLog.measure("carga", "load(\(url.lastPathComponent))") { request.run() }
+        apply(result)
+    }
+
+    /// Navegar: en la app la carpeta se lee fuera del hilo principal (la primera
+    /// lectura de la carpeta personal llegó a tardar 3 s y trababa la ventana).
+    private func loadForNavigation(_ url: URL) {
+        guard loadsInBackground else {
+            load(url)
+            return
+        }
+        loadInBackground(url, clearingFirst: true)
+    }
+
+    /// `clearingFirst`: al llegar a otra carpeta no quedan a la vista (ni
+    /// seleccionables) los ítems de la anterior mientras se lee la nueva.
+    private func loadInBackground(_ url: URL, clearingFirst: Bool) {
+        let generation = startNewLoad()
+        if clearingFirst {
+            items = []
+            error = nil
+            isLoadingDirectory = true
+        }
+        let request = makeLoadRequest(for: url)
+        loadTask = Task { [weak self] in
+            let start = Date()
+            let result = await request.runInBackground()
+            guard let self, generation == self.loadGeneration else { return }
+            DebugEventLog.log("carga", "load(\(url.lastPathComponent)) en segundo plano tardó \(Int(Date().timeIntervalSince(start) * 1000)) ms")
+            self.loadTask = nil
+            self.apply(result)
+        }
+    }
+
+    /// Invalida las lecturas en curso; devuelve el número de la nueva.
+    @discardableResult
+    private func startNewLoad() -> Int {
+        loadGeneration &+= 1
+        loadTask?.cancel()
+        loadTask = nil
+        return loadGeneration
+    }
+
+    private func makeLoadRequest(for url: URL) -> DirectoryLoadRequest {
+        var activeReader = reader
+        activeReader.sortingChoice = AppSettingsStore().settings().sortingChoice
+        if let overrideHidden = viewProperties.showsHiddenFilesOverride {
+            activeReader.showsHiddenFiles = overrideHidden
+        }
+        return DirectoryLoadRequest(
+            url: url,
+            reader: activeReader,
+            sortField: viewProperties.sortField,
+            ascending: viewProperties.ascending,
+            foldersFirst: viewProperties.sortFoldersFirst,
+            hiddenLast: viewProperties.sortHiddenLast
+        )
+    }
+
+    private func apply(_ result: DirectoryLoadResult) {
+        loadCountForTesting += 1
+        didFinishFirstLoad = true
+        switch result.contents {
+        case .success(let loaded):
+            // `@Observable` no avisa si el valor es igual, pero el `didSet` de
+            // `items` invalidaría igual la caché de `filteredItems`.
+            if items != loaded { items = loaded }
+            error = nil
+        case .failure(let readError):
+            items = []
+            error = readError
+        }
+        selectedIDs = selectedIDs.intersection(Set(items.map(\.id)))
+        if let target = pendingSelectionURL {
+            pendingSelectionURL = nil
+            if let match = items.first(where: { $0.url.standardizedFileURL == target.standardizedFileURL }) {
+                select(match)
+            }
+        }
+        isLoadingDirectory = false
+        DebugEventLog.measure("carga", "  git") { loadGitState(for: result.url) }
+        availableCapacity = result.availableCapacity
+        isCurrentDirectoryWritable = result.isWritable
+        DebugEventLog.log("carga", "\(items.count) ítems en \(result.url.lastPathComponent)")
         updateDirectoryWatcher()
     }
 
@@ -1649,45 +1754,74 @@ final class BrowserViewModel {
             return
         }
         guard directoryWatcher.watchedURL != currentURL else { return }
-        directoryWatcher.watch(currentURL) { [weak self] in
+        directoryWatcher.watch(
+            currentURL,
+            ignoring: { [weak self] name in self?.isInvisibleEntry(named: name) ?? true }
+        ) { [weak self] in
             self?.directoryChangedOnDisk()
         }
     }
 
-    /// Otra app (o esta) tocó la carpeta: se relee. No relanza la búsqueda.
-    private func directoryChangedOnDisk() {
-        DebugEventLog.log("carga", "cambio en disco en \(currentURL.lastPathComponent)")
-        load(currentURL)
+    /// Un archivo oculto que no se está mostrando (`.claude.json`, `.DS_Store`…)
+    /// no cambia la lista. `.hidden` sí: decide qué otros nombres se ocultan.
+    private func isInvisibleEntry(named name: String) -> Bool {
+        name.hasPrefix(".") && name != ".hidden" && !effectiveShowsHiddenFiles
     }
 
-    private func loadNow(_ url: URL) {
-        var activeReader = reader
-        activeReader.sortingChoice = AppSettingsStore().settings().sortingChoice
-        if let overrideHidden = viewProperties.showsHiddenFilesOverride {
-            activeReader.showsHiddenFiles = overrideHidden
-        }
-        do {
-            let loaded = try DebugEventLog.measure("carga", "  leer directorio") {
-                try activeReader.contents(
-                    of: url,
-                    sortField: viewProperties.sortField,
-                    ascending: viewProperties.ascending,
-                    foldersFirst: viewProperties.sortFoldersFirst,
-                    hiddenLast: viewProperties.sortHiddenLast
-                )
-            }
-            DebugEventLog.measure("carga", "  asignar items (dispara SwiftUI)") { items = loaded }
-            error = nil
-        } catch let readError as DirectoryReadError {
-            items = []
-            error = readError
-        } catch {
-            items = []
-            self.error = .other(error.localizedDescription)
-        }
-        selectedIDs = selectedIDs.intersection(Set(items.map(\.id)))
-        DebugEventLog.measure("carga", "  git") { loadGitState(for: url) }
-        availableCapacity = DebugEventLog.measure("carga", "  espacio del volumen") { VolumeInfoProvider().availableCapacity(for: url) }
-        isCurrentDirectoryWritable = DebugEventLog.measure("carga", "  permisos de escritura") { FileManager.default.isWritableFile(atPath: url.path) }
+    /// Otra app (o esta) tocó la carpeta: se relee en segundo plano. FSEvents ya
+    /// agrupa los cambios de cada tanda (`latency`). No relanza la búsqueda.
+    private func directoryChangedOnDisk() {
+        DebugEventLog.log("carga", "cambio en disco en \(currentURL.lastPathComponent)")
+        loadInBackground(currentURL, clearingFirst: false)
     }
+
+    func resetLoadCountForTesting() {
+        loadCountForTesting = 0
+    }
+}
+
+/// Qué carpeta leer y cómo ordenarla; se arma en el main actor y se lee en
+/// cualquier hilo.
+struct DirectoryLoadRequest: Sendable {
+    let url: URL
+    let reader: DirectoryReader
+    let sortField: SortField
+    let ascending: Bool
+    let foldersFirst: Bool
+    let hiddenLast: Bool
+
+    func run() -> DirectoryLoadResult {
+        let contents: Result<[FileItem], DirectoryReadError>
+        do {
+            contents = .success(try DebugEventLog.measure("carga", "  leer directorio") {
+                try reader.contents(
+                    of: url,
+                    sortField: sortField,
+                    ascending: ascending,
+                    foldersFirst: foldersFirst,
+                    hiddenLast: hiddenLast
+                )
+            })
+        } catch let readError as DirectoryReadError {
+            contents = .failure(readError)
+        } catch {
+            contents = .failure(.other(error.localizedDescription))
+        }
+        // También pueden tardar en un disco lento o de red.
+        let capacity = DebugEventLog.measure("carga", "  espacio del volumen") { VolumeInfoProvider().availableCapacity(for: url) }
+        let writable = DebugEventLog.measure("carga", "  permisos de escritura") { FileManager.default.isWritableFile(atPath: url.path) }
+        return DirectoryLoadResult(url: url, contents: contents, availableCapacity: capacity, isWritable: writable)
+    }
+
+    @concurrent
+    func runInBackground() async -> DirectoryLoadResult {
+        run()
+    }
+}
+
+struct DirectoryLoadResult: Sendable {
+    let url: URL
+    let contents: Result<[FileItem], DirectoryReadError>
+    let availableCapacity: Int64?
+    let isWritable: Bool
 }

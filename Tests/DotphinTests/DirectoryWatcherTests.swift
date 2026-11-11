@@ -68,6 +68,31 @@ final class DirectoryWatcherTests: XCTestCase {
         watcher.stop()
     }
 
+    func test_ignoringFilter_skipsBatchesMadeOnlyOfIgnoredNames() async throws {
+        let watcher = DirectoryWatcher()
+        watcher.watch(dir, latency: 0.05, ignoring: { $0.hasPrefix(".") }) { [weak self] in self?.notifications += 1 }
+        try await Task.sleep(for: .milliseconds(500))
+        notifications = 0
+
+        // Escritura atómica: un temporal oculto y un renombre, como hacen muchas apps.
+        try "x".write(to: dir.appendingPathComponent(".estado.json"), atomically: true, encoding: .utf8)
+        var notified = try await waitForNotification(timeout: .seconds(1))
+        XCTAssertFalse(notified)
+
+        try "x".write(to: dir.appendingPathComponent("visible.txt"), atomically: true, encoding: .utf8)
+        notified = try await waitForNotification()
+        XCTAssertTrue(notified)
+        watcher.stop()
+    }
+
+    func test_reportsSubfolderCreationButNotItsContents() async throws {
+        let watcher = try await startWatching()
+        try FileManager.default.createDirectory(at: dir.appendingPathComponent("nueva"), withIntermediateDirectories: false)
+        let notified = try await waitForNotification()
+        XCTAssertTrue(notified)
+        watcher.stop()
+    }
+
     func test_stop_endsNotifications() async throws {
         let watcher = try await startWatching()
         watcher.stop()

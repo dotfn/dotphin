@@ -207,6 +207,10 @@ struct BrowserView: View {
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+            } else if viewModel.isLoadingDirectory {
+                ProgressView(String(localized: "Cargando carpeta…", bundle: #bundle))
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if !viewModel.searchQuery.isEmpty {
                 if viewModel.searchResults.isEmpty && viewModel.isSearching {
                     ProgressView(String(localized: "Buscando «\(viewModel.searchQuery)»…", bundle: #bundle))
@@ -417,6 +421,9 @@ struct BrowserView: View {
             viewModel.presentsConflictPrompts = true
             viewModel.watchesCurrentDirectory = true
         }
+        // Solo la pestaña visible observa su carpeta; al volver se pone al día.
+        .onAppear { viewModel.watchesCurrentDirectory = true }
+        .onDisappear { viewModel.watchesCurrentDirectory = false }
         .modifier(FileConflictDialogModifier(transfer: viewModel.activeTransfer))
         .onChange(of: undoManager) { _, newValue in
             viewModel.undoManager = newValue
@@ -470,10 +477,7 @@ struct BrowserView: View {
             if let url = propertiesTargetURL {
                 FilePropertiesSheetView(url: url) { resolvedTarget in
                     let parentDir = resolvedTarget.deletingLastPathComponent()
-                    viewModel.navigate(to: parentDir)
-                    if let targetItem = viewModel.items.first(where: { $0.url.standardizedFileURL == resolvedTarget.standardizedFileURL }) {
-                        viewModel.select(targetItem)
-                    }
+                    viewModel.navigate(to: parentDir, selecting: resolvedTarget)
                 }
             }
         }

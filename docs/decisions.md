@@ -1164,3 +1164,38 @@ Reportado por el usuario al probar.
   programa, `stop()` mata la shell, F4 e Intro por `NSApp.sendEvent`.
   No verificado a mano: el aspecto de colores, `vim` y el mouse en pantalla
   (este entorno no puede mirar la pantalla).
+
+## 2026-11-11 — Relecturas en ráfaga y carga al arrancar (slice 23, issue #2)
+
+- Registro del usuario: al arrancar, `contentsOfDirectory` de la carpeta
+  personal tardó 3 s en el hilo principal; después, cientos de relecturas
+  por "cambio en disco".
+- Las relecturas repetidas eran varias pestañas abiertas en la carpeta
+  personal: cada una seguía observando su carpeta aunque no se viera
+  (`watchesCurrentDirectory` se prendía y nunca se apagaba). Ahora
+  `BrowserView` lo apaga al desaparecer; al volver, la pestaña relee una vez.
+- Lo que disparaba los cambios eran archivos ocultos que otras apps reescriben
+  (`~/.claude.json`, con un temporal y un renombre). FSEvents pasa a eventos
+  por archivo y se ignora la tanda si solo cambiaron ocultos que no se
+  muestran (`.hidden` sí cuenta). Una subcarpeta "modificada" tampoco cuenta:
+  es un cambio adentro de ella.
+- Navegar lee en segundo plano (`DirectoryLoadRequest.runInBackground`,
+  `@concurrent`; Axiom `axiom-concurrency`). Cada carga se numera y un
+  resultado viejo se descarta. Mientras carga, la lista queda vacía (no se
+  puede actuar sobre ítems de la carpeta anterior) y se ve "Cargando carpeta…".
+  Navegar y seleccionar (carpeta contenedora, destino de un enlace,
+  propiedades) usa `navigate(to:selecting:)`.
+- Solo los view models de la app (`TabsViewModel`) cargan en segundo plano;
+  uno suelto (tests) sigue sincrónico. `refresh()` tras una operación propia
+  sigue sincrónico, para seleccionar enseguida lo recién creado.
+- Descartado después de medir:
+  - Evitar reasignar `items`/`error`/etc. iguales para no redibujar: con este
+    Swift, `@Observable` ya no avisa si el valor es igual (verificado con
+    `withObservationTracking`). Solo se conserva el chequeo de `items`,
+    porque su `didSet` invalida la caché de `filteredItems`.
+  - Agrupar avisos con una espera propia: los 0,3 s de `latency` de FSEvents
+    ya juntan una ráfaga (el test pasa igual sin la espera).
+- Los bloqueos de 400–900 ms del registro no venían de las relecturas: también
+  aparecen sin ninguna cerca y coinciden con compilaciones en la máquina. Al
+  arrancar queda uno de ~900 ms que ya no es de leer carpetas (la lectura en
+  segundo plano tarda 8 ms); falta perfilarlo.

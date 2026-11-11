@@ -465,10 +465,7 @@ struct ContentView: View {
                     FilePropertiesSheetView(url: url) { resolvedTarget in
                         guard let focused = focusedViewModel else { return }
                         let parentDir = resolvedTarget.deletingLastPathComponent()
-                        focused.navigate(to: parentDir)
-                        if let targetItem = focused.items.first(where: { $0.url.standardizedFileURL == resolvedTarget.standardizedFileURL }) {
-                            focused.select(targetItem)
-                        }
+                        focused.navigate(to: parentDir, selecting: resolvedTarget)
                     }
                 }
             }
@@ -515,7 +512,7 @@ struct ContentView: View {
                         BreadcrumbView(
                             url: focused.currentURL,
                             editableByDefault: settingsModel.settings.editableLocationByDefault,
-                            onNavigate: focused.navigate,
+                            onNavigate: { focused.navigate(to: $0) },
                             onOpenInNewTab: { url in
                                 tabsViewModel.addTab(
                                     startingAt: url,

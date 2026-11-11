@@ -14,10 +14,17 @@ final class DirectoryWatcher {
 
     /// Empieza a observar `url` (y deja de observar la anterior). `onChange`
     /// se llama en el main actor, a lo sumo una vez por tanda de cambios.
-    func watch(_ url: URL, latency: TimeInterval = 0.3, onChange: @escaping @MainActor () -> Void) {
+    /// `ignoring` recibe el nombre de cada entrada que cambió: si devuelve
+    /// `true` para todas (p. ej. archivos ocultos que no se muestran), no se avisa.
+    func watch(
+        _ url: URL,
+        latency: TimeInterval = 0.3,
+        ignoring: (@MainActor (String) -> Bool)? = nil,
+        onChange: @escaping @MainActor () -> Void
+    ) {
         stop()
         let path = Self.realPath(of: url)
-        let box = DirectoryWatcherBox(watchedPath: path, handler: onChange)
+        let box = DirectoryWatcherBox(watchedPath: path, ignoring: ignoring, handler: onChange)
         var context = FSEventStreamContext(
             version: 0,
             info: Unmanaged.passUnretained(box).toOpaque(),
@@ -25,7 +32,9 @@ final class DirectoryWatcher {
             release: nil,
             copyDescription: nil
         )
-        let flags = UInt32(kFSEventStreamCreateFlagUseCFTypes | kFSEventStreamCreateFlagNoDefer)
+        // Eventos por archivo: hace falta el nombre de lo que cambió para poder
+        // ignorar, por ejemplo, un `~/.claude.json` que otra app reescribe sin parar.
+        let flags = UInt32(kFSEventStreamCreateFlagUseCFTypes | kFSEventStreamCreateFlagNoDefer | kFSEventStreamCreateFlagFileEvents)
         guard let stream = FSEventStreamCreate(
             kCFAllocatorDefault,
             directoryWatcherCallback,
@@ -74,32 +83,60 @@ final class DirectoryWatcher {
 /// mientras exista el stream.
 private final class DirectoryWatcherBox: Sendable {
     let watchedPath: String
+    let ignoring: (@MainActor (String) -> Bool)?
     let handler: @MainActor () -> Void
 
-    init(watchedPath: String, handler: @escaping @MainActor () -> Void) {
+    init(watchedPath: String, ignoring: (@MainActor (String) -> Bool)?, handler: @escaping @MainActor () -> Void) {
         self.watchedPath = watchedPath
+        self.ignoring = ignoring
         self.handler = handler
     }
 
-    /// Solo interesan los cambios directos de la carpeta observada, no los de
-    /// sus subcarpetas (FSEvents observa el árbol entero).
+    /// Solo interesan las entradas directas de la carpeta observada, no lo que
+    /// pasa dentro de sus subcarpetas (FSEvents observa el árbol entero).
     @MainActor
-    func handle(changedPaths: [String]) {
-        let isDirectChange = changedPaths.contains { path in
-            (path.hasSuffix("/") ? String(path.dropLast()) : path) == watchedPath
+    func handle(events: [(path: String, flags: FSEventStreamEventFlags)]) {
+        var changedNames: [String] = []
+        for event in events {
+            let path = event.path.hasSuffix("/") ? String(event.path.dropLast()) : event.path
+            let flags = Int(event.flags)
+            if flags & kFSEventStreamEventFlagMustScanSubDirs != 0 {
+                // El sistema perdió eventos: hay que releer sin saber qué cambió.
+                handler()
+                return
+            }
+            let isDirectory = flags & kFSEventStreamEventFlagItemIsDir != 0
+            let addedOrRemoved = flags & (kFSEventStreamEventFlagItemCreated
+                | kFSEventStreamEventFlagItemRemoved
+                | kFSEventStreamEventFlagItemRenamed) != 0
+            if path == watchedPath {
+                // La carpeta misma: solo importa si la borraron o la movieron.
+                if addedOrRemoved {
+                    handler()
+                    return
+                }
+                continue
+            }
+            guard (path as NSString).deletingLastPathComponent == watchedPath else { continue }
+            // Una subcarpeta "modificada" es un cambio adentro de ella, no de esta lista.
+            if isDirectory && !addedOrRemoved { continue }
+            changedNames.append((path as NSString).lastPathComponent)
         }
-        if isDirectChange {
-            handler()
-        }
+        guard !changedNames.isEmpty else { return }
+        if let ignoring, changedNames.allSatisfy(ignoring) { return }
+        handler()
     }
 }
 
 /// Corre en la cola principal (ver `FSEventStreamSetDispatchQueue`).
-private let directoryWatcherCallback: FSEventStreamCallback = { _, info, _, eventPaths, _, _ in
+private let directoryWatcherCallback: FSEventStreamCallback = { _, info, count, eventPaths, eventFlags, _ in
     guard let info else { return }
     let box = Unmanaged<DirectoryWatcherBox>.fromOpaque(info).takeUnretainedValue()
     let paths = (Unmanaged<CFArray>.fromOpaque(eventPaths).takeUnretainedValue() as? [String]) ?? []
+    let events = paths.prefix(count).enumerated().map { index, path in
+        (path: path, flags: eventFlags[index])
+    }
     MainActor.assumeIsolated {
-        box.handle(changedPaths: paths)
+        box.handle(events: events)
     }
 }

@@ -56,12 +56,12 @@ final class TabsViewModel {
                 var secondaryVM: BrowserViewModel? = nil
                 if let secPath = entry.secondaryPath,
                    FileManager.default.fileExists(atPath: secPath, isDirectory: &isDir), isDir.boolValue {
-                    secondaryVM = BrowserViewModel(startingAt: URL(fileURLWithPath: secPath, isDirectory: true))
+                    secondaryVM = BrowserViewModel(startingAt: URL(fileURLWithPath: secPath, isDirectory: true), loadsInBackground: true)
                 }
                 restoredTabs.append(
                     Tab(
                         id: UUID(),
-                        primary: BrowserViewModel(startingAt: primaryURL),
+                        primary: BrowserViewModel(startingAt: primaryURL, loadsInBackground: true),
                         secondary: secondaryVM,
                         focusedPaneIndex: secondaryVM != nil ? min(1, max(0, entry.focusedPaneIndex)) : 0
                     )
@@ -75,8 +75,8 @@ final class TabsViewModel {
             }
         }
 
-        let secondary = startInSplitView ? BrowserViewModel(startingAt: url) : nil
-        let first = Tab(id: UUID(), primary: BrowserViewModel(startingAt: url), secondary: secondary, focusedPaneIndex: 0)
+        let secondary = startInSplitView ? BrowserViewModel(startingAt: url, loadsInBackground: true) : nil
+        let first = Tab(id: UUID(), primary: BrowserViewModel(startingAt: url, loadsInBackground: true), secondary: secondary, focusedPaneIndex: 0)
         self.tabs = [first]
         self.selectedTabID = first.id
     }
@@ -98,8 +98,8 @@ final class TabsViewModel {
     }
 
     func addTab(startingAt url: URL, afterCurrentTab: Bool = false, splitView: Bool = false) {
-        let secondary = splitView ? BrowserViewModel(startingAt: url) : nil
-        let tab = Tab(id: UUID(), primary: BrowserViewModel(startingAt: url), secondary: secondary, focusedPaneIndex: 0)
+        let secondary = splitView ? BrowserViewModel(startingAt: url, loadsInBackground: true) : nil
+        let tab = Tab(id: UUID(), primary: BrowserViewModel(startingAt: url, loadsInBackground: true), secondary: secondary, focusedPaneIndex: 0)
         if afterCurrentTab, let currentIndex = tabs.firstIndex(where: { $0.id == selectedTabID }) {
             tabs.insert(tab, at: currentIndex + 1)
         } else {
@@ -112,8 +112,8 @@ final class TabsViewModel {
     func duplicateTab(_ id: Tab.ID) {
         guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
         let source = tabs[index]
-        let primaryVM = BrowserViewModel(startingAt: source.primary.currentURL)
-        let secondaryVM = source.secondary.map { BrowserViewModel(startingAt: $0.currentURL) }
+        let primaryVM = BrowserViewModel(startingAt: source.primary.currentURL, loadsInBackground: true)
+        let secondaryVM = source.secondary.map { BrowserViewModel(startingAt: $0.currentURL, loadsInBackground: true) }
         let duplicated = Tab(
             id: UUID(),
             primary: primaryVM,
@@ -196,8 +196,8 @@ final class TabsViewModel {
     func reopenClosedTab(_ recordID: ClosedTabRecord.ID) {
         guard let idx = recentlyClosedTabs.firstIndex(where: { $0.id == recordID }) else { return }
         let record = recentlyClosedTabs.remove(at: idx)
-        let primaryVM = BrowserViewModel(startingAt: record.primaryURL)
-        let secondaryVM = record.secondaryURL.map { BrowserViewModel(startingAt: $0) }
+        let primaryVM = BrowserViewModel(startingAt: record.primaryURL, loadsInBackground: true)
+        let secondaryVM = record.secondaryURL.map { BrowserViewModel(startingAt: $0, loadsInBackground: true) }
         let restored = Tab(
             id: UUID(),
             primary: primaryVM,
@@ -225,7 +225,7 @@ final class TabsViewModel {
             tabs[index].secondary = nil
             tabs[index].focusedPaneIndex = 0
         } else {
-            tabs[index].secondary = BrowserViewModel(startingAt: tabs[index].primary.currentURL)
+            tabs[index].secondary = BrowserViewModel(startingAt: tabs[index].primary.currentURL, loadsInBackground: true)
         }
         saveSessionSnapshot()
     }
@@ -250,7 +250,7 @@ final class TabsViewModel {
         if let secondary = tabs[tabIndex].secondary {
             secondary.navigate(to: url)
         } else {
-            tabs[tabIndex].secondary = BrowserViewModel(startingAt: url)
+            tabs[tabIndex].secondary = BrowserViewModel(startingAt: url, loadsInBackground: true)
         }
         tabs[tabIndex].focusedPaneIndex = 1
         saveSessionSnapshot()
