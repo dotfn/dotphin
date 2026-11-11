@@ -1344,3 +1344,15 @@ Salió de una auditoría de lo que la app hacía a mano teniendo API del sistema
 - Sin verificar en la app real: la restauración de varias ventanas por el
   sistema (los tests cubren `TabSessionStore` y `beginSession`, no el enganche
   con `@SceneStorage`).
+
+## 2026-11-11 — Conflicto pendiente al cerrar el panel y orden de columnas
+
+- #4: `BrowserViewModel.close()` marca el panel como cerrado y responde
+  «Detener» al conflicto que esté esperando; los conflictos que aparezcan
+  después tampoco preguntan. Lo llaman `TabsViewModel.closeTab`, `toggleSplit`
+  (al quitar el panel secundario) y `closeAllPanes` (al cerrarse la ventana).
+  No se usa `viewDidDisappear`: cambiar de pestaña también oculta la vista y
+  ahí el diálogo tiene que seguir esperando.
+- #14: reproducido en un test — con Tipo y Tamaño guardados, al mostrar
+  «Extensión» AppKit la restauraba al final. `restoreCanonicalOrder` reacomoda
+  las columnas después de reactivar el autoguardado; los anchos se conservan.
