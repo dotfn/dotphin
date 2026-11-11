@@ -689,7 +689,7 @@ final class FileRowCellView: NSTableCellView, NSTextFieldDelegate {
         if iconSizeConstraints.first?.constant != iconSide {
             iconSizeConstraints.forEach { $0.constant = iconSide }
         }
-        iconView.image = ThumbnailLoader.icon(forFile: item.url.path)
+        iconView.image = ThumbnailLoader.icon(for: item)
         nameField.stringValue = item.name
         alphaValue = item.isHiddenItem ? 0.58 : 1.0
         toolTip = formatter.hoverTooltip(for: item)

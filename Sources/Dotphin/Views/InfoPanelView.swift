@@ -45,7 +45,7 @@ struct InfoPanelView: View {
                                     .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
                                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
                             } else {
-                                Image(nsImage: ThumbnailLoader.icon(forFile: item.url.path))
+                                Image(nsImage: ThumbnailLoader.icon(for: item))
                                     .resizable()
                                     .scaledToFit()
                             }

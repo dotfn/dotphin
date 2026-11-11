@@ -39,7 +39,7 @@ struct IconGridCell: View {
                             .shadow(color: .black.opacity(0.18), radius: 2.5, y: 1)
                             .transition(.opacity.combined(with: .scale(scale: 0.96)))
                     } else {
-                        Image(nsImage: ThumbnailLoader.icon(forFile: item.url.path))
+                        Image(nsImage: ThumbnailLoader.icon(for: item))
                             .resizable()
                             .scaledToFit()
                             .shadow(color: .black.opacity(0.10), radius: 1.5, y: 0.5)

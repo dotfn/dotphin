@@ -31,6 +31,42 @@ struct ThumbnailLoader {
         return image
     }
 
+    /// Ícono de un ítem de la lista: una carpeta con etiqueta de color se ve de
+    /// ese color (como el color de carpeta de Dolphin). Solo cambia lo que se
+    /// muestra en Dotphin, no el ícono guardado en el disco.
+    static func icon(for item: FileItem) -> NSImage {
+        let base = icon(forFile: item.url.path)
+        guard item.isDirectory, let color = item.colorTag.nsColor else { return base }
+        let key = "\(item.url.path)#\(item.colorTag.rawValue)" as NSString
+        if let cached = iconCache.object(forKey: key) {
+            return cached
+        }
+        let tinted = tinted(base, with: color)
+        iconCache.setObject(tinted, forKey: key)
+        return tinted
+    }
+
+    /// Mezcla "color": toma el tono y la saturación de `color` y la luminosidad
+    /// del ícono, recortado a su silueta. Conserva el relieve, los brillos y el
+    /// dibujo de carpetas especiales (Descargas, Escritorio…).
+    static func tinted(_ base: NSImage, with color: NSColor) -> NSImage {
+        let image = NSImage(size: base.size, flipped: false) { rect in
+            guard let context = NSGraphicsContext.current?.cgContext else { return false }
+            base.draw(in: rect)
+            var proposed = rect
+            guard let mask = base.cgImage(forProposedRect: &proposed, context: NSGraphicsContext.current, hints: nil) else { return true }
+            context.saveGState()
+            context.clip(to: rect, mask: mask)
+            context.setBlendMode(.color)
+            context.setFillColor(color.usingColorSpace(.sRGB)?.cgColor ?? color.cgColor)
+            context.fill(rect)
+            context.restoreGState()
+            return true
+        }
+        image.accessibilityDescription = base.accessibilityDescription
+        return image
+    }
+
     static func invalidateIcon(forFile path: String) {
         iconCache.removeObject(forKey: path as NSString)
     }

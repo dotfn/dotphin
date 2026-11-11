@@ -26,7 +26,7 @@ struct CompactGridCell: View {
                     .transition(.scale.combined(with: .opacity))
             }
 
-            Image(nsImage: ThumbnailLoader.icon(forFile: item.url.path))
+            Image(nsImage: ThumbnailLoader.icon(for: item))
                 .resizable()
                 .scaledToFit()
                 .frame(width: iconDimension, height: iconDimension)
