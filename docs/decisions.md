@@ -1143,7 +1143,24 @@ Reportado por el usuario al probar.
 - Ya no se fuerzan `PROMPT`, `PROMPT_EOL_MARK` ni `nopromptsp`: eran parches
   para el emulador viejo; ahora se ve el prompt propio del usuario. `COLUMNS` y
   `LINES` se quitan del entorno para que mande el tamaño real del pty.
-- Verificado con tests de la shell real (arranca en la carpeta, sigue a
-  Dotphin, informa el `cd` del usuario, F4 e Intro por `NSApp.sendEvent`).
+- Revisión independiente, corregido:
+  - Rebote: con un comando ya ejecutado, cada `cd` de Dotphin hacía volver a
+    la carpeta anterior (zsh escribe antes de cambiar de carpeta). Ahora se
+    ignora lo que informe la shell hasta que llega al `cd` pendiente (o 3 s).
+    El bug venía del emulador viejo.
+  - El `cd` automático ya no se escribe dentro de `vim`, `less` o un servidor:
+    solo si la shell es el grupo de primer plano (`tcgetpgrp`); si no, queda
+    diferido y se manda al volver el prompt.
+  - `stop()` manda SIGHUP (zsh interactivo ignora SIGTERM) y llama a
+    `updateUiClosed()`; cerrar la ventana llama a `stop()`.
+  - Cada panel tiene su contenedor y le presta la vista de la terminal, para
+    que un F4 F4 rápido no la deje fuera.
+  - OSC 7 de otro equipo (`ssh`) se ignora; `LANG` sale del idioma del
+    usuario; se quitan `TERM_PROGRAM`/`ITERM_*` heredados; Intro que confirma
+    texto de un método de entrada no cuenta como comando.
+- Verificado con tests de la shell real, con un `ZDOTDIR` vacío para no
+  depender del `~/.zshrc` del usuario: arranca en la carpeta, sigue a Dotphin
+  sin rebotar (el test falla sin la corrección), espera a que termine un
+  programa, `stop()` mata la shell, F4 e Intro por `NSApp.sendEvent`.
   No verificado a mano: el aspecto de colores, `vim` y el mouse en pantalla
   (este entorno no puede mirar la pantalla).

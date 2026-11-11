@@ -19,6 +19,10 @@ final class EmbeddedTerminalTests: XCTestCase {
         try FileManager.default.createDirectory(at: dirA, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: dirB, withIntermediateDirectories: true)
         session = EmbeddedTerminalSession()
+        // Un zsh sin la configuración del usuario: rápido y predecible.
+        let zdotdir = tempDir.appendingPathComponent("zdotdir", isDirectory: true)
+        try FileManager.default.createDirectory(at: zdotdir, withIntermediateDirectories: true)
+        session.environmentOverrides = ["ZDOTDIR": zdotdir.path, "SHELL": "/bin/zsh"]
     }
 
     override func tearDownWithError() throws {
@@ -73,6 +77,73 @@ final class EmbeddedTerminalTests: XCTestCase {
         XCTAssertTrue(waitUntil { shellIsIn(dirB) })
         RunLoop.main.run(until: Date().addingTimeInterval(0.3))
         XCTAssertNil(reported)
+    }
+
+    func test_dotphinDrivenCd_afterUserCommand_neverBouncesBack() {
+        var reported: [String] = []
+        session.onDirectoryChanged = { reported.append(EmbeddedTerminalSession.realPath($0)) }
+        session.startIfNeeded(initialDirectory: dirA)
+        XCTAssertTrue(waitUntil { shellIsIn(dirA) })
+        session.noteUserSubmittedLine()
+
+        for target: URL in [dirB, dirA, dirB] {
+            session.syncDirectory(to: target)
+            XCTAssertTrue(waitUntil { shellIsIn(target) })
+            RunLoop.main.run(until: Date().addingTimeInterval(0.25))
+        }
+        XCTAssertEqual(reported, [], "Dotphin no debe navegar por un cd que mandó él mismo")
+    }
+
+    func test_cdWaitsWhileAProgramOwnsTheTerminal_thenCatchesUp() {
+        session.startIfNeeded(initialDirectory: dirA)
+        XCTAssertTrue(waitUntil { shellIsIn(dirA) && session.shellOwnsTerminal })
+
+        session.noteUserSubmittedLine()
+        session.sendRaw("sleep 30\r")
+        XCTAssertTrue(waitUntil { !session.shellOwnsTerminal }, "sleep no tomó la terminal")
+
+        session.syncDirectory(to: dirB)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+        XCTAssertTrue(shellIsIn(dirA), "el cd no debe escribirse dentro del programa")
+
+        session.sendInterrupt()
+        XCTAssertTrue(waitUntil { shellIsIn(dirB) }, "al volver el prompt, la shell debe seguir a Dotphin")
+    }
+
+    func test_stop_endsTheShellProcess() {
+        session.startIfNeeded(initialDirectory: dirA)
+        XCTAssertTrue(waitUntil { shellIsIn(dirA) })
+        let pid = try! XCTUnwrap(session.terminalView?.process.shellPid)
+        XCTAssertGreaterThan(pid, 0)
+
+        session.stop()
+        XCTAssertTrue(waitUntil(timeout: 3) { kill(pid, 0) != 0 }, "la shell \(pid) sigue viva después de stop()")
+    }
+
+    func test_osc7_acceptsLocalPathsOnly() {
+        let local: Set<String> = ["mi-mac.local"]
+        XCTAssertEqual(EmbeddedTerminalSession.localPath(fromOSC7: "file://mi-mac.local/Users/ana/con%20espacio", localHostNames: local), "/Users/ana/con espacio")
+        XCTAssertEqual(EmbeddedTerminalSession.localPath(fromOSC7: "file://MI-MAC/tmp", localHostNames: local), "/tmp")
+        XCTAssertEqual(EmbeddedTerminalSession.localPath(fromOSC7: "file:///tmp", localHostNames: local), "/tmp")
+        XCTAssertEqual(EmbeddedTerminalSession.localPath(fromOSC7: "file://localhost/tmp", localHostNames: local), "/tmp")
+        XCTAssertEqual(EmbeddedTerminalSession.localPath(fromOSC7: "/tmp", localHostNames: local), "/tmp")
+        XCTAssertNil(EmbeddedTerminalSession.localPath(fromOSC7: "file://servidor/tmp", localHostNames: local))
+        XCTAssertNil(EmbeddedTerminalSession.localPath(fromOSC7: "https://mi-mac.local/tmp", localHostNames: local))
+        XCTAssertNil(EmbeddedTerminalSession.localPath(fromOSC7: "", localHostNames: local))
+    }
+
+    func test_shellEnvironment_dropsHostTerminalVariables_andDerivesLang() {
+        let env = Set(EmbeddedTerminalSession.shellEnvironment(base: [
+            "PATH": "/usr/bin", "TERM_PROGRAM": "iTerm.app", "TERM_SESSION_ID": "x",
+            "ITERM_PROFILE": "Default", "COLUMNS": "80", "HOME": "/Users/ana",
+        ]))
+        XCTAssertTrue(env.contains("TERM_PROGRAM=Dotphin"))
+        XCTAssertTrue(env.contains("TERM=xterm-256color"))
+        XCTAssertTrue(env.contains("HOME=/Users/ana"))
+        XCTAssertFalse(env.contains { $0.hasPrefix("ITERM_") || $0.hasPrefix("TERM_SESSION") || $0.hasPrefix("COLUMNS=") })
+
+        XCTAssertEqual(EmbeddedTerminalSession.defaultLanguage(locale: Locale(identifier: "es_AR")), "es_AR.UTF-8")
+        XCTAssertEqual(EmbeddedTerminalSession.defaultLanguage(locale: Locale(identifier: "en")), "en_US.UTF-8")
     }
 
     func test_stopThenStart_launchesAFreshShell() {

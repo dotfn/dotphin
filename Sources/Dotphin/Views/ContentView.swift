@@ -102,6 +102,10 @@ struct ContentView: View {
             places = PlacesProvider().allPlaces()
             leaveUnmountedVolumes()
         }
+        // Cerrar la ventana termina su shell (y los trabajos en segundo plano).
+        .onDisappear {
+            embeddedTerminalSession.stop()
+        }
     }
 
     private var detailColumn: some View {

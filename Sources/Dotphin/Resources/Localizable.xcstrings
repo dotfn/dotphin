@@ -6322,6 +6322,22 @@
         }
       }
     },
+    "No se pudo iniciar la shell.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The shell could not be started."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo iniciar la shell."
+          }
+        }
+      }
+    },
     "No se pudo leer la plantilla «%@».": {
       "localizations": {
         "en": {

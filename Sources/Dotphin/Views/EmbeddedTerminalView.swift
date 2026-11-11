@@ -44,6 +44,13 @@ final class DotphinTerminalView: LocalProcessTerminalView {
         applySystemColors()
     }
 
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        super.viewWillMove(toWindow: newWindow)
+        if newWindow == nil {
+            removeKeyMonitor()
+        }
+    }
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if window == nil {
@@ -78,7 +85,8 @@ final class DotphinTerminalView: LocalProcessTerminalView {
                 if Self.isPanelShortcut(event), NSApp.mainMenu?.performKeyEquivalent(with: event) == true {
                     return true
                 }
-                if Self.submitsLine(event) {
+                // Return that commits marked text (IME) is not a command line.
+                if Self.submitsLine(event), !self.hasMarkedText() {
                     self.onUserSubmittedLine?()
                 }
                 return false
@@ -87,7 +95,7 @@ final class DotphinTerminalView: LocalProcessTerminalView {
         }
     }
 
-    private func removeKeyMonitor() {
+    func removeKeyMonitor() {
         if let keyMonitor {
             NSEvent.removeMonitor(keyMonitor)
         }
@@ -119,14 +127,23 @@ private final class OutputCheckGate: Sendable {
 @Observable
 final class EmbeddedTerminalSession: LocalProcessTerminalViewDelegate {
     private(set) var isRunning: Bool = false
+    private(set) var launchFailed: Bool = false
     private(set) var currentSyncedDirectory: URL?
     private(set) var terminalView: DotphinTerminalView?
     /// The user has run something in the shell, so it is no longer just following Dotphin.
     private(set) var hasUserExecutedCommand: Bool = false
     var autoSyncDirectory: Bool = true
     @ObservationIgnored var onDirectoryChanged: ((URL) -> Void)?
+    /// Extra variables for the shell (tests point `ZDOTDIR` at an empty folder).
+    @ObservationIgnored var environmentOverrides: [String: String] = [:]
 
     @ObservationIgnored private let outputGate = OutputCheckGate()
+    /// A `cd` Dotphin sent and the shell has not performed yet. Until then the shell's old
+    /// directory must not be reported back, or Dotphin would bounce to the previous folder.
+    @ObservationIgnored private var pendingDotphinDirectory: (url: URL, deadline: Date)?
+    /// Folder Dotphin moved to while a program (vim, less, a dev server) owned the terminal;
+    /// the `cd` is sent once the shell is back in the foreground.
+    @ObservationIgnored private var deferredDirectory: URL?
 
     init() {}
 
@@ -137,6 +154,12 @@ final class EmbeddedTerminalSession: LocalProcessTerminalViewDelegate {
             }
             return
         }
+
+        // A shell that ended leaves its view on screen until the restart replaces it.
+        _ = terminalView?.updateUiClosed()
+        launchFailed = false
+        pendingDotphinDirectory = nil
+        deferredDirectory = nil
 
         let view = DotphinTerminalView(frame: NSRect(x: 0, y: 0, width: 640, height: 220))
         view.applyDotphinStyle()
@@ -165,7 +188,9 @@ final class EmbeddedTerminalSession: LocalProcessTerminalViewDelegate {
         view.startProcess(
             executable: shellPath,
             args: arguments,
-            environment: Self.shellEnvironment(),
+            environment: Self.shellEnvironment(
+                base: ProcessInfo.processInfo.environment.merging(environmentOverrides) { $1 }
+            ),
             currentDirectory: initialDirectory.path
         )
         isRunning = view.process.running
@@ -179,11 +204,24 @@ final class EmbeddedTerminalSession: LocalProcessTerminalViewDelegate {
         env["TERM"] = "xterm-256color"
         env["COLORTERM"] = "truecolor"
         env["CLICOLOR"] = "1"
-        env["LANG"] = env["LANG"] ?? "es_ES.UTF-8"
+        env["LANG"] = env["LANG"] ?? defaultLanguage()
         // The panel sizes the pty; stale values from the launching environment would win over it.
         env["COLUMNS"] = nil
         env["LINES"] = nil
+        // Under `swift run` from iTerm/Terminal these would make shell integrations think they
+        // run in that terminal.
+        for key in env.keys where key.hasPrefix("ITERM_") || key.hasPrefix("TERM_SESSION") || key.hasPrefix("TERM_PROGRAM") {
+            env[key] = nil
+        }
+        env["TERM_PROGRAM"] = "Dotphin"
         return env.map { "\($0.key)=\($0.value)" }.sorted()
+    }
+
+    /// GUI apps usually get no `LANG`; build one from the user's locale (e.g. `es_AR.UTF-8`).
+    nonisolated static func defaultLanguage(locale: Locale = .current) -> String {
+        guard let language = locale.language.languageCode?.identifier,
+              let region = locale.region?.identifier else { return "en_US.UTF-8" }
+        return "\(language)_\(region).UTF-8"
     }
 
     /// Builds a complete `PATH` for GUI-launched macOS apps so tools installed via Homebrew,
@@ -223,11 +261,23 @@ final class EmbeddedTerminalSession: LocalProcessTerminalViewDelegate {
     }
 
     func stop() {
-        terminalView?.processDelegate = nil
-        terminalView?.setProcessOutputHandler(nil)
-        terminalView?.terminate()
+        if let view = terminalView {
+            view.processDelegate = nil
+            view.setProcessOutputHandler(nil)
+            view.removeKeyMonitor()
+            // An interactive shell ignores SIGTERM; SIGHUP ends it and its background jobs,
+            // like closing a Terminal.app window.
+            let pid = view.process.shellPid
+            if pid > 0 {
+                kill(pid, SIGHUP)
+            }
+            view.terminate()
+            _ = view.updateUiClosed()
+        }
         terminalView = nil
         isRunning = false
+        pendingDotphinDirectory = nil
+        deferredDirectory = nil
     }
 
     /// Dolphin's signature Konsole behavior (`src/panels/terminal/terminalpanel.cpp`):
@@ -241,6 +291,13 @@ final class EmbeddedTerminalSession: LocalProcessTerminalViewDelegate {
         }
         guard currentSyncedDirectory != standardized else { return }
         currentSyncedDirectory = standardized
+        // Typing `cd` into vim or a running server would corrupt it; wait for the prompt.
+        guard shellOwnsTerminal else {
+            deferredDirectory = standardized
+            return
+        }
+        deferredDirectory = nil
+        pendingDotphinDirectory = (standardized, Date().addingTimeInterval(3))
         let quoted = Self.shellSingleQuoted(standardized.path)
 
         // Ctrl+E, Ctrl+U clear any partial input; the leading space keeps the `cd` out of history.
@@ -254,7 +311,17 @@ final class EmbeddedTerminalSession: LocalProcessTerminalViewDelegate {
     }
 
     func noteUserSubmittedLine() {
+        guard isRunning else { return }
         hasUserExecutedCommand = true
+    }
+
+    /// The shell, not a program it launched, is the terminal's foreground process group.
+    var shellOwnsTerminal: Bool {
+        guard let process = terminalView?.process else { return false }
+        let pid = process.shellPid
+        let fd = process.childfd
+        guard pid > 0, fd >= 0 else { return false }
+        return tcgetpgrp(fd) == getpgid(pid)
     }
 
     func sendInterrupt() {
@@ -265,7 +332,7 @@ final class EmbeddedTerminalSession: LocalProcessTerminalViewDelegate {
 
     func clearOutput() {
         hasUserExecutedCommand = false
-        if isRunning {
+        if isRunning, shellOwnsTerminal {
             sendRaw("\u{0005}\u{0015} clear\r")
         }
     }
@@ -282,13 +349,31 @@ final class EmbeddedTerminalSession: LocalProcessTerminalViewDelegate {
 
     /// `cd` typed inside the terminal navigates Dolphin's active pane (`slotTerminalDirectoryChanged`).
     private func checkShellWorkingDirectoryAfterOutput() {
-        guard isRunning, let directory = shellWorkingDirectory else { return }
+        guard isRunning else { return }
+        if let deferred = deferredDirectory, shellOwnsTerminal {
+            // The program that owned the terminal exited: catch up with Dotphin.
+            deferredDirectory = nil
+            currentSyncedDirectory = nil
+            syncDirectory(to: deferred)
+            return
+        }
+        guard let directory = shellWorkingDirectory else { return }
         reportShellDirectory(directory)
     }
 
     private func reportShellDirectory(_ directory: URL) {
-        guard autoSyncDirectory, hasUserExecutedCommand else { return }
         let standardized = directory.standardizedFileURL
+        if let pending = pendingDotphinDirectory {
+            let arrived = Self.realPath(pending.url) == Self.realPath(standardized)
+            if arrived || Date() > pending.deadline {
+                pendingDotphinDirectory = nil
+            }
+            // Output printed before the shell ran Dotphin's `cd` still shows the old folder.
+            if arrived || pendingDotphinDirectory != nil {
+                return
+            }
+        }
+        guard autoSyncDirectory, hasUserExecutedCommand, deferredDirectory == nil else { return }
         // The kernel reports the real path (/private/tmp); Dotphin may be showing a link to it (/tmp).
         if let currentSyncedDirectory, Self.realPath(currentSyncedDirectory) == Self.realPath(standardized) {
             return
@@ -334,28 +419,77 @@ final class EmbeddedTerminalSession: LocalProcessTerminalViewDelegate {
 
     /// OSC 7, for shells configured to announce their directory.
     func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {
-        guard source === terminalView, let directory, !directory.isEmpty else { return }
-        let path = URL(string: directory).flatMap { $0.isFileURL ? $0.path : nil } ?? directory
+        guard source === terminalView, let path = Self.localPath(fromOSC7: directory) else { return }
         reportShellDirectory(URL(fileURLWithPath: path, isDirectory: true))
+    }
+
+    /// `file://host/path` (or a bare path). A directory on another host (an `ssh` session) is not
+    /// a local folder, even if one with the same path exists here.
+    nonisolated static func localPath(
+        fromOSC7 directory: String?,
+        localHostNames: Set<String> = [localHostName()]
+    ) -> String? {
+        guard let directory, !directory.isEmpty else { return nil }
+        guard let url = URL(string: directory), url.scheme != nil else {
+            return directory.hasPrefix("/") ? directory : nil
+        }
+        guard url.isFileURL else { return nil }
+        if let host = url.host(percentEncoded: false), !host.isEmpty, host != "localhost" {
+            let names = localHostNames.flatMap { [$0, $0.replacingOccurrences(of: ".local", with: "")] }
+            guard names.contains(where: { $0.caseInsensitiveCompare(host) == .orderedSame }) else { return nil }
+        }
+        let path = url.path(percentEncoded: false)
+        return path.isEmpty ? nil : path
+    }
+
+    /// `gethostname(3)`: what zsh's `$HOST` reports, without the DNS lookup of `ProcessInfo.hostName`.
+    nonisolated static func localHostName() -> String {
+        var buffer = [CChar](repeating: 0, count: Int(MAXHOSTNAMELEN) + 1)
+        guard gethostname(&buffer, buffer.count - 1) == 0 else { return "" }
+        return String(decoding: buffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
     }
 
     func processTerminated(source: TerminalView, exitCode: Int32?) {
         guard source === terminalView else { return }
         isRunning = false
     }
+
+    func processFailedToStart(source: TerminalView, error: LocalProcessError) {
+        guard source === terminalView else { return }
+        isRunning = false
+        launchFailed = true
+    }
 }
 
 /// Hosts the session's SwiftTerm view. The view is created by the session (it outlives the
-/// panel), so SwiftUI only places it; layout belongs to SwiftUI.
+/// panel), so each panel gets its own container and borrows the terminal. On a quick F4 F4
+/// the old container may be dismantled after the new one took the terminal; it only removes
+/// the terminal if it still holds it.
 private struct SwiftTermHostView: NSViewRepresentable {
     let terminalView: DotphinTerminalView
 
-    func makeNSView(context: Context) -> DotphinTerminalView {
+    func makeNSView(context: Context) -> NSView {
+        let container = NSView()
         terminalView.focusWhenAttached = true
-        return terminalView
+        terminalView.removeFromSuperview()
+        terminalView.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(terminalView)
+        NSLayoutConstraint.activate([
+            terminalView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            terminalView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            terminalView.topAnchor.constraint(equalTo: container.topAnchor),
+            terminalView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+        ])
+        return container
     }
 
-    func updateNSView(_ nsView: DotphinTerminalView, context: Context) {}
+    func updateNSView(_ container: NSView, context: Context) {}
+
+    static func dismantleNSView(_ container: NSView, coordinator: ()) {
+        for subview in container.subviews {
+            subview.removeFromSuperview()
+        }
+    }
 }
 
 /// KDE Dolphin-style integrated bottom terminal panel (`F4`), with live directory synchronization,
@@ -419,7 +553,9 @@ struct EmbeddedTerminalPanelView: View {
 
     private var shellEndedBar: some View {
         HStack(spacing: 8) {
-            Text(String(localized: "La sesión de la terminal terminó.", bundle: #bundle))
+            Text(session.launchFailed
+                 ? String(localized: "No se pudo iniciar la shell.", bundle: #bundle)
+                 : String(localized: "La sesión de la terminal terminó.", bundle: #bundle))
                 .font(.system(size: 11.5))
                 .foregroundStyle(.secondary)
             Button(String(localized: "Reiniciar", bundle: #bundle)) {
