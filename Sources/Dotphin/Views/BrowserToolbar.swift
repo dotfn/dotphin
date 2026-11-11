@@ -34,6 +34,10 @@ struct BrowserToolbar: CustomizableToolbarContent {
         trashItems
         ToolbarSpacer(.fixed)
         windowItems
+        // Empuja el buscador al borde derecho. Además SwiftUI descarta la
+        // personalización guardada si tiene más copias de un espaciador que la
+        // barra por defecto: con este, se pueden usar dos espacios flexibles.
+        ToolbarSpacer(.flexible)
     }
 
     @ToolbarContentBuilder

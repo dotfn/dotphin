@@ -1470,3 +1470,29 @@ Salió de una auditoría de lo que la app hacía a mano teniendo API del sistema
 - Con la posición del divisor por código, #11 (doble clic 50/50) queda a un
   paso; no se hizo acá.
 
+## 2026-11-11 — Personalización de la barra: dos espacios flexibles
+
+- El usuario agregaba un segundo espacio flexible (antes del buscador) y al
+  reabrir volvía la barra por defecto; mover el único espacio flexible sí se
+  guardaba.
+- Verificado con la app real (escribir `TB Item Identifiers` en el dominio
+  `Dotphin`, abrir el binario, leer lo guardado): mover ítems y quitar
+  botones se conserva; dos espacios flexibles, o tres fijos, hacen que se
+  borre la configuración. SwiftUI no acepta más copias de un espaciador que
+  las que trae la barra por defecto (uno flexible, dos fijos).
+- Arreglo: `ToolbarSpacer(.flexible)` al final de la barra por defecto. Lleva
+  el buscador al borde derecho (lo que el usuario buscaba) y permite dos
+  espacios flexibles. Verificado igual que arriba: dos flexibles sin
+  «Renombrar» se conserva.
+- Un primer diagnóstico ("no se conserva ningún cambio") salió de tests con
+  `NSHostingController`, cuyas ventanas no tienen el espacio flexible ni el
+  botón de la barra lateral de `WindowGroup`; en la app real no era así.
+  Mover `.searchable` al `NavigationSplitView`, que parecía arreglarlo en esos
+  tests, hacía abortar la app real al abrir (`NSToolbarItemViewer` min/max
+  size nan): se descartó.
+- Buscador "minimizado por defecto": `.searchToolbarBehavior(.minimize)` es
+  solo de iOS (`@available(macOS, unavailable)`). En Mac el campo es un
+  `NSSearchToolbarItem`, que se pliega a una lupa solo cuando no le alcanza el
+  espacio (medido: por debajo de ~920 pt de ventana) y no tiene opción para
+  empezar plegado. Pendiente de decisión del usuario.
+
