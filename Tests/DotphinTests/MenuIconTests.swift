@@ -78,4 +78,44 @@ final class MenuIconTests: XCTestCase {
         let withoutIcons = try menuImages()
         XCTAssertEqual(withoutIcons.values.filter { $0 }.count, 0, "con la opción apagada no debe haber íconos: \(withoutIcons)")
     }
+
+    /// macOS 27 oculta por defecto las imágenes de los menús: sin pedirlo con
+    /// `preferredImageVisibility`, los ítems tenían ícono pero no se dibujaba.
+    @MainActor
+    func test_menuItemImages_areRequestedVisible_followingTheSetting() throws {
+        MenuImageVisibility.shared.install()
+        let settings = AppSettingsModel.shared
+        let original = settings.settings.showsMenuIcons
+        defer { settings.settings.showsMenuIcons = original }
+
+        settings.settings.showsMenuIcons = true
+        let plain = NSMenu()
+        let item = NSMenuItem(title: "Cortar", action: nil, keyEquivalent: "")
+        plain.addItem(item)
+        item.image = NSImage(systemSymbolName: "scissors", accessibilityDescription: nil)
+        XCTAssertEqual(item.preferredImageVisibility, .visible)
+
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try "x".write(to: dir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let vm = BrowserViewModel(startingAt: dir)
+        let actions = BrowserContextMenuActions(
+            viewModel: vm, onOpen: { _ in }, onOpenInNewTab: nil, onNewFolderPrompt: {}, onNewFilePrompt: { _ in },
+            onRename: { _ in }, onBatchRename: {}, onDelete: { _ in }, onDeleteSelection: {},
+            onShowProperties: { _ in }, onOpenTerminal: nil
+        )
+        let menu = try XCTUnwrap(makeFileItemsMenu(for: vm.items, actions: actions, onRename: nil, onBatchRename: nil, onDelete: { _ in }, onDeleteSelection: {}))
+        menu.update()
+        let withImages = menu.items.filter { $0.image != nil }
+        XCTAssertFalse(withImages.isEmpty)
+        XCTAssertEqual(withImages.filter { $0.preferredImageVisibility != .visible }.map(\.title), [], "ítems con ícono que AppKit ocultaría")
+        let submenuItems = menu.items.compactMap(\.submenu).flatMap(\.items).filter { $0.image != nil }
+        XCTAssertEqual(submenuItems.filter { $0.preferredImageVisibility != .visible }.map(\.title), [])
+
+        // Apagado: también los íconos que pone el sistema (Cortar, Copiar…) quedan ocultos.
+        settings.settings.showsMenuIcons = false
+        MenuImageVisibility.shared.apply(to: plain)
+        XCTAssertEqual(item.preferredImageVisibility, .hidden)
+    }
 }

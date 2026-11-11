@@ -87,6 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        MenuImageVisibility.shared.install()
         DotphinApp.applyAppIcon()
         NSApplication.shared.activate(ignoringOtherApps: true)
     }

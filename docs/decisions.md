@@ -1256,3 +1256,11 @@ Reportado por el usuario al probar.
   `square.on.square`; "pestaña nueva", `plus.square.on.square`. Los ítems
   estándar del sistema (Cortar, Copiar, Pegar…) los pone macOS y no dependen
   de esta opción.
+- Los íconos no se veían: en macOS 27 AppKit oculta por defecto las imágenes
+  de los ítems de menú (`preferredImageVisibility = .automatic`; ver
+  `NSMenuItem.h` del SDK 27). Los ítems tenían la imagen, pero no se dibujaba.
+  `MenuImageVisibility` (instalado al arrancar) escucha `didAddItem` /
+  `didChangeItem` de cualquier menú de la app y pone `.visible` u `.hidden`
+  según la opción; con la opción apagada también oculta los íconos que pone
+  el sistema. SwiftUI no tiene modificador para esto. El test falla sin el
+  coordinador (todos los ítems quedan en "automático").
