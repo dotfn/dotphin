@@ -47,14 +47,15 @@ struct FileGridView: View {
             currentURL: currentURL,
             onOpen: onOpen,
             onMoveDropped: onMoveDropped,
-            menuForItems: { targetItems in
+            menuForItems: { targetItems, shareAnchor in
                 makeFileItemsMenu(
                     for: targetItems,
                     actions: contextMenuActions,
                     onRename: onRename,
                     onBatchRename: onBatchRename,
                     onDelete: onDelete,
-                    onDeleteSelection: onDeleteSelection
+                    onDeleteSelection: onDeleteSelection,
+                    shareAnchor: shareAnchor
                 )
             }
         )
@@ -85,7 +86,7 @@ struct FileCollectionView: NSViewRepresentable {
     let onOpen: (FileItem) -> Void
     let onMoveDropped: ([URL], URL) -> Void
     /// Menú contextual para los ítems clickeados; vacío = fondo de la grilla.
-    let menuForItems: ([FileItem]) -> NSMenu?
+    let menuForItems: ([FileItem], ShareAnchor?) -> NSMenu?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -275,14 +276,15 @@ struct FileCollectionView: NSViewRepresentable {
         func menu(forClickedIndexPath indexPath: IndexPath?) -> NSMenu? {
             guard let collectionView else { return nil }
             guard let indexPath, let item = item(at: indexPath) else {
-                return parent.menuForItems([])
+                return parent.menuForItems([], nil)
             }
             if !collectionView.selectionIndexPaths.contains(indexPath) {
                 collectionView.selectionIndexPaths = [indexPath]
                 pushSelection()
             }
             let targets = collectionView.selectionIndexPaths.sorted().compactMap { self.item(at: $0) }
-            return parent.menuForItems(targets.isEmpty ? [item] : targets)
+            let anchor = collectionView.item(at: indexPath).map { ShareAnchor(view: collectionView, rect: $0.view.frame) }
+            return parent.menuForItems(targets.isEmpty ? [item] : targets, anchor)
         }
 
         // MARK: Data source

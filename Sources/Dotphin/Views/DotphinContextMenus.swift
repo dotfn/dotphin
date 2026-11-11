@@ -27,6 +27,8 @@ struct BrowserContextMenuActions {
     var onShowGitRepoSheet: (([FileItem]) -> Void)? = nil
     var onInspectArchive: ((FileItem) -> Void)? = nil
     var onOpenTerminal: ((URL) -> Void)?
+    /// Ícono del archivo que se tocó, para abrir Compartir apuntándolo.
+    var shareAnchor: ShareAnchor? = nil
 }
 
 struct DotphinItemContextMenu: View {
@@ -246,7 +248,9 @@ struct DotphinItemContextMenu: View {
         Divider()
 
         // Como Finder: Compartir (AirDrop, Mail, Mensajes…) y la fila de colores.
-        ShareLink(items: targetItems.map(\.url))
+        Button(String(localized: "Compartir…", bundle: #bundle), menuIcon: "square.and.arrow.up") {
+            SharePresenter.share(targetItems.map(\.url), anchor: actions.shareAnchor)
+        }
         colorTagPalette
 
         Divider()

@@ -107,3 +107,41 @@ final class ShareAndColorTagMenuTests: XCTestCase {
         XCTAssertEqual(palette.items.filter { $0.preferredImageVisibility != .visible }.count, 0)
     }
 }
+
+/// Compartir se abre apuntando al ícono del archivo que se tocó, como Finder.
+@MainActor
+final class ShareAnchorTests: XCTestCase {
+    private final class Source: NSObject, NSTableViewDataSource, NSTableViewDelegate {
+        func numberOfRows(in tableView: NSTableView) -> Int { 5 }
+        func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+            let cell = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+            let icon = NSImageView(frame: NSRect(x: 20, y: 4, width: 16, height: 16))
+            icon.image = NSImage(systemSymbolName: "doc", accessibilityDescription: nil)
+            cell.addSubview(icon)
+            return cell
+        }
+        func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat { 24 }
+    }
+
+    func test_anchor_isTheIconOfTheClickedRow() throws {
+        let source = Source()
+        let table = NSTableView(frame: NSRect(x: 0, y: 0, width: 300, height: 200))
+        table.addTableColumn(NSTableColumn(identifier: .init("nombre")))
+        table.tableColumns[0].width = 300
+        table.dataSource = source
+        table.delegate = source
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200), styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = table
+        defer { window.close() }
+        table.reloadData()
+        table.layoutSubtreeIfNeeded()
+
+        let anchor = try XCTUnwrap(ShareAnchor.forRow(2, in: table))
+        XCTAssertTrue(anchor.view === table)
+        let rowRect = table.rect(ofRow: 2)
+        XCTAssertTrue(rowRect.contains(anchor.rect), "el ancla no está en la fila tocada")
+        XCTAssertEqual(anchor.rect.width, 16, accuracy: 0.5, "debería ser el ícono, no toda la fila")
+        XCTAssertNil(ShareAnchor.forRow(9, in: table))
+    }
+}

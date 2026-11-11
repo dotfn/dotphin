@@ -69,14 +69,15 @@ struct DetailsListView: View {
             onOpen: onOpen,
             onToggleExpansion: toggleExpansion(for:),
             onMoveDropped: onMoveDropped,
-            menuForItems: { targetItems in
+            menuForItems: { targetItems, shareAnchor in
                 makeFileItemsMenu(
                     for: targetItems,
                     actions: contextMenuActions,
                     onRename: onRename,
                     onBatchRename: onBatchRename,
                     onDelete: onDelete,
-                    onDeleteSelection: onDeleteSelection
+                    onDeleteSelection: onDeleteSelection,
+                    shareAnchor: shareAnchor
                 )
             }
         )

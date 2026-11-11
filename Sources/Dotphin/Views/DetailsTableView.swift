@@ -39,7 +39,7 @@ struct DetailsTableView: NSViewRepresentable {
     let onToggleExpansion: (URL) -> Void
     let onMoveDropped: ([URL], URL) -> Void
     /// Menú contextual para los ítems clickeados; vacío = fondo de la tabla.
-    let menuForItems: ([FileItem]) -> NSMenu?
+    let menuForItems: ([FileItem], ShareAnchor?) -> NSMenu?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -309,14 +309,14 @@ struct DetailsTableView: NSViewRepresentable {
         func menu(forClickedRow row: Int) -> NSMenu? {
             guard let tableView else { return nil }
             guard rows.indices.contains(row), let item = rows[row].item else {
-                return parent.menuForItems([])
+                return parent.menuForItems([], nil)
             }
             if !tableView.selectedRowIndexes.contains(row) {
                 tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
             }
             let ids = selectedIDs(in: tableView)
             let targets = rows.compactMap(\.item).filter { ids.contains($0.id) }
-            return parent.menuForItems(targets.isEmpty ? [item] : targets)
+            return parent.menuForItems(targets.isEmpty ? [item] : targets, ShareAnchor.forRow(row, in: tableView))
         }
 
         private func selectedIDs(in tableView: NSTableView) -> Set<FileItem.ID> {

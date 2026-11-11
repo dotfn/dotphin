@@ -23,7 +23,7 @@ struct FileTableView: NSViewRepresentable {
     let onOpen: (FileItem) -> Void
     let onMoveDropped: ([URL], URL) -> Void
     /// Menú contextual para los ítems clickeados; vacío = fondo de la lista.
-    let menuForItems: ([FileItem]) -> NSMenu?
+    let menuForItems: ([FileItem], ShareAnchor?) -> NSMenu?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -197,14 +197,14 @@ struct FileTableView: NSViewRepresentable {
         func menu(forClickedRow row: Int) -> NSMenu? {
             guard let tableView else { return nil }
             guard rows.indices.contains(row), let item = rows[row].item else {
-                return parent.menuForItems([])
+                return parent.menuForItems([], nil)
             }
             if !tableView.selectedRowIndexes.contains(row) {
                 tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
             }
             let selectedIDs = Set(tableView.selectedRowIndexes.compactMap { rows.indices.contains($0) ? rows[$0].item?.id : nil })
             let targets = rows.compactMap(\.item).filter { selectedIDs.contains($0.id) }
-            return parent.menuForItems(targets.isEmpty ? [item] : targets)
+            return parent.menuForItems(targets.isEmpty ? [item] : targets, ShareAnchor.forRow(row, in: tableView))
         }
 
         // MARK: Data source / delegate

@@ -35,14 +35,15 @@ struct FileListView: View {
             currentURL: currentURL,
             onOpen: onOpen,
             onMoveDropped: onMoveDropped,
-            menuForItems: { targetItems in
+            menuForItems: { targetItems, shareAnchor in
                 makeFileItemsMenu(
                     for: targetItems,
                     actions: contextMenuActions,
                     onRename: onRename,
                     onBatchRename: onBatchRename,
                     onDelete: onDelete,
-                    onDeleteSelection: onDeleteSelection
+                    onDeleteSelection: onDeleteSelection,
+                    shareAnchor: shareAnchor
                 )
             }
         )
@@ -58,9 +59,11 @@ func makeFileItemsMenu(
     onRename: ((FileItem) -> Void)?,
     onBatchRename: (() -> Void)?,
     onDelete: @escaping (FileItem) -> Void,
-    onDeleteSelection: @escaping () -> Void
+    onDeleteSelection: @escaping () -> Void,
+    shareAnchor: ShareAnchor? = nil
 ) -> NSMenu? {
-    if let actions {
+    if var actions {
+        actions.shareAnchor = shareAnchor
         if targetItems.isEmpty {
             return NSHostingMenu(rootView: DotphinViewportContextMenu(actions: actions))
         }

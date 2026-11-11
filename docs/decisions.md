@@ -1283,3 +1283,12 @@ Reportado por el usuario al probar.
   el contenido, no un adorno, aunque se apaguen los íconos de los menús.
 - No se pudo automatizar el clic: `performActionForItem` no dispara los ítems
   de `NSHostingMenu` fuera de un menú abierto de verdad.
+- Carpetas etiquetadas: se ven del color de su etiqueta, como el color de
+  carpeta de Dolphin (`ThumbnailLoader.icon(for:)`). El ícono del sistema se
+  tiñe con mezcla "color" recortada a su silueta: conserva relieve y dibujos.
+  Solo en Dotphin (no cambia el ícono en el disco). Falta en el árbol de la
+  barra lateral y en la ruta: ahí solo hay URL, no `FileItem`.
+- «Compartir…» pasa de `ShareLink` a `NSSharingServicePicker` abierto junto al
+  ícono del archivo que se tocó (`ShareAnchor`, lo arma la vista al hacer clic
+  derecho), del lado izquierdo y apuntándolo, como Finder. Sin ancla, junto
+  al puntero. Se abre en el turno siguiente, con el menú ya cerrado.
