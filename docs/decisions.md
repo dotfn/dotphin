@@ -1076,3 +1076,24 @@ Reportado por el usuario al probar.
 - Verificado con el binario real volcando el menú: un solo "View" /
   "Visualización", todo traducido, marcas en el estado correcto. Un test
   impide volver a escribir "✓" o el ícono `checkmark` a mano. 243 tests.
+
+## 2026-11-10 — Distribución por Homebrew (0.1.0-beta)
+
+- El repo `dotfn/dotphin` pasa a público: un cask baja la app de una URL
+  pública y los adjuntos de releases de un repo privado piden login. Antes se
+  revisó el historial: sin secretos, emails ni rutas personales.
+- Cask `dotphin` en `dotfn/homebrew-tap`, con el mismo estilo que `brewmenu`:
+  zip del release de GitHub, `depends_on macos: :golden_gate` (macOS 27) y
+  `arch: :arm64` (el binario es solo arm64), `postflight_steps` que quita la
+  quarantine porque no hay Developer ID ni notarización (la firma es ad-hoc).
+- El release no se marca como pre-release aunque la versión sea `-beta`:
+  `brew audit --strict` rechaza pre-releases y `:github_latest` los ignora.
+  La regex de livecheck acepta el sufijo (`v0.1.0-beta`).
+- `CFBundleShortVersionString` solo admite números: el bundle dice `0.1.0`,
+  el tag y el cask dicen `0.1.0-beta`. `LSMinimumSystemVersion` sube a 27.0
+  para coincidir con el paquete.
+- Release nuevo: `scripts/make_release.sh <versión>` → tag `v<versión>` →
+  `gh release create` con el zip → actualizar `version` y `sha256` del cask.
+- Verificado: `brew style`, `brew audit --cask --strict --online`,
+  `brew livecheck`, y `brew install --cask dotfn/tap/dotphin` real; la app
+  instalada abre con `open`.
