@@ -6,8 +6,13 @@ struct ContentView: View {
     @State private var tabsViewModel = TabsViewModel(
         startingAt: AppSettingsStore().settings().startupURL,
         startInSplitView: AppSettingsStore().settings().startInSplitView,
-        rememberOpenedTabs: AppSettingsStore().settings().rememberOpenedTabs
+        rememberOpenedTabs: AppSettingsStore().settings().rememberOpenedTabs,
+        restoresSession: false
     )
+    /// Identifica la sesión de pestañas de esta ventana; si el sistema
+    /// restaura la ventana, vuelve con el mismo valor.
+    @SceneStorage("tabSessionID") private var tabSessionID: String?
+    @State private var didBeginTabSession = false
     @State private var places = PlacesProvider().allPlaces()
     @State private var savedSearches = PlacesProvider().savedSearches()
     @State private var showsInfoPanel = false
@@ -106,6 +111,18 @@ struct ContentView: View {
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didUnmountNotification)) { _ in
             places = PlacesProvider().allPlaces()
             leaveUnmountedVolumes()
+        }
+        .onAppear {
+            guard !didBeginTabSession else { return }
+            didBeginTabSession = true
+            let restoredID = tabSessionID
+            let id = restoredID ?? tabsViewModel.sessionID
+            tabSessionID = id
+            // Sin sesión propia, solo la primera ventana retoma la última usada.
+            tabsViewModel.beginSession(
+                id: id,
+                fallingBackToLastSession: TabSessionStore.claimLaunchSession()
+            )
         }
         // Cerrar la ventana termina su shell (y los trabajos en segundo plano).
         .onDisappear {

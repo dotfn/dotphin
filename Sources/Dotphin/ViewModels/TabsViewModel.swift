@@ -19,15 +19,92 @@ struct TabSessionSnapshot: Codable, Equatable {
     let selectedIndex: Int
 }
 
+/// Sesiones de pestañas guardadas, una por ventana. Antes había una sola
+/// clave para toda la app: con dos ventanas, cada una pisaba a la otra y al
+/// reabrir todas restauraban lo mismo.
+struct TabSessionStore {
+    private struct Entry: Codable {
+        var snapshot: TabSessionSnapshot
+        var savedAt: Date
+    }
+
+    private struct Stored: Codable {
+        var sessions: [String: Entry] = [:]
+        var lastActiveID: String?
+    }
+
+    private static let key = "tabsSessions.v2"
+    /// La clave única de antes: sirve de sesión inicial la primera vez.
+    private static let legacyKey = "tabsSessionSnapshot.v1"
+    /// Las ventanas cerradas no avisan: se conservan solo las sesiones más recientes.
+    private static let maxSessions = 12
+
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    private func stored() -> Stored {
+        guard let data = defaults.data(forKey: Self.key),
+              let decoded = try? JSONDecoder().decode(Stored.self, from: data) else {
+            return Stored()
+        }
+        return decoded
+    }
+
+    func snapshot(for sessionID: String) -> TabSessionSnapshot? {
+        stored().sessions[sessionID]?.snapshot
+    }
+
+    /// La sesión de la última ventana que se usó.
+    func lastActiveSnapshot() -> TabSessionSnapshot? {
+        let stored = stored()
+        if let id = stored.lastActiveID, let entry = stored.sessions[id] {
+            return entry.snapshot
+        }
+        guard let data = defaults.data(forKey: Self.legacyKey) else { return nil }
+        return try? JSONDecoder().decode(TabSessionSnapshot.self, from: data)
+    }
+
+    func save(_ snapshot: TabSessionSnapshot, for sessionID: String, now: Date = Date()) {
+        var stored = stored()
+        stored.sessions[sessionID] = Entry(snapshot: snapshot, savedAt: now)
+        stored.lastActiveID = sessionID
+        if stored.sessions.count > Self.maxSessions {
+            let oldest = stored.sessions.sorted { $0.value.savedAt < $1.value.savedAt }
+                .prefix(stored.sessions.count - Self.maxSessions)
+            for (id, _) in oldest {
+                stored.sessions.removeValue(forKey: id)
+            }
+        }
+        if let data = try? JSONEncoder().encode(stored) {
+            defaults.set(data, forKey: Self.key)
+        }
+    }
+
+    /// Solo la primera ventana del proceso retoma la última sesión; las que
+    /// se abren después (⌘N) empiezan de cero.
+    @MainActor private static var launchSessionClaimed = false
+
+    @MainActor
+    static func claimLaunchSession() -> Bool {
+        guard !launchSessionClaimed else { return false }
+        launchSessionClaimed = true
+        return true
+    }
+}
+
 @MainActor
 @Observable
 final class TabsViewModel {
     private(set) var tabs: [Tab]
     private(set) var selectedTabID: Tab.ID
     private(set) var recentlyClosedTabs: [ClosedTabRecord] = []
-    private let defaults: UserDefaults
+    private let sessionStore: TabSessionStore
     private let rememberOpenedTabs: Bool
-    private static let sessionStorageKey = "tabsSessionSnapshot.v1"
+    /// Bajo qué sesión guarda esta ventana sus pestañas.
+    private(set) var sessionID: String
 
     var selectedTab: Tab? { tabs.first { $0.id == selectedTabID } }
 
@@ -35,44 +112,21 @@ final class TabsViewModel {
         startingAt url: URL,
         startInSplitView: Bool = false,
         rememberOpenedTabs: Bool = false,
+        restoresSession: Bool = true,
         defaults: UserDefaults = .standard
     ) {
-        self.defaults = defaults
+        self.sessionStore = TabSessionStore(defaults: defaults)
         self.rememberOpenedTabs = rememberOpenedTabs
+        self.sessionID = UUID().uuidString
 
-        if rememberOpenedTabs,
-           let data = defaults.data(forKey: Self.sessionStorageKey),
-           let snapshot = try? JSONDecoder().decode(TabSessionSnapshot.self, from: data),
-           !snapshot.entries.isEmpty {
-            var restoredTabs: [Tab] = []
-            for entry in snapshot.entries {
-                var isDir: ObjCBool = false
-                let primaryURL: URL
-                if FileManager.default.fileExists(atPath: entry.primaryPath, isDirectory: &isDir), isDir.boolValue {
-                    primaryURL = URL(fileURLWithPath: entry.primaryPath, isDirectory: true)
-                } else {
-                    primaryURL = url
-                }
-                var secondaryVM: BrowserViewModel? = nil
-                if let secPath = entry.secondaryPath,
-                   FileManager.default.fileExists(atPath: secPath, isDirectory: &isDir), isDir.boolValue {
-                    secondaryVM = BrowserViewModel(startingAt: URL(fileURLWithPath: secPath, isDirectory: true), loadsInBackground: true)
-                }
-                restoredTabs.append(
-                    Tab(
-                        id: UUID(),
-                        primary: BrowserViewModel(startingAt: primaryURL, loadsInBackground: true),
-                        secondary: secondaryVM,
-                        focusedPaneIndex: secondaryVM != nil ? min(1, max(0, entry.focusedPaneIndex)) : 0
-                    )
-                )
-            }
-            if !restoredTabs.isEmpty {
-                self.tabs = restoredTabs
-                let clampedIdx = min(restoredTabs.count - 1, max(0, snapshot.selectedIndex))
-                self.selectedTabID = restoredTabs[clampedIdx].id
-                return
-            }
+        // La ventana de la app pasa `restoresSession: false` y retoma la suya
+        // con `beginSession` cuando ya sabe cuál es.
+        if rememberOpenedTabs, restoresSession,
+           let snapshot = sessionStore.lastActiveSnapshot(),
+           let restored = Self.makeTabs(from: snapshot, fallback: url) {
+            self.tabs = restored.tabs
+            self.selectedTabID = restored.selectedTabID
+            return
         }
 
         let secondary = startInSplitView ? BrowserViewModel(startingAt: url, loadsInBackground: true) : nil
@@ -81,7 +135,52 @@ final class TabsViewModel {
         self.selectedTabID = first.id
     }
 
-    /// Saves the current open tabs and split panes to `UserDefaults` (`DolphinMainWindow::slotSaveSession`).
+    /// Pasa a guardar bajo `id` y, si esa sesión existe, retoma sus pestañas.
+    /// Con `fallingBackToLastSession`, una ventana sin sesión propia retoma la
+    /// de la última ventana que se usó.
+    func beginSession(id: String, fallingBackToLastSession: Bool) {
+        sessionID = id
+        guard rememberOpenedTabs else { return }
+        let snapshot = sessionStore.snapshot(for: id)
+            ?? (fallingBackToLastSession ? sessionStore.lastActiveSnapshot() : nil)
+        guard let snapshot,
+              let fallback = tabs.first?.primary.currentURL,
+              let restored = Self.makeTabs(from: snapshot, fallback: fallback) else { return }
+        tabs = restored.tabs
+        selectedTabID = restored.selectedTabID
+    }
+
+    /// Las pestañas de `snapshot`; una carpeta que ya no existe se cambia por `url`.
+    private static func makeTabs(from snapshot: TabSessionSnapshot, fallback url: URL) -> (tabs: [Tab], selectedTabID: Tab.ID)? {
+        var restoredTabs: [Tab] = []
+        for entry in snapshot.entries {
+            var isDir: ObjCBool = false
+            let primaryURL: URL
+            if FileManager.default.fileExists(atPath: entry.primaryPath, isDirectory: &isDir), isDir.boolValue {
+                primaryURL = URL(fileURLWithPath: entry.primaryPath, isDirectory: true)
+            } else {
+                primaryURL = url
+            }
+            var secondaryVM: BrowserViewModel? = nil
+            if let secPath = entry.secondaryPath,
+               FileManager.default.fileExists(atPath: secPath, isDirectory: &isDir), isDir.boolValue {
+                secondaryVM = BrowserViewModel(startingAt: URL(fileURLWithPath: secPath, isDirectory: true), loadsInBackground: true)
+            }
+            restoredTabs.append(
+                Tab(
+                    id: UUID(),
+                    primary: BrowserViewModel(startingAt: primaryURL, loadsInBackground: true),
+                    secondary: secondaryVM,
+                    focusedPaneIndex: secondaryVM != nil ? min(1, max(0, entry.focusedPaneIndex)) : 0
+                )
+            )
+        }
+        guard !restoredTabs.isEmpty else { return nil }
+        let clampedIdx = min(restoredTabs.count - 1, max(0, snapshot.selectedIndex))
+        return (restoredTabs, restoredTabs[clampedIdx].id)
+    }
+
+    /// Saves the current open tabs and split panes of this window (`DolphinMainWindow::slotSaveSession`).
     func saveSessionSnapshot() {
         let entries = tabs.map { tab in
             TabSessionEntry(
@@ -92,9 +191,7 @@ final class TabsViewModel {
         }
         let selectedIdx = tabs.firstIndex(where: { $0.id == selectedTabID }) ?? 0
         let snapshot = TabSessionSnapshot(entries: entries, selectedIndex: selectedIdx)
-        if let data = try? JSONEncoder().encode(snapshot) {
-            defaults.set(data, forKey: Self.sessionStorageKey)
-        }
+        sessionStore.save(snapshot, for: sessionID)
     }
 
     func addTab(startingAt url: URL, afterCurrentTab: Bool = false, splitView: Bool = false) {

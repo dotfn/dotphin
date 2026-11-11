@@ -79,4 +79,82 @@ final class TabsViewModelTests: XCTestCase {
         XCTAssertEqual(vm.selectedTab?.primary.currentURL, tempDir)
         XCTAssertEqual(vm.tabs[1].primary.currentURL, sub, "la otra pestaña no debió cambiar")
     }
+
+    // MARK: Sesión por ventana
+
+    private func makeDefaults() -> UserDefaults {
+        let name = "TabsViewModelTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        addTeardownBlock { defaults.removePersistentDomain(forName: name) }
+        return defaults
+    }
+
+    private func makeDir(_ name: String) throws -> URL {
+        let url = tempDir.appendingPathComponent(name, isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    /// Una ventana de la app: no restaura al crearse, sino con `beginSession`.
+    private func makeWindow(defaults: UserDefaults) -> TabsViewModel {
+        TabsViewModel(startingAt: tempDir, rememberOpenedTabs: true, restoresSession: false, defaults: defaults)
+    }
+
+    func test_twoWindows_keepSeparateSessions() throws {
+        let defaults = makeDefaults()
+        let dirA = try makeDir("a")
+        let dirB = try makeDir("b")
+
+        let windowA = makeWindow(defaults: defaults)
+        windowA.beginSession(id: "A", fallingBackToLastSession: false)
+        windowA.addTab(startingAt: dirA)
+        let windowB = makeWindow(defaults: defaults)
+        windowB.beginSession(id: "B", fallingBackToLastSession: false)
+        windowB.addTab(startingAt: dirB)
+        windowB.addTab(startingAt: dirB)
+
+        // El sistema restaura las dos ventanas: cada una vuelve con lo suyo.
+        let restoredA = makeWindow(defaults: defaults)
+        restoredA.beginSession(id: "A", fallingBackToLastSession: false)
+        let restoredB = makeWindow(defaults: defaults)
+        restoredB.beginSession(id: "B", fallingBackToLastSession: false)
+
+        XCTAssertEqual(restoredA.tabs.map(\.primary.currentURL.standardizedFileURL), [tempDir, dirA].map(\.standardizedFileURL))
+        XCTAssertEqual(restoredB.tabs.map(\.primary.currentURL.standardizedFileURL), [tempDir, dirB, dirB].map(\.standardizedFileURL))
+    }
+
+    func test_newWindow_startsFresh_andFirstWindowResumesLastUsedSession() throws {
+        let defaults = makeDefaults()
+        let dirA = try makeDir("a")
+        let previous = makeWindow(defaults: defaults)
+        previous.beginSession(id: "anterior", fallingBackToLastSession: false)
+        previous.addTab(startingAt: dirA)
+
+        // Otro arranque, sin restauración del sistema: ids nuevos.
+        let first = makeWindow(defaults: defaults)
+        first.beginSession(id: "primera", fallingBackToLastSession: true)
+        XCTAssertEqual(first.tabs.count, 2, "la primera ventana retoma la última sesión")
+
+        let second = makeWindow(defaults: defaults)
+        second.beginSession(id: "segunda", fallingBackToLastSession: false)
+        XCTAssertEqual(second.tabs.count, 1, "una ventana nueva no repite la sesión de la otra")
+    }
+
+    func test_sessionSavedWithTheOldSingleKey_isStillRestored() throws {
+        let defaults = makeDefaults()
+        let dirA = try makeDir("a")
+        let old = TabSessionSnapshot(
+            entries: [
+                TabSessionEntry(primaryPath: tempDir.path, secondaryPath: nil, focusedPaneIndex: 0),
+                TabSessionEntry(primaryPath: dirA.path, secondaryPath: nil, focusedPaneIndex: 0),
+            ],
+            selectedIndex: 1
+        )
+        defaults.set(try JSONEncoder().encode(old), forKey: "tabsSessionSnapshot.v1")
+
+        let window = makeWindow(defaults: defaults)
+        window.beginSession(id: "primera", fallingBackToLastSession: true)
+        XCTAssertEqual(window.tabs.count, 2)
+        XCTAssertEqual(window.selectedTab?.primary.currentURL.standardizedFileURL, dirA.standardizedFileURL)
+    }
 }
