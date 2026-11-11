@@ -1427,3 +1427,19 @@ Salió de una auditoría de lo que la app hacía a mano teniendo API del sistema
 - Test: clics rápidos en los triángulos reales con una secuencia fija. Con el
   código anterior abortó en 2 de 3 corridas (depende del tiempo, no es
   determinista); con el modelo, 0 de 8.
+
+## 2026-11-11 — Detalles: las columnas se ajustan después de restaurar anchos
+
+- Barra horizontal de más en Detalles: `rebuildColumns` llamaba a
+  `sizeToFit()` y después reactivaba el autoguardado, que pisaba los anchos con
+  los de otra ventana u otro panel. Con anchos guardados de una ventana más
+  ancha, la tabla abría más ancha que la vista (medido: 1124 pt en 800).
+- Sin parches: `sizeToFit()` pasó a después de restaurar; Nombre
+  (`firstColumnOnlyAutoresizingStyle`) absorbe la diferencia, como ya hacía al
+  redimensionar. La barra solo aparece cuando Nombre llegó a su mínimo
+  (160 pt) y el resto no entra, igual que en Finder.
+- Tests en `DetailsColumnWidthTests`; el de la ventana más angosta falla con el
+  código anterior. No reproduje el hueco al final de la primera captura del
+  usuario (anchos guardados en un panel más angosto pasan también con el
+  código anterior).
+

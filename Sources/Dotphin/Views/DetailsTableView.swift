@@ -199,7 +199,6 @@ struct DetailsTableView: NSViewRepresentable {
                 }
                 tableView.addTableColumn(column)
             }
-            tableView.sizeToFit()
             tableView.headerView?.menu = makeColumnsMenu(visible: columns)
 
             // Anchos de columna recordados por AppKit entre sesiones. Hay que
@@ -211,6 +210,10 @@ struct DetailsTableView: NSViewRepresentable {
             tableView.autosaveTableColumns = true
             Self.restoreCanonicalOrder(of: columns, in: tableView)
             isApplyingSort = false
+            // Después de restaurar: los anchos guardados vienen de otra ventana
+            // u otro panel; Nombre (`firstColumnOnlyAutoresizingStyle`) absorbe
+            // la diferencia con el ancho de ahora.
+            tableView.sizeToFit()
         }
 
         /// AppKit guarda también el orden de las columnas: una que se muestra
