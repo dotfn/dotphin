@@ -17,9 +17,14 @@ let package = Package(
     // Inglés es el idioma de respaldo para quien no tenga ninguno de los dos.
     defaultLocalization: "en",
     platforms: [.macOS(.v27)],
+    dependencies: [
+        // Motor de la terminal integrada (F4): VT/xterm completo, colores, pty.
+        .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.99.3"),
+    ],
     targets: [
         .executableTarget(
             name: "Dotphin",
+            dependencies: [.product(name: "SwiftTerm", package: "SwiftTerm")],
             path: "Sources/Dotphin",
             // AppIcon.icon (Icon Composer) lo compila actool en el .app; ver
             // scripts/build_app_bundle.sh. AppIcon.icns es su salida, para `swift run`.
