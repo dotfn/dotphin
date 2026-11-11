@@ -148,28 +148,28 @@ struct BreadcrumbView: View {
                     hoveredAncestor = hovering ? ancestor : (hoveredAncestor == ancestor ? nil : hoveredAncestor)
                 }
                 .contextMenu {
-                    Button(String(localized: "Abrir", bundle: #bundle)) {
+                    Button(String(localized: "Abrir", bundle: #bundle), menuIcon: "arrow.up.forward.square") {
                         onNavigate(ancestor)
                     }
                     if let onOpenInNewTab {
-                        Button(String(localized: "Abrir en una pestaña nueva", bundle: #bundle)) {
+                        Button(String(localized: "Abrir en una pestaña nueva", bundle: #bundle), menuIcon: "plus.square.on.square") {
                             onOpenInNewTab(ancestor)
                         }
                     }
                     if let onOpenInSplitView {
-                        Button(String(localized: "Abrir en vista dividida", bundle: #bundle)) {
+                        Button(String(localized: "Abrir en vista dividida", bundle: #bundle), menuIcon: "rectangle.split.2x1") {
                             onOpenInSplitView(ancestor)
                         }
                     }
                     Divider()
-                    Button(String(localized: "Copiar ubicación", bundle: #bundle)) {
+                    Button(String(localized: "Copiar ubicación", bundle: #bundle), menuIcon: "link") {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(ancestor.path, forType: .string)
                     }
-                    Button(String(localized: "Añadir a Lugares", bundle: #bundle)) {
+                    Button(String(localized: "Añadir a Lugares", bundle: #bundle), menuIcon: "bookmark") {
                         PlacesProvider().addBookmark(for: ancestor)
                     }
-                    Button(String(localized: "Mostrar en Finder", bundle: #bundle)) {
+                    Button(String(localized: "Mostrar en Finder", bundle: #bundle), menuIcon: "macwindow") {
                         NSWorkspace.shared.activateFileViewerSelecting([ancestor])
                     }
                 }

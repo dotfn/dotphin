@@ -1232,3 +1232,20 @@ Reportado por el usuario al probar.
 - Tests montados que los reproducen; la ventana restaura la sesión guardada,
   así que el test divide solo si hace falta (antes `toggleSplit` a veces
   cerraba una división restaurada y la medición salía distinta).
+
+## 2026-11-11 — Íconos en los menús contextuales
+
+- Pedido del usuario: íconos donde hacen falta y una opción para apagarlos,
+  como Dolphin. Axiom (`axiom-design` → `liquid-glass-ref.md`): en macOS 26
+  los menús muestran el ícono a la izquierda cuando el ítem usa `Label`, y
+  las acciones estándar usan los símbolos del sistema (tijeras, `doc.on.doc`,
+  `doc.on.clipboard`, papelera).
+- `MenuItemLabel` + `Button(_:menuIcon:)` / `Menu(_:menuIcon:)` leen
+  `AppSettings.showsMenuIcons` (activado; las configuraciones guardadas antes
+  también lo traen activado). Opción en Configuración → Menú contextual.
+- Llevan ícono las acciones de los menús contextuales de archivos, fondo de
+  carpeta, ruta, barra lateral, árbol, pestañas y barra de estado. No llevan:
+  casillas (`Toggle`, la marca ya es su ícono), ítems dinámicos (destinos,
+  plantillas, apps de "Abrir con") ni botones de diálogos. Los íconos del
+  menú "Icono de carpeta" se ven siempre: son el contenido.
+- Un test comprueba que cada `menuIcon:` del código es un SF Symbol real.

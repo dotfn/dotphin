@@ -62,11 +62,11 @@ struct PlacesSidebarView: View {
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
-                            Button(String(localized: "Ejecutar búsqueda", bundle: #bundle)) {
+                            Button(String(localized: "Ejecutar búsqueda", bundle: #bundle), menuIcon: "magnifyingglass") {
                                 onSelectSavedSearch?(saved)
                             }
                             Divider()
-                            Button(String(localized: "Quitar búsqueda guardada", bundle: #bundle), role: .destructive) {
+                            Button(String(localized: "Quitar búsqueda guardada", bundle: #bundle), menuIcon: "trash", role: .destructive) {
                                 PlacesProvider().removeSavedSearch(id: saved.id)
                             }
                         }
@@ -223,32 +223,32 @@ struct PlacesSidebarView: View {
                 .padding(.horizontal, 4)
         )
         .contextMenu {
-            Button(String(localized: "Abrir", bundle: #bundle)) {
+            Button(String(localized: "Abrir", bundle: #bundle), menuIcon: "arrow.up.forward.square") {
                 onSelect(place)
             }
             if let onOpenInNewTab {
-                Button(String(localized: "Abrir en una pestaña nueva", bundle: #bundle)) {
+                Button(String(localized: "Abrir en una pestaña nueva", bundle: #bundle), menuIcon: "plus.square.on.square") {
                     onOpenInNewTab(place.url)
                 }
             }
             if let onOpenInSplitView {
-                Button(String(localized: "Abrir en vista dividida", bundle: #bundle)) {
+                Button(String(localized: "Abrir en vista dividida", bundle: #bundle), menuIcon: "rectangle.split.2x1") {
                     onOpenInSplitView(place.url)
                 }
             }
             if place.kind == .customBookmark {
                 Divider()
-                Button(String(localized: "Quitar de Lugares", bundle: #bundle), role: .destructive) {
+                Button(String(localized: "Quitar de Lugares", bundle: #bundle), menuIcon: "bookmark.slash", role: .destructive) {
                     PlacesProvider().removeBookmark(for: place.url)
                 }
             }
             if place.kind == .volume {
                 Divider()
-                Button(String(localized: "Información", bundle: #bundle)) {
+                Button(String(localized: "Información", bundle: #bundle), menuIcon: "info.circle") {
                     infoTarget = place
                 }
                 if place.isEjectable {
-                    Button(String(localized: "Expulsar", bundle: #bundle)) {
+                    Button(String(localized: "Expulsar", bundle: #bundle), menuIcon: "eject") {
                         pendingEject = place
                         showsEjectConfirmation = true
                     }

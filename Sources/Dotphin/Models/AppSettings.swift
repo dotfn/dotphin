@@ -164,6 +164,8 @@ struct AppSettings: Codable, Equatable {
     var useRelativeDates: Bool = true
     var expandableFoldersInDetails: Bool = true
     var browseThroughArchives: Bool = false
+    /// Íconos a la izquierda de los ítems de los menús contextuales (Dolphin los muestra).
+    var showsMenuIcons: Bool = true
 
     private enum CodingKeys: String, CodingKey {
         case defaultViewMode
@@ -189,6 +191,7 @@ struct AppSettings: Codable, Equatable {
         case useRelativeDates
         case expandableFoldersInDetails
         case browseThroughArchives
+        case showsMenuIcons
     }
 
     init() {}
@@ -218,6 +221,7 @@ struct AppSettings: Codable, Equatable {
         useRelativeDates = try container.decodeIfPresent(Bool.self, forKey: .useRelativeDates) ?? true
         expandableFoldersInDetails = try container.decodeIfPresent(Bool.self, forKey: .expandableFoldersInDetails) ?? true
         browseThroughArchives = try container.decodeIfPresent(Bool.self, forKey: .browseThroughArchives) ?? false
+        showsMenuIcons = try container.decodeIfPresent(Bool.self, forKey: .showsMenuIcons) ?? true
     }
 }
 

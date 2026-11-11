@@ -89,31 +89,31 @@ struct TabBarView: View {
                     removal: .scale(scale: 0.92).combined(with: .opacity)
                 ))
                 .contextMenu {
-                    Button(String(localized: "Duplicar pestaña", bundle: #bundle)) {
+                    Button(String(localized: "Duplicar pestaña", bundle: #bundle), menuIcon: "plus.square.on.square") {
                         viewModel.duplicateTab(tab.id)
                     }
-                    Button(String(localized: "Recargar pestaña", bundle: #bundle)) {
+                    Button(String(localized: "Recargar pestaña", bundle: #bundle), menuIcon: "arrow.clockwise") {
                         tab.primary.refresh()
                         tab.secondary?.refresh()
                     }
-                    Button(String(localized: "Copiar ubicación", bundle: #bundle)) {
+                    Button(String(localized: "Copiar ubicación", bundle: #bundle), menuIcon: "link") {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(tab.focused.currentURL.path, forType: .string)
                     }
                     Divider()
-                    Button(String(localized: "Cerrar otras pestañas", bundle: #bundle)) {
+                    Button(String(localized: "Cerrar otras pestañas", bundle: #bundle), menuIcon: "xmark.square") {
                         viewModel.closeOtherTabs(keeping: tab.id)
                     }
                     .disabled(viewModel.tabs.count <= 1)
 
                     if let idx = viewModel.tabs.firstIndex(where: { $0.id == tab.id }),
                        idx + 1 < viewModel.tabs.count {
-                        Button(String(localized: "Cerrar pestañas a la derecha", bundle: #bundle)) {
+                        Button(String(localized: "Cerrar pestañas a la derecha", bundle: #bundle), menuIcon: "arrow.right.to.line") {
                             viewModel.closeTabsToTheRight(of: tab.id)
                         }
                     }
 
-                    Button(String(localized: "Cerrar pestaña", bundle: #bundle), role: .destructive) {
+                    Button(String(localized: "Cerrar pestaña", bundle: #bundle), menuIcon: "xmark", role: .destructive) {
                         viewModel.closeTab(tab.id)
                     }
                     .disabled(viewModel.tabs.count <= 1)

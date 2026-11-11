@@ -63,35 +63,35 @@ struct FolderTreeRow: View {
             }
             .buttonStyle(.plain)
             .contextMenu {
-                Button(String(localized: "Abrir", bundle: #bundle)) {
+                Button(String(localized: "Abrir", bundle: #bundle), menuIcon: "arrow.up.forward.square") {
                     onSelect(url)
                 }
                 if let onOpenInNewTab {
-                    Button(String(localized: "Abrir en una pestaña nueva", bundle: #bundle)) {
+                    Button(String(localized: "Abrir en una pestaña nueva", bundle: #bundle), menuIcon: "plus.square.on.square") {
                         onOpenInNewTab(url)
                     }
                 }
                 if let onOpenInSplitView {
-                    Button(String(localized: "Abrir en vista dividida", bundle: #bundle)) {
+                    Button(String(localized: "Abrir en vista dividida", bundle: #bundle), menuIcon: "rectangle.split.2x1") {
                         onOpenInSplitView(url)
                     }
                 }
                 Divider()
                 let places = PlacesProvider()
                 if places.isBookmarked(url) {
-                    Button(String(localized: "Quitar de Lugares", bundle: #bundle)) {
+                    Button(String(localized: "Quitar de Lugares", bundle: #bundle), menuIcon: "bookmark.slash") {
                         places.removeBookmark(for: url)
                     }
                 } else {
-                    Button(String(localized: "Añadir a Lugares", bundle: #bundle)) {
+                    Button(String(localized: "Añadir a Lugares", bundle: #bundle), menuIcon: "bookmark") {
                         places.addBookmark(for: url)
                     }
                 }
-                Button(String(localized: "Copiar ubicación", bundle: #bundle)) {
+                Button(String(localized: "Copiar ubicación", bundle: #bundle), menuIcon: "link") {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(url.path, forType: .string)
                 }
-                Button(String(localized: "Mostrar en Finder", bundle: #bundle)) {
+                Button(String(localized: "Mostrar en Finder", bundle: #bundle), menuIcon: "macwindow") {
                     NSWorkspace.shared.activateFileViewerSelecting([url])
                 }
                 if showsHiddenFiles != nil || limitToHomeDirectory != nil {

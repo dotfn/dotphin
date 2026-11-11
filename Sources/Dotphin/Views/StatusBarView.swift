@@ -205,7 +205,7 @@ struct StatusBarView: View {
                 }
             }
             if let onChangeDisplayMode {
-                Menu(String(localized: "Estilo de barra de estado", bundle: #bundle)) {
+                Menu(String(localized: "Estilo de barra de estado", bundle: #bundle), menuIcon: "rectangle.bottomthird.inset.filled") {
                     Picker(selection: Binding(get: { displayMode }, set: { onChangeDisplayMode($0) })) {
                         ForEach(StatusBarDisplayMode.allCases) { mode in
                             Text(mode.title).tag(mode)

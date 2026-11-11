@@ -101,6 +101,7 @@ struct SettingsView: View {
                 }
 
                 Section(String(localized: "Menú contextual", bundle: #bundle)) {
+                    Toggle(String(localized: "Mostrar íconos en los menús", bundle: #bundle), isOn: $model.settings.showsMenuIcons)
                     Toggle(String(localized: "Mostrar comando «Eliminar permanentemente» en el menú contextual", bundle: #bundle), isOn: $model.settings.showPermanentDeleteCommand)
                 }
             }

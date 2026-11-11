@@ -5650,6 +5650,22 @@
         }
       }
     },
+    "Mostrar íconos en los menús": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show icons in menus"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar íconos en los menús"
+          }
+        }
+      }
+    },
     "Mover %lld ítems a la Papelera": {
       "localizations": {
         "en": {
