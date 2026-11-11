@@ -644,18 +644,6 @@ final class DolphinFullParityTests: XCTestCase {
         let preview = InfoPanelView.readTextPreviewSnippet(for: item)
         XCTAssertEqual(preview, "struct Dolphin {}\nlet version = 27")
         XCTAssertEqual(InfoPanelView.formatDuration(125), "2:05")
-
-        let hiddenFolder = tempDir.appendingPathComponent(".hiddenSubDir", isDirectory: true)
-        let visibleFolder = tempDir.appendingPathComponent("visibleSubDir", isDirectory: true)
-        try FileManager.default.createDirectory(at: hiddenFolder, withIntermediateDirectories: true)
-        try FileManager.default.createDirectory(at: visibleFolder, withIntermediateDirectories: true)
-
-        let defaultTree = FolderTreeProvider(showsHiddenFiles: false).subdirectories(of: tempDir)
-        XCTAssertFalse(defaultTree.map(\.lastPathComponent).contains(".hiddenSubDir"))
-
-        let hiddenTree = FolderTreeProvider(showsHiddenFiles: true).subdirectories(of: tempDir)
-        XCTAssertTrue(hiddenTree.map(\.lastPathComponent).contains(".hiddenSubDir"))
-        XCTAssertTrue(hiddenTree.map(\.lastPathComponent).contains("visibleSubDir"))
     }
 
     // MARK: - 17. ContentDisplay & DetailsMode Formatting, TooltipManager, Templates & Permanent Delete

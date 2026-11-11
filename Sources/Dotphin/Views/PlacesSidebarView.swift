@@ -1,27 +1,31 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
+/// Barra lateral al estilo Finder: Favoritos, Ubicaciones y Etiquetas. Cada
+/// sección se pliega como en Finder y lo recuerda.
 struct PlacesSidebarView: View {
-    let places: [PlaceItem]
+    let sidebar: SidebarPlaces
     var savedSearches: [SavedSearchItem] = []
     let currentURL: URL
+    /// Etiqueta cuyos archivos se muestran en el panel activo, si hay una.
+    var shownTag: FinderColorTag? = nil
     let onSelect: (PlaceItem) -> Void
+    var onSelectTag: ((FinderColorTag) -> Void)? = nil
     var onSelectSavedSearch: ((SavedSearchItem) -> Void)? = nil
     var onOpenInNewTab: ((URL) -> Void)? = nil
     var onOpenInSplitView: ((URL) -> Void)? = nil
-    var onSelectFolder: ((URL) -> Void)?
 
     @State private var pendingEject: PlaceItem?
     @State private var showsEjectConfirmation = false
     @State private var infoTarget: PlaceItem?
+    /// Fila cuyo selector de ícono está abierto.
+    @State private var symbolTarget: Selection?
     @State private var ejectError: String?
     @State private var cachedVolumeUsages: [URL: Double] = [:]
-    @State private var folderTreeShowsHiddenFiles = false
-    @State private var folderTreeLimitToHome = true
-    @State private var folderTree = FolderTreeModel()
-
-    private var folderTreeRoot: URL {
-        folderTreeLimitToHome ? FileManager.default.homeDirectoryForCurrentUser : URL(fileURLWithPath: "/")
-    }
+    @AppStorage("sidebar.section.favorites") private var favoritesExpanded = true
+    @AppStorage("sidebar.section.locations") private var locationsExpanded = true
+    @AppStorage("sidebar.section.tags") private var tagsExpanded = true
+    @AppStorage("sidebar.section.savedSearches") private var savedSearchesExpanded = true
 
     private static let sizeFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
@@ -29,28 +33,106 @@ struct PlacesSidebarView: View {
         return formatter
     }()
 
-    private var standardPlaces: [PlaceItem] {
-        places.filter { $0.kind == .bookmark || $0.kind == .customBookmark }
+    /// Fila elegida de la barra lateral. La sección va en el valor porque la
+    /// misma carpeta puede estar en Favoritos y en Ubicaciones.
+    enum Selection: Hashable {
+        case favorite(URL)
+        case location(URL)
+        case tag(FinderColorTag)
+    }
+
+    /// La selección sale de la carpeta que se está viendo: al entrar en una
+    /// subcarpeta se deselecciona, y volver a tocar el favorito vuelve a navegar.
+    private var selection: Binding<Selection?> {
+        Binding(
+            get: {
+                if let shownTag {
+                    return .tag(shownTag)
+                }
+                let key = PlacesProvider.sidebarKey(currentURL)
+                if let place = sidebar.favorites.first(where: { PlacesProvider.sidebarKey($0.url) == key }) {
+                    return .favorite(place.url)
+                }
+                if let place = sidebar.locations.first(where: { PlacesProvider.sidebarKey($0.url) == key }) {
+                    return .location(place.url)
+                }
+                return nil
+            },
+            set: { newValue in
+                let place: PlaceItem?
+                switch newValue {
+                case .favorite(let url): place = sidebar.favorites.first { $0.url == url }
+                case .location(let url): place = sidebar.locations.first { $0.url == url }
+                case .tag(let tag):
+                    onSelectTag?(tag)
+                    return
+                case nil: place = nil
+                }
+                if let place { onSelect(place) }
+            }
+        )
     }
 
     private var volumePlaces: [PlaceItem] {
-        places.filter { $0.kind == .volume }
+        sidebar.locations.filter { $0.kind == .volume }
     }
 
     var body: some View {
-        List {
-            Section {
-                ForEach(standardPlaces) { place in
-                    placeRow(place)
+        // Selección nativa, como Finder: las filas no son botones, así la lista
+        // recibe el clic y puede arrastrar Favoritos para reordenarlos.
+        List(selection: selection) {
+            Section(isExpanded: $favoritesExpanded) {
+                ForEach(sidebar.favorites) { place in
+                    placeRow(place, row: .favorite(place.url))
+                        .tag(Selection.favorite(place.url))
+                }
+                // Reordenar arrastrando, como en Finder.
+                .onMove { source, destination in
+                    PlacesProvider().moveFavorites(fromOffsets: source, toOffset: destination)
+                }
+                // Carpetas soltadas desde la lista de archivos o desde Finder.
+                .onInsert(of: [.fileURL]) { index, providers in
+                    for (offset, provider) in providers.enumerated() {
+                        _ = provider.loadTransferable(type: URL.self) { result in
+                            guard let url = try? result.get() else { return }
+                            Task { @MainActor in
+                                PlacesProvider().insertFavorites([url], at: index + offset)
+                            }
+                        }
+                    }
                 }
             } header: {
-                Text(String(localized: "Lugares", bundle: #bundle))
+                Text(String(localized: "Favoritos", bundle: #bundle))
                     .font(.xsSidebarHeader)
                     .foregroundStyle(.secondary)
             }
 
+            Section(isExpanded: $locationsExpanded) {
+                ForEach(sidebar.locations) { place in
+                    placeRow(place, row: .location(place.url))
+                        .tag(Selection.location(place.url))
+                }
+            } header: {
+                Text(String(localized: "Ubicaciones", bundle: #bundle))
+                    .font(.xsSidebarHeader)
+                    .foregroundStyle(.secondary)
+            }
+
+            if onSelectTag != nil, !sidebar.tags.isEmpty {
+                Section(isExpanded: $tagsExpanded) {
+                    ForEach(sidebar.tags) { tag in
+                        tagRow(tag)
+                            .tag(Selection.tag(tag))
+                    }
+                } header: {
+                    Text(String(localized: "Etiquetas", bundle: #bundle))
+                        .font(.xsSidebarHeader)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             if !savedSearches.isEmpty {
-                Section {
+                Section(isExpanded: $savedSearchesExpanded) {
                     ForEach(savedSearches) { saved in
                         Button {
                             onSelectSavedSearch?(saved)
@@ -82,53 +164,12 @@ struct PlacesSidebarView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-
-            if !volumePlaces.isEmpty {
-                Section {
-                    ForEach(volumePlaces) { place in
-                        placeRow(place)
-                    }
-                } header: {
-                    Text(String(localized: "Dispositivos", bundle: #bundle))
-                        .font(.xsSidebarHeader)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            if let onSelectFolder {
-                Section {
-                    FolderTreeRow(
-                        url: folderTreeRoot,
-                        model: folderTree,
-                        currentURL: currentURL,
-                        showsHiddenFiles: $folderTreeShowsHiddenFiles,
-                        limitToHomeDirectory: $folderTreeLimitToHome,
-                        onSelect: onSelectFolder,
-                        onOpenInNewTab: onOpenInNewTab,
-                        onOpenInSplitView: onOpenInSplitView
-                    )
-                } header: {
-                    Text(String(localized: "Carpetas", bundle: #bundle))
-                        .font(.xsSidebarHeader)
-                        .foregroundStyle(.secondary)
-                }
-            }
         }
         .listStyle(.sidebar)
         .onAppear {
             refreshVolumeUsages()
-            folderTree.reveal(currentURL, under: folderTreeRoot)
         }
-        .onChange(of: currentURL) { _, newURL in
-            folderTree.reveal(newURL, under: folderTreeRoot)
-        }
-        .onChange(of: folderTreeLimitToHome) { _, _ in
-            folderTree.reveal(currentURL, under: folderTreeRoot)
-        }
-        .onChange(of: folderTreeShowsHiddenFiles) { _, showsHidden in
-            folderTree.setShowsHiddenFiles(showsHidden)
-        }
-        .onChange(of: places) { _, _ in
+        .onChange(of: sidebar) { _, _ in
             refreshVolumeUsages()
         }
         .alert(
@@ -172,28 +213,19 @@ struct PlacesSidebarView: View {
     }
 
     @ViewBuilder
-    private func placeRow(_ place: PlaceItem) -> some View {
-        let isSelected = place.url.standardizedFileURL.path == currentURL.standardizedFileURL.path
+    private func placeRow(_ place: PlaceItem, row: Selection) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Button {
-                    onSelect(place)
-                } label: {
-                    Label {
-                        Text(place.localizedDisplayName)
-                            .font(.system(size: 13, weight: isSelected ? .medium : .regular))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                    } icon: {
-                        Image(systemName: place.systemImage)
-                            .symbolRenderingMode(.hierarchical)
-                            .font(.system(size: 13.5, weight: .medium))
-                            .foregroundStyle(Color.accentColor)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
+                Label {
+                    Text(place.localizedDisplayName)
+                        .lineLimit(1)
+                } icon: {
+                    // Los símbolos de la barra lateral de Finder.
+                    Image(systemName: place.sidebarSymbol)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Color.accentColor)
                 }
-                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 if place.kind == .volume && place.isEjectable {
                     Button {
@@ -230,12 +262,18 @@ struct PlacesSidebarView: View {
             }
         }
         .padding(.vertical, 2.5)
-        .animation(.snappy(duration: 0.16), value: isSelected)
-        .listRowBackground(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(isSelected ? Color.accentColor.opacity(0.18) : Color.clear)
-                .padding(.horizontal, 4)
-        )
+        .popover(
+            isPresented: Binding(
+                get: { symbolTarget == row },
+                set: { if !$0 { symbolTarget = nil } }
+            ),
+            arrowEdge: .trailing
+        ) {
+            SidebarSymbolPicker(current: place.sidebarSymbol, defaultSymbol: place.defaultSidebarSymbol) { symbol in
+                PlacesProvider().setSidebarSymbol(symbol, for: place)
+                symbolTarget = nil
+            }
+        }
         .contextMenu {
             Button(String(localized: "Abrir", bundle: #bundle), menuIcon: "arrow.up.forward.square") {
                 onSelect(place)
@@ -250,12 +288,6 @@ struct PlacesSidebarView: View {
                     onOpenInSplitView(place.url)
                 }
             }
-            if place.kind == .customBookmark {
-                Divider()
-                Button(String(localized: "Quitar de Lugares", bundle: #bundle), menuIcon: "bookmark.slash", role: .destructive) {
-                    PlacesProvider().removeBookmark(for: place.url)
-                }
-            }
             if place.kind == .volume {
                 Divider()
                 Button(String(localized: "Información", bundle: #bundle), menuIcon: "info.circle") {
@@ -267,6 +299,33 @@ struct PlacesSidebarView: View {
                         showsEjectConfirmation = true
                     }
                 }
+            }
+            Divider()
+            Button(String(localized: "Cambiar ícono…", bundle: #bundle), menuIcon: "square.grid.3x3") {
+                symbolTarget = row
+            }
+            // Como Finder. Lo agregado por el usuario se borra; lo demás se
+            // oculta y vuelve desde Ajustes → Barra lateral.
+            Button(String(localized: "Quitar de la barra lateral", bundle: #bundle), menuIcon: "minus.circle") {
+                PlacesProvider().removeFromSidebar(place)
+            }
+        }
+    }
+
+    /// Como Finder: un punto del color y el nombre de la etiqueta.
+    private func tagRow(_ tag: FinderColorTag) -> some View {
+        Label {
+            Text(tag.title)
+                .lineLimit(1)
+        } icon: {
+            Circle()
+                .fill(Color(nsColor: tag.nsColor ?? .secondaryLabelColor))
+                .frame(width: 10, height: 10)
+        }
+        .padding(.vertical, 2.5)
+        .contextMenu {
+            Button(String(localized: "Quitar de la barra lateral", bundle: #bundle), menuIcon: "minus.circle") {
+                PlacesProvider().setTagHiddenInSidebar(true, for: tag)
             }
         }
     }

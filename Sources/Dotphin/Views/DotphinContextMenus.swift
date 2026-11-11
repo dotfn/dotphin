@@ -266,13 +266,13 @@ struct DotphinItemContextMenu: View {
             folderIconMenu(for: item.url)
 
             let placesProvider = PlacesProvider()
-            if placesProvider.isBookmarked(item.url) {
-                Button(String(localized: "Quitar de Lugares", bundle: #bundle), menuIcon: "bookmark.slash") {
-                    placesProvider.removeBookmark(for: item.url)
+            if placesProvider.isInFavorites(item.url) {
+                Button(String(localized: "Quitar de Favoritos", bundle: #bundle), menuIcon: "bookmark.slash") {
+                    placesProvider.removeFromFavorites(item.url)
                 }
             } else {
-                Button(String(localized: "Añadir a Lugares", bundle: #bundle), menuIcon: "bookmark") {
-                    placesProvider.addBookmark(for: item.url, name: item.name)
+                Button(String(localized: "Añadir a Favoritos", bundle: #bundle), menuIcon: "bookmark") {
+                    placesProvider.addToFavorites(item.url, name: item.name)
                 }
             }
         }
@@ -712,13 +712,13 @@ struct DotphinViewportContextMenu: View {
         Divider()
 
         let placesProvider = PlacesProvider()
-        if placesProvider.isBookmarked(actions.viewModel.currentURL) {
-            Button(String(localized: "Quitar carpeta actual de Lugares", bundle: #bundle), menuIcon: "bookmark.slash") {
-                placesProvider.removeBookmark(for: actions.viewModel.currentURL)
+        if placesProvider.isInFavorites(actions.viewModel.currentURL) {
+            Button(String(localized: "Quitar carpeta actual de Favoritos", bundle: #bundle), menuIcon: "bookmark.slash") {
+                placesProvider.removeFromFavorites(actions.viewModel.currentURL)
             }
         } else {
-            Button(String(localized: "Añadir carpeta actual a Lugares", bundle: #bundle), menuIcon: "bookmark") {
-                placesProvider.addBookmark(for: actions.viewModel.currentURL)
+            Button(String(localized: "Añadir carpeta actual a Favoritos", bundle: #bundle), menuIcon: "bookmark") {
+                placesProvider.addToFavorites(actions.viewModel.currentURL)
             }
         }
 

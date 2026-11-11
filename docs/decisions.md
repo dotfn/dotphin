@@ -1496,3 +1496,71 @@ Salió de una auditoría de lo que la app hacía a mano teniendo API del sistema
   espacio (medido: por debajo de ~920 pt de ventana) y no tiene opción para
   empezar plegado. Pendiente de decisión del usuario.
 
+## 2026-11-11 — El árbol "Carpetas" ya no sigue a la carpeta actual
+
+- Pedido del usuario: el árbol no debe desplegarse solo hasta la carpeta que se
+  está viendo. Se quitó `FolderTreeModel.reveal`; al aparecer (o al cambiar
+  "Limitar a la carpeta personal") solo se despliega la raíz. Lo demás queda
+  como el usuario lo deja.
+
+## 2026-11-11 — Barra lateral: Favoritos y Ubicaciones (Finder) + Carpetas (Dolphin)
+
+- Pedido del usuario: mezcla de Finder y Dolphin, con poder editar, ocultar y
+  mostrar elementos "como Dolphin pero nativo de macOS". Parte A (esta):
+  secciones y edición. Parte B (pendiente): Etiquetas con Spotlight (#20, #22).
+- Secciones: Favoritos (Escritorio, Documentos, Descargas, Aplicaciones y los
+  agregados por el usuario), Ubicaciones (carpeta personal con el nombre de
+  usuario, disco de arranque, iCloud Drive si existe, otros discos, Papelera),
+  Búsquedas guardadas (si hay) y Carpetas. Todas son `Section(isExpanded:)`
+  —se pliegan como en Finder— y recuerdan su estado con `@AppStorage`;
+  Carpetas arranca plegada. "Lugares" y "Dispositivos" desaparecen.
+- Edición nativa: Favoritos se reordena arrastrando (`onMove`; el orden se
+  guarda por ruta y los ocultos conservan su lugar). Clic derecho → "Quitar de
+  la barra lateral": un favorito agregado se borra (como Finder), lo demás se
+  oculta. Ajustes → Barra lateral tiene una casilla por elemento para volver a
+  mostrarlo. Consultado axiom-macos (estado de la barra lateral persistido).
+- Arreglado de paso: "Quitar de Lugares" sobre una carpeta de serie (p. ej.
+  Escritorio) no hacía nada; ahora "Quitar de Favoritos" la oculta y
+  "Añadir a Favoritos" la vuelve a mostrar en vez de duplicarla.
+- El arrastre no funcionaba (lo probó el usuario): cada fila era un `Button`
+  que tomaba el clic. Ahora la lista usa la selección nativa
+  (`List(selection:)`, como Finder) con filas simples; la selección se calcula
+  desde la carpeta actual, así entrar en una subcarpeta deselecciona y volver
+  a tocar el favorito navega (el motivo original de los botones, slice 1).
+  Los tests no pueden simular clics ni arrastres en esta lista (los eventos
+  sintéticos no seleccionan ni arrastran); cubren la selección derivada y la
+  navegación al elegir una fila. El arrastre queda para probar a mano.
+- Soltar carpetas en Favoritos (desde Dotphin o Finder): `onInsert(of:
+  [.fileURL])` en la lista, que agrega en la posición donde se suelta; un
+  favorito existente solo se mueve, los archivos se ignoran
+  (`PlacesProvider.insertFavorites`). Sin verificar a mano.
+- Íconos: primero se probó el ícono real de cada carpeta (`NSWorkspace`); el
+  usuario prefirió los símbolos de la barra lateral de Finder. Ahora
+  `PlaceItem.sidebarSymbol` da el símbolo SF de cada carpeta conocida
+  (Developer → `hammer`, Escritorio → `menubar.dock.rectangle`, …) en el color
+  de acento; Aplicaciones usa `a.circle`, el símbolo público más parecido a la
+  "A" de Finder. Otras carpetas: `folder`.
+- Arreglado de paso: `ThumbnailLoader.invalidateIcon` existía pero nadie lo
+  llamaba, así que un ícono de carpeta cambiado desde Dotphin no se veía
+  hasta reiniciar. Ahora `setFolderIcon` lo invalida (también las versiones
+  teñidas). Un ícono cambiado desde Finder con Dotphin abierto todavía no se
+  refresca solo.
+- Se quitó la sección Carpetas (el árbol de Dolphin) por pedido del usuario,
+  junto con `FolderTreeRow`, `FolderTreeModel` y `FolderTreeProvider`.
+- Etiquetas (parte B): sección con los colores en el orden de Finder,
+  ocultables como el resto. Elegir una muestra sus archivos en el panel
+  activo (`BrowserViewModel.showItems(taggedWith:)`, `shownTag`), buscados con
+  Spotlight (`TaggedItemsSearch`, `NSMetadataQuery`). Se busca por
+  `kMDItemFSLabel` (número de color), no por nombre: probado en esta Mac,
+  ambos encuentran el archivo, pero el número no depende del idioma.
+- Visto al probar: `setColorTag` guarda el nombre de la etiqueta en el idioma
+  de la interfaz; con "Rojo" (sin la etiqueta existente en el sistema) el
+  archivo quedó con el color pero sin nombre de etiqueta. Con la app en inglés
+  ("Red") anda. Pendiente de revisar (relacionado con #22).
+- Pendiente: con una etiqueta en pantalla, la ruta del panel sigue mostrando
+  la carpeta anterior (Finder pone el nombre de la etiqueta).
+- "Cambiar ícono…" (pedido del usuario después de elegir los símbolos de
+  Finder): clic derecho en Favoritos o Ubicaciones abre un popover con una
+  grilla de símbolos SF (como el de Recordatorios; macOS no tiene un selector
+  público de símbolos). Se guarda por ruta en `sidebar.customSymbols`, solo
+  cambia la barra lateral y "Restablecer" vuelve al símbolo de Finder.

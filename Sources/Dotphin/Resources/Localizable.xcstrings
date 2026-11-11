@@ -10017,6 +10017,214 @@
           }
         }
       }
+    },
+    "Ubicaciones": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Locations"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ubicaciones"
+          }
+        }
+      }
+    },
+    "Aplicaciones": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applications"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aplicaciones"
+          }
+        }
+      }
+    },
+    "Quitar de la barra lateral": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from Sidebar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar de la barra lateral"
+          }
+        }
+      }
+    },
+    "Barra lateral": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sidebar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra lateral"
+          }
+        }
+      }
+    },
+    "Quitar de Favoritos": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from Favorites"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar de Favoritos"
+          }
+        }
+      }
+    },
+    "Añadir a Favoritos": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to Favorites"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir a Favoritos"
+          }
+        }
+      }
+    },
+    "Quitar carpeta actual de Favoritos": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove Current Folder from Favorites"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar carpeta actual de Favoritos"
+          }
+        }
+      }
+    },
+    "Añadir carpeta actual a Favoritos": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Current Folder to Favorites"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir carpeta actual a Favoritos"
+          }
+        }
+      }
+    },
+    "Guardar esta búsqueda en la barra lateral": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save this search in the sidebar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar esta búsqueda en la barra lateral"
+          }
+        }
+      }
+    },
+    "Buscando archivos con la etiqueta «%@»…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finding files tagged “%@”…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscando archivos con la etiqueta «%@»…"
+          }
+        }
+      }
+    },
+    "Ningún archivo con la etiqueta «%@»": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No files tagged “%@”"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ningún archivo con la etiqueta «%@»"
+          }
+        }
+      }
+    },
+    "Cambiar ícono…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Icon…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambiar ícono…"
+          }
+        }
+      }
+    },
+    "Restablecer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restablecer"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -166,8 +166,8 @@ struct BreadcrumbView: View {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(ancestor.path, forType: .string)
                     }
-                    Button(String(localized: "Añadir a Lugares", bundle: #bundle), menuIcon: "bookmark") {
-                        PlacesProvider().addBookmark(for: ancestor)
+                    Button(String(localized: "Añadir a Favoritos", bundle: #bundle), menuIcon: "bookmark") {
+                        PlacesProvider().addToFavorites(ancestor)
                     }
                     Button(String(localized: "Mostrar en Finder", bundle: #bundle), menuIcon: "macwindow") {
                         NSWorkspace.shared.activateFileViewerSelecting([ancestor])

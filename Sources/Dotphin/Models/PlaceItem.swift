@@ -12,6 +12,8 @@ struct PlaceItem: Identifiable, Hashable, Codable {
     let systemImage: String
     let kind: PlaceKind
     var isEjectable: Bool = true
+    /// Símbolo elegido por el usuario para la barra lateral ("Cambiar ícono…").
+    var customSymbol: String? = nil
 
     var id: URL { url }
 
@@ -23,6 +25,7 @@ struct PlaceItem: Identifiable, Hashable, Codable {
         case "Desktop": return String(localized: "Escritorio", bundle: #bundle)
         case "Documents": return String(localized: "Documentos", bundle: #bundle)
         case "Downloads": return String(localized: "Descargas", bundle: #bundle)
+        case "Applications": return String(localized: "Aplicaciones", bundle: #bundle)
         case "Trash": return String(localized: "Papelera", bundle: #bundle)
         default: return name
         }

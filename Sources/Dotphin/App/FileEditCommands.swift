@@ -376,9 +376,9 @@ struct FileEditCommands: Commands {
         }
 
         CommandMenu(String(localized: "Marcadores", bundle: #bundle)) {
-            Button(String(localized: "Añadir carpeta actual a Lugares", bundle: #bundle), menuIcon: "bookmark") {
+            Button(String(localized: "Añadir carpeta actual a Favoritos", bundle: #bundle), menuIcon: "bookmark") {
                 guard let url = viewModel?.currentURL else { return }
-                PlacesProvider().addBookmark(for: url)
+                PlacesProvider().addToFavorites(url)
             }
             .keyboardShortcut("b", modifiers: .command)
             .disabled(viewModel == nil)

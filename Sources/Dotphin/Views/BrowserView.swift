@@ -211,13 +211,26 @@ struct BrowserView: View {
                 ProgressView(String(localized: "Cargando carpeta…", bundle: #bundle))
                     .controlSize(.small)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if !viewModel.searchQuery.isEmpty {
+            } else if viewModel.isShowingResults {
                 if viewModel.searchResults.isEmpty && viewModel.isSearching {
-                    ProgressView(String(localized: "Buscando «\(viewModel.searchQuery)»…", bundle: #bundle))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    if let tag = viewModel.shownTag {
+                        ProgressView(String(localized: "Buscando archivos con la etiqueta «\(tag.title)»…", bundle: #bundle))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        ProgressView(String(localized: "Buscando «\(viewModel.searchQuery)»…", bundle: #bundle))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 } else if viewModel.searchResults.isEmpty {
-                    ContentUnavailableView.search(text: viewModel.searchQuery)
+                    if let tag = viewModel.shownTag {
+                        ContentUnavailableView(
+                            String(localized: "Ningún archivo con la etiqueta «\(tag.title)»", bundle: #bundle),
+                            systemImage: "tag"
+                        )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        ContentUnavailableView.search(text: viewModel.searchQuery)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 } else {
                     FileListView(
                         items: viewModel.searchResults,
@@ -744,7 +757,7 @@ struct BrowserView: View {
                         .background(Capsule().fill(Color.primary.opacity(0.06)))
                     }
                     .buttonStyle(.plain)
-                    .help(String(localized: "Guardar esta búsqueda en el panel Lugares", bundle: #bundle))
+                    .help(String(localized: "Guardar esta búsqueda en la barra lateral", bundle: #bundle))
                 }
 
                 if viewModel.hasActiveFacets || !viewModel.filterText.isEmpty || !viewModel.searchQuery.isEmpty {

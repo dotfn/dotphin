@@ -154,19 +154,6 @@ final class DirectoryReaderTests: XCTestCase {
         XCTAssertTrue(library.isHiddenItem, "con ocultos a la vista, igual cuenta como oculto (se atenúa y va al final)")
     }
 
-    func test_folderTreeSkipsFlagHiddenFoldersAndPackages() throws {
-        let flagged = tempDir.appendingPathComponent("Library", isDirectory: true)
-        try FileManager.default.createDirectory(at: flagged, withIntermediateDirectories: true)
-        try setHiddenFlag(on: flagged)
-        try FileManager.default.createDirectory(at: tempDir.appendingPathComponent("Demo.app"), withIntermediateDirectories: true)
-        try FileManager.default.createDirectory(at: tempDir.appendingPathComponent("normal"), withIntermediateDirectories: true)
-
-        let tree = FolderTreeProvider(showsHiddenFiles: false).subdirectories(of: tempDir).map(\.lastPathComponent)
-        XCTAssertEqual(tree, ["normal"])
-        let withHidden = FolderTreeProvider(showsHiddenFiles: true).subdirectories(of: tempDir).map(\.lastPathComponent)
-        XCTAssertEqual(withHidden, ["Library", "normal"])
-    }
-
     func test_packageIsReadAsPackageAndSortsWithFiles() throws {
         try FileManager.default.createDirectory(at: tempDir.appendingPathComponent("Demo.app"), withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: tempDir.appendingPathComponent("zfolder"), withIntermediateDirectories: true)

@@ -5,7 +5,7 @@ extension Notification.Name {
 }
 
 struct PlacesProvider {
-    private let defaults: UserDefaults
+    let defaults: UserDefaults
     private static let customBookmarksKey = "dolphin.customBookmarks"
     private static let savedSearchesKey = "dolphin.savedSearches"
 
@@ -75,7 +75,7 @@ struct PlacesProvider {
 
     func addBookmark(for url: URL, name: String? = nil, systemImage: String = "bookmark.fill") {
         let normalized = url.standardizedFileURL
-        guard !isBookmarked(normalized) else { return }
+        guard !favorites(includingHidden: true).contains(where: { Self.sidebarKey($0.url) == Self.sidebarKey(normalized) }) else { return }
         var current = customBookmarks()
         let rawTitle = name ?? (normalized.lastPathComponent.isEmpty ? normalized.path : normalized.lastPathComponent)
         current.append(

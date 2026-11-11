@@ -14,6 +14,7 @@ struct ContentView: View {
     @SceneStorage("tabSessionID") private var tabSessionID: String?
     @State private var didBeginTabSession = false
     @State private var places = PlacesProvider().allPlaces()
+    @State private var sidebarPlaces = PlacesProvider().sidebarPlaces()
     @State private var savedSearches = PlacesProvider().savedSearches()
     @State private var showsInfoPanel = false
     @State private var showsEmbeddedTerminal = false
@@ -59,11 +60,15 @@ struct ContentView: View {
         let _ = connectCommands()
         NavigationSplitView {
             PlacesSidebarView(
-                places: places,
+                sidebar: sidebarPlaces,
                 savedSearches: savedSearches,
                 currentURL: focusedViewModel?.currentURL ?? FileManager.default.homeDirectoryForCurrentUser,
+                shownTag: focusedViewModel?.shownTag,
                 onSelect: { place in
                     focusedViewModel?.navigate(to: place.url)
+                },
+                onSelectTag: { tag in
+                    focusedViewModel?.showItems(taggedWith: tag)
                 },
                 onSelectSavedSearch: { saved in
                     focusedViewModel?.applySavedSearch(saved)
@@ -79,9 +84,6 @@ struct ContentView: View {
                     if let tab = tabsViewModel.selectedTab {
                         tabsViewModel.openInSplitView(url, for: tab.id)
                     }
-                },
-                onSelectFolder: { url in
-                    focusedViewModel?.navigate(to: url)
                 }
             )
             .navigationSplitViewColumnWidth(min: 190, ideal: 205, max: 250)
@@ -100,18 +102,22 @@ struct ContentView: View {
         .background(WindowCommandsRegistrar(commands: commands))
         .onReceive(NotificationCenter.default.publisher(for: .placesBookmarksDidChange)) { _ in
             places = PlacesProvider().allPlaces()
+            sidebarPlaces = PlacesProvider().sidebarPlaces()
             savedSearches = PlacesProvider().savedSearches()
         }
-        // Discos conectados, expulsados o renombrados: el panel Lugares se
+        // Discos conectados, expulsados o renombrados: la barra lateral se
         // actualiza solo (antes era una foto del momento del arranque).
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didMountNotification)) { _ in
             places = PlacesProvider().allPlaces()
+            sidebarPlaces = PlacesProvider().sidebarPlaces()
         }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didRenameVolumeNotification)) { _ in
             places = PlacesProvider().allPlaces()
+            sidebarPlaces = PlacesProvider().sidebarPlaces()
         }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didUnmountNotification)) { _ in
             places = PlacesProvider().allPlaces()
+            sidebarPlaces = PlacesProvider().sidebarPlaces()
             leaveUnmountedVolumes()
         }
         .onAppear {

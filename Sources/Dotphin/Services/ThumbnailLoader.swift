@@ -67,8 +67,13 @@ struct ThumbnailLoader {
         return image
     }
 
+    /// Olvida el ícono guardado de `path` (también sus versiones teñidas por
+    /// etiqueta), p. ej. tras cambiar el ícono de una carpeta.
     static func invalidateIcon(forFile path: String) {
         iconCache.removeObject(forKey: path as NSString)
+        for tag in FinderColorTag.allCases {
+            iconCache.removeObject(forKey: "\(path)#\(tag.rawValue)" as NSString)
+        }
     }
 
     func thumbnail(for url: URL, size: CGSize) async -> NSImage? {
@@ -132,3 +137,4 @@ struct ThumbnailLoader {
         return NSImage(cgImage: cgThumb, size: NSSize(width: cgThumb.width, height: cgThumb.height))
     }
 }
+

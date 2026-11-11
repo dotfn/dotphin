@@ -348,6 +348,15 @@ final class BrowserViewModel {
         }
     }
     private(set) var searchResults: [FileItem] = []
+    /// Etiqueta de la barra lateral cuyos archivos se muestran en lugar de la
+    /// carpeta (Finder → Etiquetas). Los resultados van en `searchResults`.
+    private(set) var shownTag: FinderColorTag?
+
+    /// La lista en pantalla son resultados (de una búsqueda o de una etiqueta)
+    /// y no el contenido de la carpeta.
+    var isShowingResults: Bool {
+        !searchQuery.isEmpty || shownTag != nil
+    }
     /// `true` mientras la búsqueda en segundo plano no terminó; la vista muestra
     /// progreso en vez de "sin resultados" en ese intervalo.
     private(set) var isSearching: Bool = false
@@ -470,6 +479,7 @@ final class BrowserViewModel {
             filterText = ""
         }
         searchQuery = ""
+        shownTag = nil
         searchTypeFilter = .all
         searchDateFilter = .any
         searchSizeFilter = .any
@@ -490,6 +500,7 @@ final class BrowserViewModel {
     /// filtro mientras corre ya no encola recorridos completos uno detrás de otro.
     func performSearch() {
         searchTask?.cancel()
+        shownTag = nil
         guard !searchQuery.isEmpty else {
             searchTask = nil
             isSearching = false
@@ -523,6 +534,23 @@ final class BrowserViewModel {
         }
     }
 
+    /// Muestra los archivos con la etiqueta `tag` (barra lateral → Etiquetas),
+    /// buscados con Spotlight.
+    func showItems(taggedWith tag: FinderColorTag, using search: TaggedItemsSearch = TaggedItemsSearch()) {
+        searchTask?.cancel()
+        searchQuery = ""
+        shownTag = tag
+        selectedIDs = []
+        searchResults = []
+        isSearching = true
+        searchTask = Task { [weak self] in
+            let results = await search.items(labeled: tag)
+            guard !Task.isCancelled, let self, self.shownTag == tag else { return }
+            self.searchResults = results
+            self.isSearching = false
+        }
+    }
+
     /// Espera a que terminen la búsqueda y la carga de git en curso (para tests).
     func waitForBackgroundWork() async {
         // Una lectura puede reemplazar a otra mientras se espera (cambio en disco).
@@ -538,6 +566,7 @@ final class BrowserViewModel {
     func resetSearchAndFilters() {
         filterText = ""
         searchQuery = ""
+        shownTag = nil
         searchTypeFilter = .all
         searchDateFilter = .any
         searchSizeFilter = .any
@@ -640,7 +669,7 @@ final class BrowserViewModel {
 
     /// Items in their visual display order (respecting search results and `showInGroups` sections).
     var orderedVisibleItems: [FileItem] {
-        if !searchQuery.isEmpty {
+        if isShowingResults {
             return searchResults
         }
         if viewProperties.showInGroups {
@@ -684,7 +713,7 @@ final class BrowserViewModel {
             return
         }
 
-        let isGridMode = searchQuery.isEmpty && (viewProperties.mode == .icons || viewProperties.mode == .compact)
+        let isGridMode = !isShowingResults && (viewProperties.mode == .icons || viewProperties.mode == .compact)
         let cols = max(1, gridColumnsCount)
         var targetItem: FileItem?
 
@@ -811,7 +840,7 @@ final class BrowserViewModel {
             self?.typeAheadBuffer = ""
         }
 
-        let visible = searchQuery.isEmpty ? filteredItems : searchResults
+        let visible = isShowingResults ? searchResults : filteredItems
         guard !visible.isEmpty else { return nil }
 
         // Prefer prefix match first, then fallback to case-insensitive substring match
@@ -894,7 +923,9 @@ final class BrowserViewModel {
 
     func refresh() {
         load(currentURL)
-        if !searchQuery.isEmpty {
+        if let shownTag {
+            showItems(taggedWith: shownTag)
+        } else if !searchQuery.isEmpty {
             performSearch()
         }
     }
@@ -1145,6 +1176,7 @@ final class BrowserViewModel {
 
     func setFolderIcon(_ preset: FolderIconPreset, for folderURL: URL) {
         _ = FolderIconAndTagService().setFolderIcon(preset, for: folderURL)
+        ThumbnailLoader.invalidateIcon(forFile: folderURL.path)
         refresh()
     }
 

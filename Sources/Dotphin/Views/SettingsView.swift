@@ -110,6 +110,12 @@ struct SettingsView: View {
             .tabItem {
                 Label(String(localized: "Confirmaciones", bundle: #bundle), systemImage: "checkmark.shield")
             }
+
+            SidebarSettingsView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .tabItem {
+                    Label(String(localized: "Barra lateral", bundle: #bundle), systemImage: "sidebar.left")
+                }
         }
         .frame(width: 720, height: 500)
     }
