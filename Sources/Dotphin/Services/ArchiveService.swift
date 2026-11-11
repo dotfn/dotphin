@@ -146,7 +146,7 @@ struct ArchiveService {
         process.arguments = arguments
         let outPipe = Pipe()
         process.standardOutput = outPipe
-        process.standardError = Pipe()
+        process.standardError = FileHandle.nullDevice
         do {
             try process.run()
             let data = outPipe.fileHandleForReading.readDataToEndOfFile()
@@ -164,15 +164,16 @@ struct ArchiveService {
         process.arguments = arguments
         let errorPipe = Pipe()
         process.standardError = errorPipe
-        process.standardOutput = Pipe()
+        process.standardOutput = FileHandle.nullDevice
         do {
             try process.run()
-            process.waitUntilExit()
         } catch {
             throw FileOperationError.other(error.localizedDescription)
         }
+        // Leer el pipe antes de waitUntilExit (lección del slice 10: al revés, deadlock).
+        let errData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
         guard process.terminationStatus == 0 else {
-            let errData = errorPipe.fileHandleForReading.readDataToEndOfFile()
             let message = String(data: errData, encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             throw FileOperationError.other(
