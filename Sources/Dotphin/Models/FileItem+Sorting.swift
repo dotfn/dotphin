@@ -18,8 +18,9 @@ extension Array where Element == FileItem {
             if hiddenLast && lhs.isHiddenItem != rhs.isHiddenItem {
                 return !lhs.isHiddenItem
             }
-            if foldersFirst && lhs.isDirectory != rhs.isDirectory {
-                return lhs.isDirectory
+            // Un paquete se ordena con los archivos, como en Finder.
+            if foldersFirst && lhs.opensAsFolder != rhs.opensAsFolder {
+                return lhs.opensAsFolder
             }
             let (a, b) = ascending ? (lhs, rhs) : (rhs, lhs)
             switch field {
@@ -41,8 +42,8 @@ extension Array where Element == FileItem {
                 if aDate != bDate { return aDate < bDate }
                 return sortingChoice.compare(lhs.name, rhs.name) == .orderedAscending
             case .type:
-                let aKind = Self.kindLabel(for: a)
-                let bKind = Self.kindLabel(for: b)
+                let aKind = a.kindDescription
+                let bKind = b.kindDescription
                 let cmp = sortingChoice.compare(aKind, bKind)
                 if cmp != .orderedSame { return cmp == .orderedAscending }
                 return sortingChoice.compare(lhs.name, rhs.name) == .orderedAscending
@@ -85,14 +86,6 @@ extension Array where Element == FileItem {
         }
     }
 
-    private static func kindLabel(for item: FileItem) -> String {
-        if item.isDirectory {
-            return String(localized: "Carpeta", bundle: #bundle)
-        }
-        let ext = item.url.pathExtension
-        return ext.isEmpty ? String(localized: "Documento", bundle: #bundle) : ext.uppercased()
-    }
-
     private static func groupTitle(
         for item: FileItem,
         field: SortField,
@@ -111,7 +104,7 @@ extension Array where Element == FileItem {
             return "#"
 
         case .size:
-            if foldersFirst && item.isDirectory {
+            if foldersFirst && item.opensAsFolder {
                 return String(localized: "Carpetas", bundle: #bundle)
             }
             let bytes = item.size ?? 0
@@ -152,7 +145,7 @@ extension Array where Element == FileItem {
             return String(localized: "Anteriores", bundle: #bundle)
 
         case .type:
-            return kindLabel(for: item)
+            return item.kindDescription
 
         case .extensionType:
             if item.isDirectory { return String(localized: "Carpetas", bundle: #bundle) }

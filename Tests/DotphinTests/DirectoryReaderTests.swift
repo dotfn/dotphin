@@ -129,4 +129,68 @@ final class DirectoryReaderTests: XCTestCase {
             XCTAssertEqual(error as? DirectoryReadError, .permissionDenied(locked))
         }
     }
+
+    // MARK: Ocultos por marca, paquetes y tipo (APIs del sistema)
+
+    /// Marca un ítem como oculto sin cambiarle el nombre (lo que tiene `~/Library`).
+    private func setHiddenFlag(on url: URL) throws {
+        var url = url
+        var values = URLResourceValues()
+        values.isHidden = true
+        try url.setResourceValues(values)
+    }
+
+    func test_contentsHidesItemsWithTheHiddenFlag() throws {
+        let flagged = tempDir.appendingPathComponent("Library", isDirectory: true)
+        try FileManager.default.createDirectory(at: flagged, withIntermediateDirectories: true)
+        try setHiddenFlag(on: flagged)
+        try "x".write(to: tempDir.appendingPathComponent("visible.txt"), atomically: true, encoding: .utf8)
+
+        XCTAssertEqual(try DirectoryReader().contents(of: tempDir).map(\.name), ["visible.txt"])
+
+        let all = try DirectoryReader(showsHiddenFiles: true).contents(of: tempDir)
+        let library = try XCTUnwrap(all.first { $0.name == "Library" })
+        XCTAssertTrue(library.isHiddenByFlag)
+        XCTAssertTrue(library.isHiddenItem, "con ocultos a la vista, igual cuenta como oculto (se atenúa y va al final)")
+    }
+
+    func test_folderTreeSkipsFlagHiddenFoldersAndPackages() throws {
+        let flagged = tempDir.appendingPathComponent("Library", isDirectory: true)
+        try FileManager.default.createDirectory(at: flagged, withIntermediateDirectories: true)
+        try setHiddenFlag(on: flagged)
+        try FileManager.default.createDirectory(at: tempDir.appendingPathComponent("Demo.app"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: tempDir.appendingPathComponent("normal"), withIntermediateDirectories: true)
+
+        let tree = FolderTreeProvider(showsHiddenFiles: false).subdirectories(of: tempDir).map(\.lastPathComponent)
+        XCTAssertEqual(tree, ["normal"])
+        let withHidden = FolderTreeProvider(showsHiddenFiles: true).subdirectories(of: tempDir).map(\.lastPathComponent)
+        XCTAssertEqual(withHidden, ["Library", "normal"])
+    }
+
+    func test_packageIsReadAsPackageAndSortsWithFiles() throws {
+        try FileManager.default.createDirectory(at: tempDir.appendingPathComponent("Demo.app"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: tempDir.appendingPathComponent("zfolder"), withIntermediateDirectories: true)
+        try "x".write(to: tempDir.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+
+        let items = try DirectoryReader().contents(of: tempDir)
+        XCTAssertEqual(items.map(\.name), ["zfolder", "a.txt", "Demo.app"], "un paquete va con los archivos, no con las carpetas")
+        let app = try XCTUnwrap(items.first { $0.name == "Demo.app" })
+        XCTAssertTrue(app.isDirectory)
+        XCTAssertTrue(app.isPackage)
+        XCTAssertFalse(app.opensAsFolder, "abrirlo no debe navegar adentro")
+        let folder = try XCTUnwrap(items.first { $0.name == "zfolder" })
+        XCTAssertFalse(folder.isPackage)
+        XCTAssertTrue(folder.opensAsFolder)
+    }
+
+    func test_kindIsTheSystemTypeDescription() throws {
+        let file = tempDir.appendingPathComponent("nota.txt")
+        try "x".write(to: file, atomically: true, encoding: .utf8)
+        let expected = try XCTUnwrap(file.resourceValues(forKeys: [.localizedTypeDescriptionKey]).localizedTypeDescription)
+
+        let item = try XCTUnwrap(DirectoryReader().contents(of: tempDir).first)
+        XCTAssertEqual(item.typeDescription, expected)
+        XCTAssertEqual(FileMetadataFormatter().metadata(for: item).kind, expected)
+        XCTAssertNotEqual(item.kindDescription, "TXT", "ya no es la extensión en mayúsculas")
+    }
 }

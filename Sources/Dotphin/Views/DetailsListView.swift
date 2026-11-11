@@ -29,7 +29,7 @@ struct DetailsListView: View {
         var result: [DetailsTableRow] = []
         func appendItems(_ list: [FileItem], depth: Int) {
             for item in list {
-                let isExpanded = item.isDirectory && expandedDirectories.contains(item.url)
+                let isExpanded = item.opensAsFolder && expandedDirectories.contains(item.url)
                 result.append(.item(item, depth: depth, isExpanded: isExpanded))
                 if isExpanded, let children = directoryChildren[item.url] {
                     appendItems(children, depth: depth + 1)

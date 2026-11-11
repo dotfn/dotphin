@@ -10001,6 +10001,22 @@
           }
         }
       }
+    },
+    "Mostrar contenido del paquete": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Package Contents"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar contenido del paquete"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

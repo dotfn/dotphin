@@ -379,7 +379,7 @@ struct DetailsTableView: NSViewRepresentable {
                         outline: parent.expandableFolders
                             ? FileRowCellView.Outline(
                                 depth: depth,
-                                isExpanded: item.isDirectory ? isExpanded : nil,
+                                isExpanded: item.opensAsFolder ? isExpanded : nil,
                                 onToggle: { [weak self] in self?.parent.onToggleExpansion(url) }
                             )
                             : nil

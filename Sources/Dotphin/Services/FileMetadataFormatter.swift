@@ -32,13 +32,7 @@ struct FileMetadataFormatter {
     }
 
     func metadata(for item: FileItem) -> FileMetadata {
-        let kind: String
-        if item.isDirectory {
-            kind = String(localized: "Carpeta", bundle: #bundle)
-        } else {
-            let ext = item.url.pathExtension
-            kind = ext.isEmpty ? String(localized: "Documento", bundle: #bundle) : ext.uppercased()
-        }
+        let kind = item.kindDescription
 
         let sizeText = item.isDirectory
             ? "—"
@@ -68,10 +62,15 @@ struct FileMetadataFormatter {
         case .none:
             computed = "—"
         case .contentCount:
-            guard let entries = try? FileManager.default.contentsOfDirectory(atPath: item.url.path) else {
+            // `.skipsHiddenFiles` también deja afuera lo oculto por marca, no solo por punto.
+            guard let entries = try? FileManager.default.contentsOfDirectory(
+                at: item.url,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            ) else {
                 return "—"
             }
-            let visibleCount = entries.filter { !$0.hasPrefix(".") }.count
+            let visibleCount = entries.count
             computed = visibleCount == 1 ? String(localized: "1 ítem", bundle: #bundle) : String(localized: "\(visibleCount) ítems", bundle: #bundle)
         case .contentSize:
             // Recursivo, como Dolphin: antes solo sumaba los archivos del primer

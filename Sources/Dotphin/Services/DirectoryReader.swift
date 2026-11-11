@@ -28,7 +28,10 @@ struct DirectoryReader {
             .contentModificationDateKey,
             .creationDateKey,
             .labelNumberKey,
-            .tagNamesKey
+            .tagNamesKey,
+            .isHiddenKey,
+            .isPackageKey,
+            .localizedTypeDescriptionKey
         ]
         let urls: [URL]
         do {
@@ -53,11 +56,6 @@ struct DirectoryReader {
         let dotHiddenNames = DebugEventLog.measure("carga", "    .hidden") { DotHiddenService().hiddenEntries(in: url) }
 
         let items = try DebugEventLog.measure("carga", "    resourceValues de \(urls.count) entradas") { try urls
-            .filter { itemURL in
-                let name = itemURL.lastPathComponent
-                let isHidden = name.hasPrefix(".") || dotHiddenNames.contains(name)
-                return showsHiddenFiles || !isHidden
-            }
             .map { itemURL -> FileItem in
                 let values = try itemURL.resourceValues(forKeys: keys)
                 let isSymbolicLink = values.isSymbolicLink ?? false
@@ -77,9 +75,13 @@ struct DirectoryReader {
                     creationDate: values.creationDate,
                     labelNumber: values.labelNumber ?? 0,
                     tagNames: values.tagNames ?? [],
-                    isHiddenInDotHidden: dotHiddenNames.contains(name)
+                    isHiddenInDotHidden: dotHiddenNames.contains(name),
+                    isHiddenByFlag: values.isHidden ?? false,
+                    isPackage: values.isPackage ?? false,
+                    typeDescription: values.localizedTypeDescription
                 )
             }
+            .filter { showsHiddenFiles || !$0.isHiddenItem }
         }
 
         return DebugEventLog.measure("carga", "    ordenar") {

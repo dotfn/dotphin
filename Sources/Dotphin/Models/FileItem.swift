@@ -61,8 +61,33 @@ struct FileItem: Identifiable, Hashable {
     let labelNumber: Int
     let tagNames: [String]
     let isHiddenInDotHidden: Bool
+    /// Oculto por el sistema (`isHiddenKey`): además de los nombres con punto,
+    /// lo que lleva la marca de oculto, como `~/Library` o `/usr`.
+    let isHiddenByFlag: Bool
+    /// Paquete (`.app`, `.xcodeproj`…): es una carpeta en disco, pero se abre
+    /// como un archivo.
+    let isPackage: Bool
+    /// "Tipo" como lo describe el sistema (`localizedTypeDescriptionKey`).
+    let typeDescription: String?
 
     var id: URL { url }
+
+    /// Carpeta en la que se entra al abrirla; un paquete no.
+    var opensAsFolder: Bool {
+        isDirectory && !isPackage
+    }
+
+    /// El tipo que se muestra: el del sistema o, si no se leyó, la extensión.
+    var kindDescription: String {
+        if let typeDescription, !typeDescription.isEmpty {
+            return typeDescription
+        }
+        if isDirectory {
+            return String(localized: "Carpeta", bundle: #bundle)
+        }
+        let ext = url.pathExtension
+        return ext.isEmpty ? String(localized: "Documento", bundle: #bundle) : ext.uppercased()
+    }
 
     var fileExtension: String {
         isDirectory ? "" : url.pathExtension.lowercased()
@@ -81,7 +106,7 @@ struct FileItem: Identifiable, Hashable {
     }
 
     var isHiddenItem: Bool {
-        name.hasPrefix(".") || isHiddenInDotHidden
+        name.hasPrefix(".") || isHiddenByFlag || isHiddenInDotHidden
     }
 
     init(
@@ -94,7 +119,10 @@ struct FileItem: Identifiable, Hashable {
         creationDate: Date? = nil,
         labelNumber: Int = 0,
         tagNames: [String] = [],
-        isHiddenInDotHidden: Bool = false
+        isHiddenInDotHidden: Bool = false,
+        isHiddenByFlag: Bool = false,
+        isPackage: Bool = false,
+        typeDescription: String? = nil
     ) {
         self.url = url
         self.name = name
@@ -106,5 +134,8 @@ struct FileItem: Identifiable, Hashable {
         self.labelNumber = labelNumber
         self.tagNames = tagNames
         self.isHiddenInDotHidden = isHiddenInDotHidden
+        self.isHiddenByFlag = isHiddenByFlag
+        self.isPackage = isPackage
+        self.typeDescription = typeDescription
     }
 }

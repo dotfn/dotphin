@@ -172,7 +172,7 @@ enum SearchTypeFilter: String, CaseIterable, Identifiable, Codable, Sendable {
         case .all:
             return true
         case .folders:
-            return item.isDirectory
+            return item.opensAsFolder
         case .documents:
             guard !item.isDirectory else { return false }
             let ext = item.url.pathExtension.lowercased()
@@ -281,12 +281,15 @@ struct SearchService {
             .fileSizeKey,
             .contentModificationDateKey,
             .labelNumberKey,
-            .tagNamesKey
+            .tagNamesKey,
+            .isPackageKey,
+            .localizedTypeDescriptionKey
         ]
         guard let enumerator = FileManager.default.enumerator(
             at: directory,
             includingPropertiesForKeys: keys,
-            options: [.skipsHiddenFiles]
+            // No se busca dentro de los paquetes (`.app`…), como Finder.
+            options: [.skipsHiddenFiles, .skipsPackageDescendants]
         ) else {
             return []
         }
@@ -325,7 +328,9 @@ struct SearchService {
                 size: fileSize,
                 modificationDate: values.contentModificationDate,
                 labelNumber: values.labelNumber ?? 0,
-                tagNames: values.tagNames ?? []
+                tagNames: values.tagNames ?? [],
+                isPackage: values.isPackage ?? false,
+                typeDescription: values.localizedTypeDescription
             )
             guard typeFilter.matches(item),
                   dateFilter.matches(item),

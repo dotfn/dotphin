@@ -126,7 +126,7 @@ struct BrowserView: View {
                 showsBatchRenameSheet = true
             }
             let onOpen: (FileItem) -> Void = { item in
-                if item.isDirectory {
+                if item.opensAsFolder {
                     withAnimation(.snappy(duration: 0.18)) {
                         viewModel.navigate(to: item.url)
                     }
@@ -226,7 +226,7 @@ struct BrowserView: View {
                         gitStatuses: [:],
                         currentURL: nil,
                         onOpen: { item in
-                            if item.isDirectory {
+                            if item.opensAsFolder {
                                 viewModel.navigate(to: item.url)
                             } else {
                                 viewModel.navigate(to: item.url.deletingLastPathComponent())

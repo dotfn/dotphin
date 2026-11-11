@@ -311,7 +311,7 @@ struct FileEditCommands: Commands {
 
             Button(String(localized: "Abrir ítem seleccionado", bundle: #bundle), menuIcon: "arrow.up.forward.square") {
                 guard let viewModel, let item = viewModel.selectedItem else { return }
-                if item.isDirectory {
+                if item.opensAsFolder {
                     viewModel.navigate(to: item.url)
                 } else {
                     NSWorkspace.shared.open(item.url)

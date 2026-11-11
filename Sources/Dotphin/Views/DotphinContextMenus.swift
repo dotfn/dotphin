@@ -89,12 +89,17 @@ struct DotphinItemContextMenu: View {
             Button(String(localized: "Abrir", bundle: #bundle), menuIcon: "arrow.up.forward.square") {
                 actions.onOpen(item)
             }
-            if item.isDirectory, let onOpenInNewTab = actions.onOpenInNewTab {
+            if item.isPackage {
+                Button(String(localized: "Mostrar contenido del paquete", bundle: #bundle), menuIcon: "shippingbox") {
+                    actions.viewModel.navigate(to: item.url)
+                }
+            }
+            if item.opensAsFolder, let onOpenInNewTab = actions.onOpenInNewTab {
                 Button(String(localized: "Abrir en una pestaña nueva", bundle: #bundle), menuIcon: "plus.square.on.square") {
                     onOpenInNewTab(item.url)
                 }
             }
-            if item.isDirectory, let onOpenInSplitView = actions.onOpenInSplitView {
+            if item.opensAsFolder, let onOpenInSplitView = actions.onOpenInSplitView {
                 Button(String(localized: "Abrir en vista dividida", bundle: #bundle), menuIcon: "rectangle.split.2x1") {
                     onOpenInSplitView(item.url)
                 }
@@ -130,7 +135,7 @@ struct DotphinItemContextMenu: View {
 
             Divider()
 
-            if item.isDirectory {
+            if item.opensAsFolder {
                 createNewMenu
                 Divider()
             }
