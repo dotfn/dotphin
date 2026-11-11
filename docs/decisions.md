@@ -1385,3 +1385,24 @@ Salió de una auditoría de lo que la app hacía a mano teniendo API del sistema
   ~29 ms por paso, como antes (~25 ms). No llega a 60 fps; queda pendiente.
 - Verificado por el usuario en la app. Sin revisar: animaciones que crucen
   el borde de `PaneSplitView` (cada panel es otro árbol de SwiftUI).
+
+## 2026-11-11 — Atajos que no chocan con macOS
+
+- Consultado axiom-macos (menús y comandos): revisar los atajos estándar antes
+  de asignar uno propio.
+- Los que macOS se queda y nunca llegaban a la app: F11 (Mostrar escritorio) y
+  ⌃F3 (foco al Dock). El resto de la fila F son teclas de brillo, Mission
+  Control y demás; sin fn no llegan.
+- El menú muestra el atajo de macOS o Finder: panel de información ⌥⌘I,
+  vistas previas ⇧⌘P, refrescar ⌘R, dividir ⌘\, otro panel ⌥⌘\, copiar o
+  mover al otro panel ⌃⌘C / ⌃⌘M, terminal ⌃` (externa ⌃⇧`), eliminar
+  permanentemente ⌥⌘⌫ (⇧⌘⌫ es Vaciar Papelera en Finder), copiar ubicación
+  ⌥⌘C y comparar ⌃⌥⌘C (intercambiados, como Finder), grupos ⌃⌘0 (⌘G es
+  Buscar siguiente), deseleccionar ⌥⌘A, enlace simbólico ⌃⌘A.
+- Las teclas de Dolphin (F3, F4, ⇧F4, F5, ⇧F5, ⇧F6, F12) y ⌘= siguen andando:
+  `FunctionKeyShortcuts` las traduce al atajo del menú con un monitor local, así
+  la acción tiene un solo camino y la terminal no se las come. Un test verifica
+  que cada traducción caiga en un atajo que el menú tiene.
+- F2 (renombrar) y ⌃⇧F3 (separar en pestañas) quedan en el menú: no chocan.
+- Sin verificar en la app real: que los atajos nuevos y las teclas F con fn
+  disparen la acción (solo probado con menús de prueba en tests).

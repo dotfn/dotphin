@@ -24,7 +24,7 @@ struct SettingsView: View {
                             }
                         }
                     }
-                    Toggle(String(localized: "Iniciar ventanas o pestañas en vista dividida (F3)", bundle: #bundle), isOn: $model.settings.startInSplitView)
+                    Toggle(String(localized: "Iniciar ventanas o pestañas en vista dividida (⌘\\)", bundle: #bundle), isOn: $model.settings.startInSplitView)
                 }
 
                 Section(String(localized: "Pestañas y barra de ubicaciones", bundle: #bundle)) {
@@ -98,7 +98,7 @@ struct SettingsView: View {
                 Section(String(localized: "Confirmaciones de operaciones destructivas", bundle: #bundle)) {
                     Toggle(String(localized: "Pedir confirmación antes de mover archivos a la Papelera", bundle: #bundle), isOn: $model.settings.confirmMoveToTrash)
                     Toggle(String(localized: "Pedir confirmación antes de vaciar la Papelera", bundle: #bundle), isOn: $model.settings.confirmEmptyTrash)
-                    Toggle(String(localized: "Pedir confirmación antes de eliminar permanentemente (⇧⌘⌫)", bundle: #bundle), isOn: $model.settings.confirmPermanentDelete)
+                    Toggle(String(localized: "Pedir confirmación antes de eliminar permanentemente (⌥⌘⌫)", bundle: #bundle), isOn: $model.settings.confirmPermanentDelete)
                 }
 
                 Section(String(localized: "Menú contextual", bundle: #bundle)) {

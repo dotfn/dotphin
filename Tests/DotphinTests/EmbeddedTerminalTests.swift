@@ -174,7 +174,7 @@ final class EmbeddedTerminalTests: XCTestCase {
         XCTAssertNil(reported)
     }
 
-    func test_keyClassification_returnSubmits_andF4BelongsToTheMenu() throws {
+    func test_keyClassification_returnSubmits_andControlBacktickBelongsToTheMenu() throws {
         func key(_ chars: String, code: UInt16, flags: NSEvent.ModifierFlags = []) throws -> NSEvent {
             try XCTUnwrap(NSEvent.keyEvent(
                 with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0,
@@ -188,24 +188,29 @@ final class EmbeddedTerminalTests: XCTestCase {
         XCTAssertTrue(DotphinTerminalView.submitsLine(try key("\u{03}", code: 76)))
         XCTAssertFalse(DotphinTerminalView.submitsLine(try key("a", code: 0)))
 
-        XCTAssertTrue(DotphinTerminalView.isPanelShortcut(try key(f4, code: 118)))
-        XCTAssertTrue(DotphinTerminalView.isPanelShortcut(try key(f4, code: 118, flags: [.shift])))
-        XCTAssertFalse(DotphinTerminalView.isPanelShortcut(try key(f4, code: 118, flags: [.control])))
-        XCTAssertFalse(DotphinTerminalView.isPanelShortcut(try key("a", code: 0)))
+        XCTAssertTrue(DotphinTerminalView.isPanelShortcut(try key("`", code: 50, flags: [.control])))
+        XCTAssertTrue(DotphinTerminalView.isPanelShortcut(try key("~", code: 50, flags: [.control, .shift])))
+        XCTAssertFalse(DotphinTerminalView.isPanelShortcut(try key("`", code: 50)))
+        XCTAssertFalse(DotphinTerminalView.isPanelShortcut(try key("`", code: 50, flags: [.command])))
+        XCTAssertFalse(DotphinTerminalView.isPanelShortcut(try key("a", code: 0, flags: [.control])))
+        // F4 llega como ⌃` gracias a `FunctionKeyShortcuts`.
+        XCTAssertEqual(
+            FunctionKeyShortcuts.menuShortcut(for: try key(f4, code: 118, flags: [.function])),
+            .init(characters: "`", keyCode: 50, modifiers: .control)
+        )
     }
 
-    func test_focusedTerminal_givesF4ToTheMenu_andReturnMarksAUserCommand() throws {
+    func test_focusedTerminal_givesControlBacktickToTheMenu_andReturnMarksAUserCommand() throws {
         final class MenuTarget: NSObject {
             var fired = 0
             @objc func toggle(_ sender: Any?) { fired += 1 }
         }
         let target = MenuTarget()
-        let f4 = String(Character(UnicodeScalar(NSF4FunctionKey)!))
         let mainMenu = NSMenu()
         let viewItem = NSMenuItem(title: "Ver", action: nil, keyEquivalent: "")
         let viewMenu = NSMenu(title: "Ver")
-        let toggleItem = NSMenuItem(title: "Terminal", action: #selector(MenuTarget.toggle(_:)), keyEquivalent: f4)
-        toggleItem.keyEquivalentModifierMask = []
+        let toggleItem = NSMenuItem(title: "Terminal", action: #selector(MenuTarget.toggle(_:)), keyEquivalent: "`")
+        toggleItem.keyEquivalentModifierMask = [.control]
         toggleItem.target = target
         viewMenu.addItem(toggleItem)
         viewItem.submenu = viewMenu
@@ -221,15 +226,15 @@ final class EmbeddedTerminalTests: XCTestCase {
         defer { window.close() }
         XCTAssertTrue(waitUntil(timeout: 3) { session.terminalView.map { window.firstResponder === $0 } ?? false })
 
-        func send(_ chars: String, code: UInt16) throws {
+        func send(_ chars: String, code: UInt16, flags: NSEvent.ModifierFlags = []) throws {
             NSApp.sendEvent(try XCTUnwrap(NSEvent.keyEvent(
-                with: .keyDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                with: .keyDown, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
                 windowNumber: window.windowNumber, context: nil, characters: chars,
                 charactersIgnoringModifiers: chars, isARepeat: false, keyCode: code
             )))
         }
 
-        try send(f4, code: 118)
+        try send("`", code: 50, flags: [.control])
         XCTAssertEqual(target.fired, 1)
 
         XCTAssertFalse(session.hasUserExecutedCommand)

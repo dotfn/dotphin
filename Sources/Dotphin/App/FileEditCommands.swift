@@ -12,7 +12,8 @@ extension FocusedValues {
     }
 }
 
-/// Edit, File, View, Go, and Bookmarks menu commands replicating Dolphin's keyboard shortcuts alongside native macOS ones.
+/// Edit, File, View, Go, and Bookmarks menu commands. Shortcuts follow macOS and Finder; Dolphin's
+/// function keys still work as fallbacks through `FunctionKeyShortcuts`.
 struct FileEditCommands: Commands {
     @FocusedValue(\.browserViewModel) private var viewModel
     @FocusedValue(\.windowCommands) private var commands
@@ -53,7 +54,7 @@ struct FileEditCommands: Commands {
             Button(String(localized: "Crear enlace simbólico aquí", bundle: #bundle), menuIcon: "link.badge.plus") {
                 viewModel?.createSymbolicLinkToSelected()
             }
-            .keyboardShortcut("l", modifiers: [.command, .option])
+            .keyboardShortcut("a", modifiers: [.command, .control])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
             Button(String(localized: "Cerrar pestaña", bundle: #bundle), menuIcon: "xmark") {
@@ -76,7 +77,7 @@ struct FileEditCommands: Commands {
             Button(String(localized: "Comparar archivos seleccionados…", bundle: #bundle), menuIcon: "arrow.left.arrow.right") {
                 commands?.perform(.compareFiles)
             }
-            .keyboardShortcut("c", modifiers: [.command, .option])
+            .keyboardShortcut("c", modifiers: [.command, .control, .option])
 
             Button(String(localized: "Propiedades…", bundle: #bundle), menuIcon: "info.circle") {
                 commands?.perform(.showProperties)
@@ -99,19 +100,19 @@ struct FileEditCommands: Commands {
             Button((viewModel?.selectedIDs.count ?? 0) > 1 ? String(localized: "Copiar ubicaciones", bundle: #bundle) : String(localized: "Copiar ubicación", bundle: #bundle), menuIcon: "link") {
                 viewModel?.copySelectedPathsToPasteboard()
             }
-            .keyboardShortcut("c", modifiers: [.command, .control, .option])
+            .keyboardShortcut("c", modifiers: [.command, .option])
             .disabled(viewModel == nil)
 
             Button(String(localized: "Copiar al otro panel dividido", bundle: #bundle), menuIcon: "doc.on.doc") {
                 commands?.perform(.copyToOtherSplitPane)
             }
-            .keyboardShortcut(Self.fKey(NSF5FunctionKey), modifiers: [.shift])
+            .keyboardShortcut("c", modifiers: [.command, .control])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
             Button(String(localized: "Mover al otro panel dividido", bundle: #bundle), menuIcon: "arrow.right.square") {
                 commands?.perform(.moveToOtherSplitPane)
             }
-            .keyboardShortcut(Self.fKey(NSF6FunctionKey), modifiers: [.shift])
+            .keyboardShortcut("m", modifiers: [.command, .control])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
             Divider()
@@ -124,7 +125,7 @@ struct FileEditCommands: Commands {
             Button(String(localized: "Deseleccionar todo", bundle: #bundle), menuIcon: "xmark.circle") {
                 viewModel?.deselectAll()
             }
-            .keyboardShortcut("a", modifiers: [.command, .shift])
+            .keyboardShortcut("a", modifiers: [.command, .option])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
 
             Button(String(localized: "Seleccionar ítems por patrón…", bundle: #bundle), menuIcon: "text.magnifyingglass") {
@@ -154,7 +155,7 @@ struct FileEditCommands: Commands {
             Button(String(localized: "Eliminar permanentemente…", bundle: #bundle), menuIcon: "trash.slash") {
                 commands?.perform(.permanentDeleteSelectedFiles)
             }
-            .keyboardShortcut(.delete, modifiers: [.command, .shift])
+            .keyboardShortcut(.delete, modifiers: [.command, .option])
             .disabled(viewModel?.selectedIDs.isEmpty ?? true)
         }
 
@@ -187,7 +188,7 @@ struct FileEditCommands: Commands {
                 get: { viewModel?.viewProperties.showInGroups ?? false },
                 set: { _ in viewModel?.toggleShowInGroups() }
             ))
-            .keyboardShortcut("g", modifiers: .command)
+            .keyboardShortcut("0", modifiers: [.command, .control])
 
             Menu(String(localized: "Agrupar por", bundle: #bundle), menuIcon: "rectangle.3.group") {
                 GroupByPicker(selection: Binding(
@@ -200,7 +201,7 @@ struct FileEditCommands: Commands {
                 get: { viewModel?.viewProperties.showPreviews ?? true },
                 set: { _ in viewModel?.toggleShowPreviews() }
             ))
-            .keyboardShortcut(Self.fKey(NSF12FunctionKey), modifiers: [])
+            .keyboardShortcut("p", modifiers: [.command, .shift])
 
             Toggle(String(localized: "Mostrar archivos ocultos", bundle: #bundle), isOn: Binding(
                 get: { viewModel?.effectiveShowsHiddenFiles ?? false },
@@ -239,12 +240,12 @@ struct FileEditCommands: Commands {
             Button(String(localized: "Dividir vista", bundle: #bundle), menuIcon: "rectangle.split.2x1") {
                 commands?.perform(.toggleSplit)
             }
-            .keyboardShortcut(Self.fKey(NSF3FunctionKey), modifiers: [])
+            .keyboardShortcut("\\", modifiers: .command)
 
             Button(String(localized: "Enfocar el otro panel dividido", bundle: #bundle), menuIcon: "rectangle.righthalf.inset.filled") {
                 commands?.perform(.focusOtherSplitPane)
             }
-            .keyboardShortcut(Self.fKey(NSF3FunctionKey), modifiers: [.control])
+            .keyboardShortcut("\\", modifiers: [.command, .option])
 
             Button(String(localized: "Separar vista dividida en pestañas", bundle: #bundle), menuIcon: "rectangle.on.rectangle") {
                 commands?.perform(.moveSplitToTabs)
@@ -260,7 +261,7 @@ struct FileEditCommands: Commands {
             Button(String(localized: "Panel de información", bundle: #bundle), menuIcon: "sidebar.right") {
                 commands?.perform(.toggleInfoPanel)
             }
-            .keyboardShortcut(Self.fKey(NSF11FunctionKey), modifiers: [])
+            .keyboardShortcut("i", modifiers: [.command, .option])
 
             Toggle(String(localized: "Barra de filtro", bundle: #bundle), isOn: Binding(
                 get: { viewModel?.isFilterBarVisible ?? false },
@@ -271,12 +272,12 @@ struct FileEditCommands: Commands {
             Button(String(localized: "Panel de Terminal integrada", bundle: #bundle), menuIcon: "terminal") {
                 commands?.perform(.toggleEmbeddedTerminal)
             }
-            .keyboardShortcut(Self.fKey(NSF4FunctionKey), modifiers: [])
+            .keyboardShortcut("`", modifiers: .control)
 
             Button(String(localized: "Abrir Terminal externa aquí", bundle: #bundle), menuIcon: "arrow.up.forward.app") {
                 commands?.perform(.openTerminal)
             }
-            .keyboardShortcut(Self.fKey(NSF4FunctionKey), modifiers: [.shift])
+            .keyboardShortcut("`", modifiers: [.control, .shift])
 
             Divider()
 
@@ -288,7 +289,7 @@ struct FileEditCommands: Commands {
             Button(String(localized: "Refrescar", bundle: #bundle), menuIcon: "arrow.clockwise") {
                 viewModel?.refresh()
             }
-            .keyboardShortcut(Self.fKey(NSF5FunctionKey), modifiers: [])
+            .keyboardShortcut("r", modifiers: .command)
         }
 
         CommandMenu(String(localized: "Ir", bundle: #bundle)) {

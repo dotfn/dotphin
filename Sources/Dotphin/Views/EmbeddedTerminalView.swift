@@ -6,7 +6,7 @@ import SwiftTerm
 import SwiftUI
 import Synchronization
 
-/// SwiftTerm terminal view used by the F4 panel. SwiftTerm does the whole VT/xterm emulation
+/// SwiftTerm terminal view used by the terminal panel (⌃`). SwiftTerm does the whole VT/xterm emulation
 /// (colors, alternate screen, mouse, wide characters) and owns the pty; this subclass only adds
 /// Dotphin's keyboard rules and follows the system's light/dark colors.
 final class DotphinTerminalView: LocalProcessTerminalView {
@@ -24,12 +24,12 @@ final class DotphinTerminalView: LocalProcessTerminalView {
             && !event.modifierFlags.contains(.command)
     }
 
-    /// F4 / ⇧F4 toggle the panel and open Terminal.app; they belong to the menu, not to the shell.
+    /// ⌃` / ⌃⇧` toggle the panel and open Terminal.app; they belong to the menu, not to the shell.
+    /// (F4 / ⇧F4 are translated to these by `FunctionKeyShortcuts` before the terminal sees them.)
     static func isPanelShortcut(_ event: NSEvent) -> Bool {
-        guard event.type == .keyDown,
-              event.charactersIgnoringModifiers?.unicodeScalars.first?.value == UInt32(NSF4FunctionKey)
-        else { return false }
-        return event.modifierFlags.isDisjoint(with: [.command, .option, .control])
+        guard event.type == .keyDown, event.keyCode == 50 else { return false }
+        return event.modifierFlags.contains(.control)
+            && event.modifierFlags.isDisjoint(with: [.command, .option])
     }
 
     func applyDotphinStyle() {
@@ -641,7 +641,7 @@ struct EmbeddedTerminalPanelView: View {
                     .frame(width: 22, height: 22)
             }
             .buttonStyle(.plain)
-            .help(String(localized: "Abrir en Terminal.app externa (⇧F4)", bundle: #bundle))
+            .help(String(localized: "Abrir en Terminal.app externa (⌃⇧`)", bundle: #bundle))
 
             Button(action: onClose) {
                 Image(systemName: "xmark")
@@ -650,7 +650,7 @@ struct EmbeddedTerminalPanelView: View {
                     .frame(width: 22, height: 22)
             }
             .buttonStyle(.plain)
-            .help(String(localized: "Ocultar panel de terminal (F4)", bundle: #bundle))
+            .help(String(localized: "Ocultar panel de terminal (⌃`)", bundle: #bundle))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)

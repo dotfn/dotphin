@@ -498,18 +498,18 @@
         }
       }
     },
-    "Abrir en Terminal.app externa (⇧F4)": {
+    "Abrir en Terminal.app externa (⌃⇧`)": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open in external Terminal.app (⇧F4)"
+            "value": "Open in external Terminal.app (⌃⇧`)"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Abrir en Terminal.app externa (⇧F4)"
+            "value": "Abrir en Terminal.app externa (⌃⇧`)"
           }
         }
       }
@@ -4642,18 +4642,18 @@
         }
       }
     },
-    "Iniciar ventanas o pestañas en vista dividida (F3)": {
+    "Iniciar ventanas o pestañas en vista dividida (⌘\\)": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open windows and tabs in split view (F3)"
+            "value": "Open windows and tabs in split view (⌘\\)"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Iniciar ventanas o pestañas en vista dividida (F3)"
+            "value": "Iniciar ventanas o pestañas en vista dividida (⌘\\)"
           }
         }
       }
@@ -6818,18 +6818,18 @@
         }
       }
     },
-    "Ocultar panel de terminal (F4)": {
+    "Ocultar panel de terminal (⌃`)": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hide terminal panel (F4)"
+            "value": "Hide terminal panel (⌃`)"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ocultar panel de terminal (F4)"
+            "value": "Ocultar panel de terminal (⌃`)"
           }
         }
       }
@@ -7090,18 +7090,18 @@
         }
       }
     },
-    "Pedir confirmación antes de eliminar permanentemente (⇧⌘⌫)": {
+    "Pedir confirmación antes de eliminar permanentemente (⌥⌘⌫)": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ask before deleting permanently (⇧⌘⌫)"
+            "value": "Ask before deleting permanently (⌥⌘⌫)"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pedir confirmación antes de eliminar permanentemente (⇧⌘⌫)"
+            "value": "Pedir confirmación antes de eliminar permanentemente (⌥⌘⌫)"
           }
         }
       }
