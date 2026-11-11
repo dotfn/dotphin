@@ -547,6 +547,7 @@ struct ContentView: View {
         if let tab = tabsViewModel.selectedTab {
             SplitBrowserView(
                 tab: tab,
+                editableLocationByDefault: settingsModel.settings.editableLocationByDefault,
                 onOpenInNewTab: { url in
                     tabsViewModel.addTab(
                         startingAt: url,
@@ -599,49 +600,23 @@ struct ContentView: View {
 
     private var detailMainStack: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 4) {
-                // Como Safari: con una sola pestaña no hay barra (reabrir una cerrada
-                // sigue en Archivo y con ⇧⌘T).
-                if settingsModel.settings.alwaysShowTabBar || tabsViewModel.tabs.count > 1 {
-                    TabBarView(
-                        viewModel: tabsViewModel,
-                        onShowTabOverview: {
-                            withAnimation(.spring(duration: 0.28, bounce: 0.05)) {
-                                showsTabOverview.toggle()
-                            }
+            // Como Safari: con una sola pestaña no hay barra (reabrir una cerrada
+            // sigue en Archivo y con ⇧⌘T). La ruta va dentro de cada panel.
+            if settingsModel.settings.alwaysShowTabBar || tabsViewModel.tabs.count > 1 {
+                TabBarView(
+                    viewModel: tabsViewModel,
+                    onShowTabOverview: {
+                        withAnimation(.spring(duration: 0.28, bounce: 0.05)) {
+                            showsTabOverview.toggle()
                         }
-                    )
-                }
-                if let focused = focusedViewModel, tabsViewModel.selectedTab?.isSplit != true {
-                    HStack(spacing: 8) {
-                        BreadcrumbView(
-                            url: focused.currentURL,
-                            editableByDefault: settingsModel.settings.editableLocationByDefault,
-                            onNavigate: { focused.navigate(to: $0) },
-                            onOpenInNewTab: { url in
-                                tabsViewModel.addTab(
-                                    startingAt: url,
-                                    afterCurrentTab: !settingsModel.settings.openNewTabAfterLastTab,
-                                    splitView: settingsModel.settings.startInSplitView
-                                )
-                            },
-                            onOpenInSplitView: { url in
-                                if let tab = tabsViewModel.selectedTab {
-                                    tabsViewModel.openInSplitView(url, for: tab.id)
-                                }
-                            }
-                        )
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 3)
-                }
-            }
-            .padding(.top, 2)
-            .padding(.bottom, 4)
-            .fixedSize(horizontal: false, vertical: true)
-            .background(.bar)
+                )
+                .padding(.vertical, 4)
+                .fixedSize(horizontal: false, vertical: true)
+                .background(.bar)
 
-            Divider()
+                Divider()
+            }
 
             // Divisor nativo (`NSSplitView`) para la terminal integrada, abajo; el
             // panel de información es el `.inspector` de la columna.

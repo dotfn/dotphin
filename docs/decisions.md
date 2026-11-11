@@ -1443,3 +1443,30 @@ Salió de una auditoría de lo que la app hacía a mano teniendo API del sistema
   usuario (anchos guardados en un panel más angosto pasan también con el
   código anterior).
 
+## 2026-11-11 — Vista dividida sin recrear el primer panel; la ruta va en cada panel
+
+- Tirón al dividir (⌘\): `SplitBrowserView` elegía entre `PaneSplitView` y
+  un panel suelto con un `if`, así que al dividir o volver a un panel SwiftUI
+  destruía y volvía a crear el primero (tabla de AppKit, ruta y lectura de la
+  carpeta). El log lo mostraba: dos `load(web)` por cada ⌘\ y ~455 ms de
+  bloqueo la primera vez.
+- Ahora siempre es el mismo `NSSplitView` con dos paneles; sin vista dividida
+  el segundo está oculto (`isHidden`, que `NSSplitView` trata como plegado) y
+  el delegate oculta la línea del divisor (`shouldHideDividerAt`). Al ocultar o
+  mostrar hay que llamar a `adjustSubviews()`: si no, el panel visible quedaba
+  en 0 pt. Al aparecer el segundo panel se reparte 50/50.
+- El divisor es una capa propia del `NSSplitView` (blanca, 10 % de opacidad).
+  Ocultar el panel no la mueve: quedaba una franja a la mitad del panel que
+  queda, visible a través del contenido. Hace falta `needsLayout = true`
+  (`needsDisplay` no alcanza); con eso pasa al borde, fuera de lo visible.
+- La ruta pasó de la ventana a cada panel, también con uno solo (se ve igual,
+  debajo de la barra de herramientas). Criterio de UX: con dos paneles hay que
+  ver el destino de ⌃⌘C/⌃⌘M, cada panel se navega desde su ruta sin enfocarlo
+  antes, y VoiceOver lee cada panel con su ubicación en vez de una ruta única
+  que cambia según el foco. El punto de foco solo aparece con dos paneles.
+- Test: la tabla del primer panel es el mismo objeto antes y después de
+  dividir y de volver. No medí cuadros por segundo; lo que se sacó es el
+  trabajo de recrear y releer el panel.
+- Con la posición del divisor por código, #11 (doble clic 50/50) queda a un
+  paso; no se hizo acá.
+

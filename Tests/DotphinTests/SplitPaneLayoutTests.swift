@@ -17,6 +17,59 @@ final class SplitPaneLayoutTests: XCTestCase {
         return views.compactMap { $0.enclosingScrollView }.map { $0.convert($0.bounds, to: content).maxX }
     }
 
+    /// Dividir y volver a un panel no recrea el primero: la misma tabla, sin
+    /// volver a leer su carpeta (antes se notaba como un tirón de cuadros).
+    func test_togglingSplit_keepsTheFirstPaneAlive() async throws {
+        struct Host: View {
+            let tabs: TabsViewModel
+            var body: some View {
+                if let tab = tabs.selectedTab {
+                    SplitBrowserView(tab: tab, onFocusPane: { _ in })
+                }
+            }
+        }
+        let suite = "test.split.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let tabs = TabsViewModel(startingAt: URL(fileURLWithPath: NSTemporaryDirectory()), defaults: defaults)
+        let window = NSWindow(contentViewController: NSHostingController(rootView: Host(tabs: tabs).frame(width: 900, height: 500)))
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+        let content = try XCTUnwrap(window.contentView)
+        func settle() { RunLoop.main.run(until: Date().addingTimeInterval(0.3)) }
+        settle()
+
+        let split = try XCTUnwrap(all(EvenSplitView.self, in: content).first)
+        func firstPaneTable() -> NSTableView? { all(NSTableView.self, in: split.arrangedSubviews[0]).first }
+        let table = try XCTUnwrap(firstPaneTable())
+        XCTAssertTrue(split.arrangedSubviews[1].isHidden, "sin vista dividida el segundo panel está oculto")
+        XCTAssertEqual(split.arrangedSubviews[0].frame.width, split.bounds.width, accuracy: 0.5, "sin línea de divisor")
+
+        let tabID = try XCTUnwrap(tabs.selectedTab?.id)
+        tabs.toggleSplit(for: tabID)
+        settle()
+        XCTAssertTrue(firstPaneTable() === table, "dividir no recrea el primer panel")
+        XCTAssertFalse(split.arrangedSubviews[1].isHidden)
+        XCTAssertEqual(split.arrangedSubviews[0].frame.width, (split.bounds.width - split.dividerThickness) / 2, accuracy: 1)
+        XCTAssertNotNil(all(NSTableView.self, in: split.arrangedSubviews[1]).first, "el segundo panel muestra su carpeta")
+
+        // Al volver a un panel, la línea del divisor no queda dibujada en el medio.
+        split.setShowsTrailing(false)
+        settle()
+        let paneLayers = Set(split.subviews.compactMap { $0.layer.map(ObjectIdentifier.init) })
+        let strayLines = (split.layer?.sublayers ?? []).filter { layer in
+            !paneLayers.contains(ObjectIdentifier(layer)) && !layer.isHidden
+                && layer.frame.intersects(split.bounds) && layer.frame.width < 4
+        }
+        XCTAssertEqual(strayLines.map(\.frame), [], "no queda la línea del divisor a la vista")
+        tabs.toggleSplit(for: tabID)
+        settle()
+        XCTAssertTrue(firstPaneTable() === table, "volver a un panel no recrea el primero")
+        XCTAssertTrue(split.arrangedSubviews[1].isHidden)
+        XCTAssertEqual(split.arrangedSubviews[0].frame.width, split.bounds.width, accuracy: 0.5, "sin línea de divisor")
+        for tab in tabs.tabs { await tab.primary.waitForBackgroundWork() }
+    }
+
     func test_splitPanes_reachTheRightEdgeAtEveryWidth() throws {
         try checkRightEdge(withPanels: false)
     }

@@ -1,53 +1,65 @@
 import AppKit
 import SwiftUI
 
+/// Los paneles de una pestaña. Siempre es el mismo `NSSplitView` con dos
+/// paneles: sin vista dividida el segundo se oculta, así el primero no se
+/// vuelve a crear (ni a leer su carpeta) al dividir o volver a un panel.
+/// Cada panel lleva su propia ruta, también cuando está solo.
 struct SplitBrowserView: View {
     let tab: Tab
+    var editableLocationByDefault = false
     var onOpenInNewTab: ((URL) -> Void)? = nil
     var onOpenInSplitView: ((URL) -> Void)? = nil
     var onOpenTerminal: ((URL) -> Void)? = nil
     let onFocusPane: (Int) -> Void
 
     var body: some View {
-        Group {
-            if tab.isSplit, let secondary = tab.secondary {
-                // Divisor nativo: arrastre, cursor y límites son los de AppKit.
-                PaneSplitView(minPaneWidth: 180) {
-                    paneView(viewModel: tab.primary, index: 0, showSplitHeader: true)
-                } trailing: {
-                    paneView(viewModel: secondary, index: 1, showSplitHeader: true)
-                }
+        // Divisor nativo: arrastre, cursor y límites son los de AppKit.
+        PaneSplitView(minPaneWidth: 180, showsTrailing: tab.isSplit) {
+            paneView(viewModel: tab.primary, index: 0)
+        } trailing: {
+            if let secondary = tab.secondary {
+                paneView(viewModel: secondary, index: 1)
             } else {
-                paneView(viewModel: tab.primary, index: 0, showSplitHeader: false)
+                Color.clear
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .id(tab.id)
     }
 
-    private func paneView(viewModel: BrowserViewModel, index: Int, showSplitHeader: Bool) -> some View {
+    private func paneView(viewModel: BrowserViewModel, index: Int) -> some View {
         let otherPane = index == 0 ? tab.secondary : tab.primary
+        let isSplit = tab.isSplit
         let isFocused = tab.focusedPaneIndex == index
         return VStack(spacing: 0) {
-            if showSplitHeader {
-                HStack(spacing: 6) {
+            HStack(spacing: 6) {
+                // El punto marca el panel activo; solo hace falta con dos.
+                if isSplit {
                     Circle()
                         .fill(isFocused ? Color.accentColor : Color.secondary.opacity(0.35))
                         .frame(width: 7, height: 7)
-
-                    BreadcrumbView(
-                        url: viewModel.currentURL,
-                        editableByDefault: false,
-                        onNavigate: { viewModel.navigate(to: $0) },
-                        onOpenInNewTab: onOpenInNewTab,
-                        onOpenInSplitView: onOpenInSplitView
-                    )
+                        .accessibilityHidden(true)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(isFocused ? Color.accentColor.opacity(0.06) : Color.primary.opacity(0.02))
-                Divider()
+
+                BreadcrumbView(
+                    url: viewModel.currentURL,
+                    editableByDefault: editableLocationByDefault,
+                    onNavigate: { viewModel.navigate(to: $0) },
+                    onOpenInNewTab: onOpenInNewTab,
+                    onOpenInSplitView: onOpenInSplitView
+                )
             }
+            .padding(.horizontal, isSplit ? 8 : 10)
+            .padding(.vertical, 3)
+            .background {
+                if isSplit {
+                    isFocused ? Color.accentColor.opacity(0.06) : Color.primary.opacity(0.02)
+                } else {
+                    Rectangle().fill(.bar)
+                }
+            }
+            Divider()
 
             BrowserView(
                 viewModel: viewModel,
@@ -59,9 +71,9 @@ struct SplitBrowserView: View {
             )
         }
         .background(Color(nsColor: .textBackgroundColor))
-        .opacity(showSplitHeader && !isFocused ? 0.92 : 1.0)
+        .opacity(isSplit && !isFocused ? 0.92 : 1.0)
         .overlay(alignment: .top) {
-            if showSplitHeader {
+            if isSplit {
                 Rectangle()
                     .fill(isFocused ? Color.accentColor : Color.clear)
                     .frame(height: 2)
@@ -69,7 +81,7 @@ struct SplitBrowserView: View {
         }
         // El panel activo lo decide el foco de teclado: la vista de archivos
         // avisa cuando recibe el foco o un clic.
-        .environment(\.isActiveBrowserPane, !showSplitHeader || isFocused)
+        .environment(\.isActiveBrowserPane, !isSplit || isFocused)
         .environment(\.fileViewInteraction, FileViewInteraction(onActivate: { onFocusPane(index) }))
         .onChange(of: viewModel.currentURL) { _, _ in
             onFocusPane(index)
@@ -80,7 +92,9 @@ struct SplitBrowserView: View {
     }
 }
 
-/// Dos paneles lado a lado en un `NSSplitView` propio.
+/// Dos paneles lado a lado en un `NSSplitView` propio. Con `showsTrailing`
+/// en falso el segundo se oculta: `NSSplitView` lo trata como plegado, sin
+/// divisor, y el primero ocupa todo.
 ///
 /// El `HSplitView` de SwiftUI informa mal su tamaño mínimo (la ventana no se
 /// dejaba achicar) y, corregido con `GeometryReader` o `frame(minWidth:)`,
@@ -88,6 +102,7 @@ struct SplitBrowserView: View {
 /// tamaño lo decide SwiftUI (`sizeThatFits`) y el reparto, AppKit.
 struct PaneSplitView<Leading: View, Trailing: View>: NSViewRepresentable {
     var minPaneWidth: CGFloat
+    var showsTrailing = true
     @ViewBuilder var leading: Leading
     @ViewBuilder var trailing: Trailing
 
@@ -95,7 +110,7 @@ struct PaneSplitView<Leading: View, Trailing: View>: NSViewRepresentable {
         Coordinator(minPaneWidth: minPaneWidth)
     }
 
-    func makeNSView(context: Context) -> NSSplitView {
+    func makeNSView(context: Context) -> EvenSplitView {
         let splitView = EvenSplitView()
         splitView.isVertical = true
         splitView.dividerStyle = .thin
@@ -106,18 +121,20 @@ struct PaneSplitView<Leading: View, Trailing: View>: NSViewRepresentable {
             host.sizingOptions = []
             splitView.addArrangedSubview(host)
         }
+        splitView.arrangedSubviews[1].isHidden = !showsTrailing
         return splitView
     }
 
-    func updateNSView(_ splitView: NSSplitView, context: Context) {
+    func updateNSView(_ splitView: EvenSplitView, context: Context) {
         context.coordinator.minPaneWidth = minPaneWidth
         for (host, root) in zip(splitView.arrangedSubviews, roots(context)) {
             (host as? NSHostingView<AnyView>)?.rootView = root
         }
+        splitView.setShowsTrailing(showsTrailing)
     }
 
-    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSSplitView, context: Context) -> CGSize? {
-        let minWidth = minPaneWidth * 2 + nsView.dividerThickness
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: EvenSplitView, context: Context) -> CGSize? {
+        let minWidth = showsTrailing ? minPaneWidth * 2 + nsView.dividerThickness : minPaneWidth
         return CGSize(
             width: max(minWidth, proposal.width ?? minWidth * 2),
             height: max(0, proposal.height ?? 400)
@@ -148,17 +165,39 @@ struct PaneSplitView<Leading: View, Trailing: View>: NSViewRepresentable {
         func splitView(_ splitView: NSSplitView, constrainMaxCoordinate proposedMaximumPosition: CGFloat, ofSubviewAt dividerIndex: Int) -> CGFloat {
             proposedMaximumPosition - minPaneWidth
         }
+
+        /// Con un solo panel no queda la línea del divisor en el borde.
+        func splitView(_ splitView: NSSplitView, shouldHideDividerAt dividerIndex: Int) -> Bool {
+            splitView.arrangedSubviews.contains { splitView.isSubviewCollapsed($0) }
+        }
     }
 }
 
-/// `NSSplitView` que arranca con los paneles a la mitad.
+/// `NSSplitView` que reparte los paneles a la mitad cada vez que aparece el segundo.
 final class EvenSplitView: NSSplitView {
-    private var didSetInitialPosition = false
+    private var needsEvenPosition = true
+
+    func setShowsTrailing(_ showsTrailing: Bool) {
+        guard arrangedSubviews.count == 2, arrangedSubviews[1].isHidden == showsTrailing else { return }
+        arrangedSubviews[1].isHidden = !showsTrailing
+        needsEvenPosition = showsTrailing
+        // Ocultar o mostrar un panel no reparte el espacio ni mueve la capa
+        // del divisor por sí solo: sin el pase de layout quedaba la línea
+        // vieja a la mitad del panel que queda.
+        adjustSubviews()
+        evenOutIfNeeded()
+        needsLayout = true
+    }
 
     override func layout() {
         super.layout()
-        guard !didSetInitialPosition, bounds.width > 0, arrangedSubviews.count == 2 else { return }
-        didSetInitialPosition = true
+        evenOutIfNeeded()
+    }
+
+    private func evenOutIfNeeded() {
+        guard needsEvenPosition, bounds.width > 0, arrangedSubviews.count == 2,
+              !arrangedSubviews[1].isHidden else { return }
+        needsEvenPosition = false
         setPosition((bounds.width - dividerThickness) / 2, ofDividerAt: 0)
     }
 }
