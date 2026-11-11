@@ -12,6 +12,8 @@ struct ContentView: View {
     @State private var savedSearches = PlacesProvider().savedSearches()
     @State private var showsInfoPanel = false
     @State private var showsEmbeddedTerminal = false
+    nonisolated static let minimumWidth: CGFloat = 840
+    nonisolated static let minimumWidthWithInfoPanel: CGFloat = 1000
     @State private var embeddedTerminalSession = EmbeddedTerminalSession()
     @State private var showsTabOverview = false
     @State private var pendingDelete: FileItem?
@@ -81,7 +83,10 @@ struct ContentView: View {
         } detail: {
             detailColumn
         }
-        .frame(minWidth: 840, minHeight: 540)
+        // Los mínimos de los paneles dentro de los divisores no llegan al mínimo de
+        // la ventana: con el panel de información abierto, en menos de ~1000 pt el
+        // contenido no entraba y se cortaba en los dos bordes.
+        .frame(minWidth: showsInfoPanel ? Self.minimumWidthWithInfoPanel : Self.minimumWidth, minHeight: 540)
         .focusedSceneValue(\.browserViewModel, focusedViewModel)
         .focusedSceneValue(\.windowCommands, commands)
         .environment(\.locationEditRequest, locationEditRequest)

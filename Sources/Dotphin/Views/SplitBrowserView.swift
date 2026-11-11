@@ -18,6 +18,7 @@ struct SplitBrowserView: View {
                     paneView(viewModel: secondary, index: 1, showSplitHeader: true)
                         .frame(minWidth: 180, idealWidth: 480, maxWidth: .infinity, maxHeight: .infinity)
                 }
+                .fillingAvailableSpaceExactly()
             } else {
                 paneView(viewModel: tab.primary, index: 0, showSplitHeader: false)
             }
@@ -81,3 +82,13 @@ struct SplitBrowserView: View {
     }
 }
 
+extension View {
+    /// Para `HSplitView`/`VSplitView`: con un ancho máximo no redistribuyen los
+    /// paneles cuando el espacio es justo (quedaban más angostos que la ventana,
+    /// o más anchos y cortados en los dos bordes); con un tamaño exacto, sí.
+    func fillingAvailableSpaceExactly() -> some View {
+        GeometryReader { proxy in
+            frame(width: proxy.size.width, height: proxy.size.height)
+        }
+    }
+}

@@ -1212,3 +1212,23 @@ Reportado por el usuario al probar.
     misma carpeta no vacía la lista.
   - Etiquetas, Finder info y dueño de una subcarpeta sí provocan relectura.
   - Sin relectura extra al arrancar; contadores de tests solo en DEBUG.
+
+## 2026-11-11 — Bordes de la ventana y migas de la ruta
+
+- Vista dividida en ventanas angostas (840–975 pt): el `HSplitView` de los
+  paneles no repartía el ancho y quedaba una franja vacía a la derecha (772 pt
+  en 840). Con un tamaño exacto (`fillingAvailableSpaceExactly()`, un
+  `GeometryReader`) sí lo hace. No se aplica al divisor exterior: ahí el
+  tamaño exacto en alto tapaba la barra de estado.
+- Con el panel de información abierto el contenido necesitaba ~920 pt y en
+  840 se cortaba en los dos bordes (SwiftUI lo centra). Los mínimos de los
+  paneles dentro de los divisores no llegan al mínimo de la ventana, así que
+  el mínimo sube a 1000 pt mientras el panel está abierto (`contentMinSize`
+  agranda la ventana sola).
+- Migas: `.layoutPriority(1)` (el arreglo anterior) hacía que el panel
+  exigiera su ancho; ahora las migas son lo único flexible de la fila y el
+  espacio clicable va de fondo. Si no entran, el desplazamiento arranca al
+  final (`defaultScrollAnchor(.trailing)`) para que se vea la carpeta actual.
+- Tests montados que los reproducen; la ventana restaura la sesión guardada,
+  así que el test divide solo si hace falta (antes `toggleSplit` a veces
+  cerraba una división restaurada y la medición salía distinta).

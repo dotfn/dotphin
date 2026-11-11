@@ -188,22 +188,28 @@ struct BreadcrumbView: View {
             // Si las migas entran, se muestran a su ancho natural; si no, se
             // desplazan en horizontal. (Un `ScrollView` con `fixedSize` acá
             // entraba en bucle de layout junto al inspector.)
+            //
+            // Las migas son lo único flexible de la fila y el espacio clicable va
+            // de fondo: como dos vistas flexibles lado a lado, el HStack les
+            // repartía el ancho a medias y en paneles medianos las migas pasaban a
+            // desplazarse aunque sobrara lugar. (Darles `layoutPriority` hacía que
+            // el panel exigiera su ancho y dejaba un hueco al borde de la ventana.)
             ViewThatFits(in: .horizontal) {
                 crumbRow
                 ScrollView(.horizontal, showsIndicators: false) {
                     crumbRow
                 }
+                // Si no entra, se ve el final: la carpeta actual.
+                .defaultScrollAnchor(.trailing)
+                .defaultScrollAnchor(.trailing, for: .sizeChanges)
             }
-            // Sin prioridad, el HStack repartía el ancho a medias con el espacio
-            // clicable de al lado y, en paneles medianos, las migas recibían menos
-            // de lo que medían: pasaban a desplazarse y el último segmento se cortaba.
-            .layoutPriority(1)
-
-            Color.clear
-                .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24)
-                .contentShape(Rectangle())
-                .onTapGesture { beginEditing() }
-                .help(String(localized: "Clic para editar la ruta (⌘L)", bundle: #bundle))
+            .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24, alignment: .leading)
+            .background {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { beginEditing() }
+                    .help(String(localized: "Clic para editar la ruta (⌘L)", bundle: #bundle))
+            }
 
             Button {
                 beginEditing()

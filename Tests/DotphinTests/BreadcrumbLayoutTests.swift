@@ -42,4 +42,23 @@ final class BreadcrumbLayoutTests: XCTestCase {
         for index in 0..<12 { deep.appendPathComponent("carpeta-con-nombre-largo-\(index)", isDirectory: true) }
         XCTAssertEqual(widthsThatScroll(url: deep, widths: [300]), [300])
     }
+
+    func test_longPath_inANarrowSpace_showsTheCurrentFolder() throws {
+        var deep = FileManager.default.temporaryDirectory
+        for index in 0..<12 { deep.appendPathComponent("carpeta-con-nombre-largo-\(index)", isDirectory: true) }
+        let host = NSHostingView(rootView: BreadcrumbView(url: deep, onNavigate: { _ in }))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: 40), styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = host
+        defer { window.close() }
+        host.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+        host.layoutSubtreeIfNeeded()
+
+        let scrollView = try XCTUnwrap(scrollViews(in: host).first)
+        let document = try XCTUnwrap(scrollView.documentView)
+        XCTAssertGreaterThan(document.frame.width, scrollView.contentView.bounds.width, "la ruta debería no entrar")
+        // Al final de la ruta está la carpeta actual: tiene que quedar a la vista.
+        XCTAssertEqual(scrollView.contentView.bounds.maxX, document.frame.maxX, accuracy: 2)
+    }
 }
