@@ -91,13 +91,7 @@ final class ArchiveAndSearchFilterTests: XCTestCase {
         XCTAssertFalse(SearchTypeFilter.documents.matches(image))
     }
 
-    func test_embeddedTerminal_helpersStripANSIAndQuotePaths() {
-        let raw = "\u{001B}[32mhola\u{001B}[0m \r\nmundo"
-        XCTAssertEqual(EmbeddedTerminalSession.stripANSISequences(from: raw), "hola \nmundo")
-
-        let withBackspace = "abc\u{0008}d"
-        XCTAssertEqual(EmbeddedTerminalSession.applyBackspaces(to: withBackspace), "abd")
-
+    func test_embeddedTerminal_quotesPathsForTheShell() {
         let quoted = EmbeddedTerminalSession.shellSingleQuoted("/Users/test/Carpeta con 'comillas'")
         XCTAssertEqual(quoted, "'/Users/test/Carpeta con '\\''comillas'\\'''")
     }

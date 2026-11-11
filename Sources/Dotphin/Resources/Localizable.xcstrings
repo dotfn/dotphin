@@ -2,38 +2,6 @@
   "sourceLanguage": "en",
   "strings": {
     "": {},
-    "\n[Error al iniciar %@: %@]\n": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "\n[Error starting %@: %@]\n"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "\n[Error al iniciar %@: %@]\n"
-          }
-        }
-      }
-    },
-    "\n[Error: no se pudo abrir el pseudo-terminal (openpty)]\n": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "\n[Error: couldn’t open the pseudo-terminal (openpty)]\n"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "\n[Error: no se pudo abrir el pseudo-terminal (openpty)]\n"
-          }
-        }
-      }
-    },
     "%@  ↔  %@": {
       "localizations": {
         "en": {
@@ -3378,22 +3346,6 @@
         }
       }
     },
-    "Ejecutar comando (Intro)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Run command (Return)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ejecutar comando (Intro)"
-          }
-        }
-      }
-    },
     "El destino «%@» no existe.": {
       "localizations": {
         "en": {
@@ -3678,22 +3630,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Error al procesar el archivo comprimido."
-          }
-        }
-      }
-    },
-    "Escribir comando… (Intro para ejecutar, ↑/↓ historial)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Type a command… (Return to run, ↑/↓ history)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Escribir comando… (Intro para ejecutar, ↑/↓ historial)"
           }
         }
       }
@@ -4674,22 +4610,6 @@
         }
       }
     },
-    "Iniciando sesión de terminal en %@…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Starting terminal session in %@…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Iniciando sesión de terminal en %@…"
-          }
-        }
-      }
-    },
     "Iniciar ventanas o pestañas en vista dividida (F3)": {
       "localizations": {
         "en": {
@@ -4894,6 +4814,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Juegos"
+          }
+        }
+      }
+    },
+    "La sesión de la terminal terminó.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The terminal session ended."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La sesión de la terminal terminó."
           }
         }
       }
@@ -7794,6 +7730,22 @@
         }
       }
     },
+    "Reiniciar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restart"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reiniciar"
+          }
+        }
+      }
+    },
     "Renombrado": {
       "localizations": {
         "en": {
@@ -9982,22 +9934,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "• Usa la barra inferior para ejecutar acciones por lotes sobre los ítems marcados."
-          }
-        }
-      }
-    },
-    "❯": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "❯"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "❯"
           }
         }
       }

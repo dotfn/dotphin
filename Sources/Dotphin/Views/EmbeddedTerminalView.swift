@@ -2,286 +2,131 @@ import AppKit
 import Darwin
 import Foundation
 import Observation
+import SwiftTerm
 import SwiftUI
+import Synchronization
 
-/// Processes a VT100/xterm byte/character stream with proper support for carriage return (`\r`),
-/// line feed (`\n`), backspace (`\u{08}`), form feed (`\u{0C}`), and ANSI CSI/OSC sequences
-/// (`ESC [ K`, `ESC [ 2K`, `ESC [ J`, `ESC [ n D`, `ESC [ n C`, `ESC [ n G`) used by `zsh` ZLE.
-struct TerminalScreenBuffer: Sendable {
-    private(set) var lines: [[Character]] = [[]]
-    private(set) var cursorRow: Int = 0
-    private(set) var cursorCol: Int = 0
-    private var pendingEscape: String = ""
+/// SwiftTerm terminal view used by the F4 panel. SwiftTerm does the whole VT/xterm emulation
+/// (colors, alternate screen, mouse, wide characters) and owns the pty; this subclass only adds
+/// Dotphin's keyboard rules and follows the system's light/dark colors.
+final class DotphinTerminalView: LocalProcessTerminalView {
+    /// Called when the user presses Return in the terminal (a command line was submitted).
+    var onUserSubmittedLine: (() -> Void)?
+    /// Takes keyboard focus the next time the view lands in a window (the panel just opened).
+    var focusWhenAttached = false
 
-    mutating func reset() {
-        lines = [[]]
-        cursorRow = 0
-        cursorCol = 0
-        pendingEscape = ""
+    private var keyMonitor: Any?
+
+    /// Return or keypad Enter without ⌘: the shell receives a command line.
+    static func submitsLine(_ event: NSEvent) -> Bool {
+        event.type == .keyDown
+            && (event.keyCode == 36 || event.keyCode == 76)
+            && !event.modifierFlags.contains(.command)
     }
 
-    mutating func feed(_ rawChunk: String) {
-        let input = pendingEscape + rawChunk
-        pendingEscape = ""
+    /// F4 / ⇧F4 toggle the panel and open Terminal.app; they belong to the menu, not to the shell.
+    static func isPanelShortcut(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown,
+              event.charactersIgnoringModifiers?.unicodeScalars.first?.value == UInt32(NSF4FunctionKey)
+        else { return false }
+        return event.modifierFlags.isDisjoint(with: [.command, .option, .control])
+    }
 
-        var index = input.startIndex
-        while index < input.endIndex {
-            let ch = input[index]
+    func applyDotphinStyle() {
+        font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        // Option composes characters (e.g. @ on Spanish layouts), as in Terminal.app.
+        optionAsMetaKey = false
+        applySystemColors()
+    }
 
-            if ch == "\u{001B}" {
-                guard let (nextIndex, complete) = parseEscapeSequence(in: input, from: index) else {
-                    pendingEscape = String(input[index...])
-                    break
-                }
-                if complete {
-                    index = nextIndex
-                    continue
-                }
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applySystemColors()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil {
+            removeKeyMonitor()
+            return
+        }
+        installKeyMonitor()
+        if focusWhenAttached {
+            focusWhenAttached = false
+            Task { @MainActor [weak self] in
+                guard let self, let window = self.window else { return }
+                window.makeFirstResponder(self)
             }
+        }
+    }
 
-            // Note: Swift treats "\r\n" as a single grapheme cluster Character!
-            if ch == "\r\n" {
-                advanceLine()
-            } else if ch == "\r" {
-                cursorCol = 0
-            } else if ch == "\n" {
-                advanceLine()
-            } else if ch == "\u{0008}" {
-                if cursorCol > 0 {
-                    cursorCol -= 1
+    private func applySystemColors() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            nativeForegroundColor = NSColor.textColor.usingColorSpace(.sRGB) ?? .textColor
+            nativeBackgroundColor = NSColor.textBackgroundColor.usingColorSpace(.sRGB) ?? .textBackgroundColor
+        }
+    }
+
+    /// SwiftTerm's `keyDown` is not overridable, so the keys Dotphin cares about are looked at
+    /// before AppKit dispatches them, and only while this terminal has the focus.
+    private func installKeyMonitor() {
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let handledByMenu = MainActor.assumeIsolated { () -> Bool in
+                guard let self, let window = self.window,
+                      event.window === window, window.firstResponder === self else { return false }
+                if Self.isPanelShortcut(event), NSApp.mainMenu?.performKeyEquivalent(with: event) == true {
+                    return true
                 }
-            } else if ch == "\u{000C}" {
-                // Form feed (Ctrl+L)
-                lines = [[]]
-                cursorRow = 0
-                cursorCol = 0
-            } else if ch == "\u{0007}" {
-                // BEL — ignore
-            } else if ch == "\t" {
-                let spaces = 4 - (cursorCol % 4)
-                for _ in 0..<spaces {
-                    putCharacter(" ")
+                if Self.submitsLine(event) {
+                    self.onUserSubmittedLine?()
                 }
-            } else {
-                for scalarChar in String(ch) where scalarChar != "\0" {
-                    putCharacter(scalarChar)
-                }
+                return false
             }
-
-            index = input.index(after: index)
-        }
-
-        trimHistoryIfNeeded()
-    }
-
-    var renderedText: String {
-        lines.map { String($0) }.joined(separator: "\n")
-    }
-
-    private mutating func ensureRowExists(_ row: Int) {
-        while lines.count <= row {
-            lines.append([])
+            return handledByMenu ? nil : event
         }
     }
 
-    private mutating func advanceLine() {
-        cursorRow += 1
-        ensureRowExists(cursorRow)
-        cursorCol = 0
-    }
-
-    private mutating func putCharacter(_ ch: Character) {
-        ensureRowExists(cursorRow)
-        if cursorCol > lines[cursorRow].count {
-            let padding = cursorCol - lines[cursorRow].count
-            lines[cursorRow].append(contentsOf: repeatElement(" ", count: padding))
+    private func removeKeyMonitor() {
+        if let keyMonitor {
+            NSEvent.removeMonitor(keyMonitor)
         }
-        if cursorCol < lines[cursorRow].count {
-            lines[cursorRow][cursorCol] = ch
-        } else {
-            lines[cursorRow].append(ch)
-        }
-        cursorCol += 1
-    }
-
-    private mutating func parseEscapeSequence(
-        in text: String,
-        from escIndex: String.Index
-    ) -> (nextIndex: String.Index, complete: Bool)? {
-        let afterEsc = text.index(after: escIndex)
-        guard afterEsc < text.endIndex else { return nil }
-        let kind = text[afterEsc]
-
-        // 1. CSI sequence: ESC [ ... finalByte (@ through ~)
-        if kind == "[" {
-            var cur = text.index(after: afterEsc)
-            var params = ""
-            while cur < text.endIndex {
-                let c = text[cur]
-                if let ascii = c.asciiValue, ascii >= 0x40 && ascii <= 0x7E {
-                    handleCSI(params: params, finalByte: c)
-                    return (text.index(after: cur), true)
-                }
-                params.append(c)
-                cur = text.index(after: cur)
-            }
-            return nil
-        }
-
-        // 2. OSC sequence: ESC ] ... (BEL \u{07} or ST: ESC \)
-        if kind == "]" {
-            var cur = text.index(after: afterEsc)
-            while cur < text.endIndex {
-                let c = text[cur]
-                if c == "\u{0007}" {
-                    return (text.index(after: cur), true)
-                }
-                if c == "\u{001B}" {
-                    let next = text.index(after: cur)
-                    guard next < text.endIndex else { return nil }
-                    if text[next] == "\\" {
-                        return (text.index(after: next), true)
-                    }
-                }
-                cur = text.index(after: cur)
-            }
-            return nil
-        }
-
-        // 3. Charset / two-byte sequence: ESC ( X or ESC ) X
-        if kind == "(" || kind == ")" {
-            let next = text.index(after: afterEsc)
-            guard next < text.endIndex else { return nil }
-            return (text.index(after: next), true)
-        }
-
-        // 4. Single-character ESC sequence (e.g. ESC =, ESC >, ESC M)
-        return (text.index(after: afterEsc), true)
-    }
-
-    private mutating func handleCSI(params: String, finalByte: Character) {
-        ensureRowExists(cursorRow)
-        let cleanParams = params.trimmingCharacters(in: CharacterSet(charactersIn: "?<>="))
-        let parts = cleanParams.split(separator: ";", omittingEmptySubsequences: false)
-        let firstNumber = Int(parts.first ?? "") ?? 0
-        let secondNumber = parts.count > 1 ? (Int(parts[1]) ?? 0) : 0
-
-        switch finalByte {
-        case "K":
-            // Erase in Line (EL): 0 = cursor to end, 1 = start to cursor, 2 = entire line
-            let mode = firstNumber
-            if mode == 0 {
-                if cursorCol < lines[cursorRow].count {
-                    lines[cursorRow].removeSubrange(cursorCol..<lines[cursorRow].count)
-                }
-            } else if mode == 1 {
-                let end = min(cursorCol + 1, lines[cursorRow].count)
-                for i in 0..<end {
-                    lines[cursorRow][i] = " "
-                }
-            } else if mode == 2 {
-                lines[cursorRow].removeAll()
-                cursorCol = 0
-            }
-        case "J":
-            // Erase in Display (ED): 0 = cursor to end, 2 or 3 = clear entire screen
-            if firstNumber == 2 || firstNumber == 3 {
-                lines = [[]]
-                cursorRow = 0
-                cursorCol = 0
-            } else if firstNumber == 0 {
-                if cursorCol < lines[cursorRow].count {
-                    lines[cursorRow].removeSubrange(cursorCol..<lines[cursorRow].count)
-                }
-                if cursorRow + 1 < lines.count {
-                    lines.removeSubrange((cursorRow + 1)..<lines.count)
-                }
-            }
-        case "A":
-            // Cursor Up (CUU)
-            let count = max(1, firstNumber)
-            cursorRow = max(0, cursorRow - count)
-            ensureRowExists(cursorRow)
-        case "B":
-            // Cursor Down (CUD)
-            let count = max(1, firstNumber)
-            cursorRow += count
-            ensureRowExists(cursorRow)
-        case "E":
-            // Cursor Next Line (CNL)
-            let count = max(1, firstNumber)
-            cursorRow += count
-            cursorCol = 0
-            ensureRowExists(cursorRow)
-        case "F":
-            // Cursor Previous Line (CPL)
-            let count = max(1, firstNumber)
-            cursorRow = max(0, cursorRow - count)
-            cursorCol = 0
-            ensureRowExists(cursorRow)
-        case "H", "f":
-            // Cursor Position (CUP, 1-based row;col)
-            let row = max(1, firstNumber) - 1
-            let col = max(1, secondNumber) - 1
-            cursorRow = row
-            cursorCol = col
-            ensureRowExists(cursorRow)
-        case "d":
-            // Line Position Absolute (VPA, 1-based row)
-            let row = max(1, firstNumber) - 1
-            cursorRow = row
-            ensureRowExists(cursorRow)
-        case "D":
-            // Cursor Backward (CUB)
-            let count = max(1, firstNumber)
-            cursorCol = max(0, cursorCol - count)
-        case "C":
-            // Cursor Forward (CUF)
-            let count = max(1, firstNumber)
-            cursorCol += count
-        case "G":
-            // Cursor Horizontal Absolute (CHA, 1-based)
-            let col = max(1, firstNumber)
-            cursorCol = col - 1
-        case "P":
-            // Delete Character (DCH)
-            let count = max(1, firstNumber)
-            if cursorCol < lines[cursorRow].count {
-                let end = min(lines[cursorRow].count, cursorCol + count)
-                lines[cursorRow].removeSubrange(cursorCol..<end)
-            }
-        default:
-            break
-        }
-    }
-
-    private mutating func trimHistoryIfNeeded() {
-        let maxLines = 1500
-        if lines.count > maxLines {
-            let overflow = lines.count - 1200
-            lines.removeFirst(overflow)
-            cursorRow = max(0, cursorRow - overflow)
-        }
+        keyMonitor = nil
     }
 }
 
-/// Manages an interactive pseudo-terminal (`openpty` + `/bin/zsh`) session that automatically
-/// synchronizes its working directory with Dolphin's active folder (just like KDE Dolphin's F4 Konsole panel).
+/// Lets the pty's I/O thread ask for at most one pending main-actor directory check at a time,
+/// so a burst of output (`cat` of a big file) does not enqueue thousands of tasks.
+private final class OutputCheckGate: Sendable {
+    private let pending = Mutex(false)
+
+    func claim() -> Bool {
+        pending.withLock { pending in
+            defer { pending = true }
+            return !pending
+        }
+    }
+
+    func release() {
+        pending.withLock { $0 = false }
+    }
+}
+
+/// Owns the interactive shell of the F4 panel and keeps its working directory in sync with
+/// Dotphin's active folder (like KDE Dolphin's Konsole panel). It outlives the panel view, so
+/// hiding and showing the panel keeps the same shell.
 @MainActor
 @Observable
-final class EmbeddedTerminalSession {
-    private(set) var outputText: String = ""
+final class EmbeddedTerminalSession: LocalProcessTerminalViewDelegate {
     private(set) var isRunning: Bool = false
     private(set) var currentSyncedDirectory: URL?
+    private(set) var terminalView: DotphinTerminalView?
+    /// The user has run something in the shell, so it is no longer just following Dotphin.
+    private(set) var hasUserExecutedCommand: Bool = false
     var autoSyncDirectory: Bool = true
-    var onDirectoryChanged: ((URL) -> Void)?
+    @ObservationIgnored var onDirectoryChanged: ((URL) -> Void)?
 
-    private var masterFD: Int32 = -1
-    private var slaveFD: Int32 = -1
-    private var shellProcess: Process?
-    private var readSource: DispatchSourceRead?
-    private var screenBuffer = TerminalScreenBuffer()
-    private var hasUserExecutedCommand: Bool = false
+    @ObservationIgnored private let outputGate = OutputCheckGate()
 
     init() {}
 
@@ -293,85 +138,52 @@ final class EmbeddedTerminalSession {
             return
         }
 
-        var master: Int32 = -1
-        var slave: Int32 = -1
-        var winSize = winsize(ws_row: 36, ws_col: 220, ws_xpixel: 0, ws_ypixel: 0)
-        guard openpty(&master, &slave, nil, nil, &winSize) == 0 else {
-            outputText += String(localized: "\n[Error: no se pudo abrir el pseudo-terminal (openpty)]\n", bundle: #bundle)
-            return
+        let view = DotphinTerminalView(frame: NSRect(x: 0, y: 0, width: 640, height: 220))
+        view.applyDotphinStyle()
+        view.focusWhenAttached = true
+        view.processDelegate = self
+        view.onUserSubmittedLine = { [weak self] in
+            self?.noteUserSubmittedLine()
         }
-
-        let flags = fcntl(master, F_GETFL)
-        if flags != -1 {
-            _ = fcntl(master, F_SETFL, flags | O_NONBLOCK)
+        let gate = outputGate
+        view.setProcessOutputHandler { [weak self] in
+            guard gate.claim() else { return }
+            Task { @MainActor [weak self] in
+                gate.release()
+                self?.checkShellWorkingDirectoryAfterOutput()
+            }
         }
-
-        self.masterFD = master
-        self.slaveFD = slave
-        self.screenBuffer.reset()
-        self.hasUserExecutedCommand = false
 
         let shellPath = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: shellPath)
-        if shellPath.hasSuffix("zsh") {
-            // Login + interactive, disable PROMPT_SP (`%` + 99 spaces before prompt), ignore leading-space commands in history
-            process.arguments = ["-l", "-i", "-o", "nopromptsp", "-o", "histignorespace"]
-        } else {
-            process.arguments = ["-l", "-i"]
-        }
-        process.currentDirectoryURL = initialDirectory
+        // Login + interactive; with zsh, commands typed with a leading space (Dotphin's own
+        // `cd`) stay out of the history.
+        let arguments = shellPath.hasSuffix("zsh") ? ["-l", "-i", "-o", "histignorespace"] : ["-l", "-i"]
 
-        var env = ProcessInfo.processInfo.environment
-        env["PATH"] = Self.enrichedDeveloperPath(existingPath: env["PATH"])
+        terminalView = view
+        hasUserExecutedCommand = false
+        currentSyncedDirectory = initialDirectory.standardizedFileURL
+        view.startProcess(
+            executable: shellPath,
+            args: arguments,
+            environment: Self.shellEnvironment(),
+            currentDirectory: initialDirectory.path
+        )
+        isRunning = view.process.running
+    }
+
+    nonisolated static func shellEnvironment(
+        base: [String: String] = ProcessInfo.processInfo.environment
+    ) -> [String] {
+        var env = base
+        env["PATH"] = enrichedDeveloperPath(existingPath: env["PATH"])
         env["TERM"] = "xterm-256color"
         env["COLORTERM"] = "truecolor"
         env["CLICOLOR"] = "1"
-        env["COLUMNS"] = "220"
-        env["LINES"] = "36"
-        env["PROMPT_EOL_MARK"] = ""
         env["LANG"] = env["LANG"] ?? "es_ES.UTF-8"
-        if shellPath.hasSuffix("zsh") {
-            env["PROMPT"] = "%n@%m %1~ %# "
-        }
-        process.environment = env
-
-        let slaveHandle = FileHandle(fileDescriptor: slave, closeOnDealloc: false)
-        process.standardInput = slaveHandle
-        process.standardOutput = slaveHandle
-        process.standardError = slaveHandle
-
-        let source = DispatchSource.makeReadSource(fileDescriptor: master, queue: .main)
-        source.setEventHandler { [weak self] in
-            MainActor.assumeIsolated {
-                self?.readAvailableBytes()
-            }
-        }
-        source.setCancelHandler { [master, slave] in
-            if master >= 0 { close(master) }
-            if slave >= 0 { close(slave) }
-        }
-        self.readSource = source
-        source.resume()
-
-        process.terminationHandler = { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.isRunning = false
-            }
-        }
-
-        do {
-            try process.run()
-            self.shellProcess = process
-            self.isRunning = true
-            self.currentSyncedDirectory = initialDirectory.standardizedFileURL
-        } catch {
-            outputText += String(localized: "\n[Error al iniciar \(shellPath): \(error.localizedDescription)]\n", bundle: #bundle)
-            source.cancel()
-            self.readSource = nil
-            self.masterFD = -1
-            self.slaveFD = -1
-        }
+        // The panel sizes the pty; stale values from the launching environment would win over it.
+        env["COLUMNS"] = nil
+        env["LINES"] = nil
+        return env.map { "\($0.key)=\($0.value)" }.sorted()
     }
 
     /// Builds a complete `PATH` for GUI-launched macOS apps so tools installed via Homebrew,
@@ -411,14 +223,10 @@ final class EmbeddedTerminalSession {
     }
 
     func stop() {
-        if let process = shellProcess, process.isRunning {
-            process.terminate()
-        }
-        shellProcess = nil
-        readSource?.cancel()
-        readSource = nil
-        masterFD = -1
-        slaveFD = -1
+        terminalView?.processDelegate = nil
+        terminalView?.setProcessOutputHandler(nil)
+        terminalView?.terminate()
+        terminalView = nil
         isRunning = false
     }
 
@@ -435,84 +243,56 @@ final class EmbeddedTerminalSession {
         currentSyncedDirectory = standardized
         let quoted = Self.shellSingleQuoted(standardized.path)
 
+        // Ctrl+E, Ctrl+U clear any partial input; the leading space keeps the `cd` out of history.
         if !hasUserExecutedCommand {
-            // Keep the terminal clean when the user is just clicking through folders in Dolphin
-            // without having run custom commands yet (matches Dolphin's m_clearTerminal behavior).
-            screenBuffer.reset()
-            outputText = ""
+            // Keep the terminal clean while the user is just clicking through folders
+            // (matches Dolphin's m_clearTerminal behavior).
             sendRaw("\u{0005}\u{0015} cd \(quoted) && clear\r")
         } else {
-            // Send Ctrl+E, Ctrl+U to clear any partial input, then leading-space cd
             sendRaw("\u{0005}\u{0015} cd \(quoted)\r")
         }
     }
 
-    func sendCommand(_ command: String) {
-        guard isRunning else { return }
+    func noteUserSubmittedLine() {
         hasUserExecutedCommand = true
-        sendRaw(command + "\r")
     }
 
     func sendInterrupt() {
         guard isRunning else { return }
         // Ctrl+C (ETX, 0x03)
-        sendBytes([0x03])
+        sendRaw("\u{0003}")
     }
 
     func clearOutput() {
         hasUserExecutedCommand = false
-        screenBuffer.reset()
-        outputText = ""
         if isRunning {
             sendRaw("\u{0005}\u{0015} clear\r")
         }
     }
 
-    func updateWindowSize(rows: UInt16, cols: UInt16 = 220) {
-        guard masterFD >= 0 else { return }
-        var ws = winsize(ws_row: max(5, rows), ws_col: max(40, cols), ws_xpixel: 0, ws_ypixel: 0)
-        _ = ioctl(masterFD, TIOCSWINSZ, &ws)
-    }
-
     func sendRaw(_ text: String) {
-        sendBytes(Array(text.utf8))
+        terminalView?.send(txt: text)
     }
 
-    private func sendBytes(_ bytes: [UInt8]) {
-        guard masterFD >= 0, !bytes.isEmpty else { return }
-        bytes.withUnsafeBytes { rawBuffer in
-            guard let base = rawBuffer.baseAddress else { return }
-            _ = Darwin.write(masterFD, base, rawBuffer.count)
-        }
+    /// The shell's working directory, read from the kernel.
+    var shellWorkingDirectory: URL? {
+        guard let pid = terminalView?.process.shellPid else { return nil }
+        return Self.workingDirectory(forPID: pid)
     }
 
-    private func readAvailableBytes() {
-        guard masterFD >= 0 else { return }
-        var buffer = [UInt8](repeating: 0, count: 4096)
-        var collected: [UInt8] = []
-        while true {
-            let count = Darwin.read(masterFD, &buffer, buffer.count)
-            if count > 0 {
-                collected.append(contentsOf: buffer[0..<count])
-            } else {
-                break
-            }
-        }
-        guard !collected.isEmpty else { return }
-        let rawChunk = String(decoding: collected, as: UTF8.self)
-        screenBuffer.feed(rawChunk)
-        outputText = screenBuffer.renderedText
-        checkShellWorkingDirectoryAfterOutput()
-    }
-
-    /// Queries the shell process's current working directory via `proc_pidinfo(PROC_PIDVNODEPATHINFO)`
-    /// so that `cd` commands typed inside the terminal navigate Dolphin's active pane (`slotTerminalDirectoryChanged`).
+    /// `cd` typed inside the terminal navigates Dolphin's active pane (`slotTerminalDirectoryChanged`).
     private func checkShellWorkingDirectoryAfterOutput() {
-        guard autoSyncDirectory, hasUserExecutedCommand,
-              let process = shellProcess, process.isRunning else { return }
-        guard let detectedURL = Self.workingDirectory(forPID: process.processIdentifier) else { return }
-        let standardized = detectedURL.standardizedFileURL
-        guard standardized != currentSyncedDirectory else { return }
+        guard isRunning, let directory = shellWorkingDirectory else { return }
+        reportShellDirectory(directory)
+    }
+
+    private func reportShellDirectory(_ directory: URL) {
+        guard autoSyncDirectory, hasUserExecutedCommand else { return }
+        let standardized = directory.standardizedFileURL
+        // The kernel reports the real path (/private/tmp); Dotphin may be showing a link to it (/tmp).
+        if let currentSyncedDirectory, Self.realPath(currentSyncedDirectory) == Self.realPath(standardized) {
+            return
+        }
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: standardized.path, isDirectory: &isDir),
               isDir.boolValue else { return }
@@ -535,27 +315,51 @@ final class EmbeddedTerminalSession {
         return URL(fileURLWithPath: path, isDirectory: true).standardizedFileURL
     }
 
-    /// Processes a raw terminal stream through `TerminalScreenBuffer` (used by unit tests and snapshot helpers).
-    nonisolated static func stripANSISequences(from input: String) -> String {
-        var buf = TerminalScreenBuffer()
-        buf.feed(input)
-        return buf.renderedText
-    }
-
-    nonisolated static func applyBackspaces(to input: String) -> String {
-        var buf = TerminalScreenBuffer()
-        buf.feed(input)
-        return buf.renderedText
+    /// `realpath(3)`: unlike `resolvingSymlinksInPath()`, it keeps the `/private` prefix.
+    nonisolated static func realPath(_ url: URL) -> String {
+        guard let resolved = realpath(url.path, nil) else { return url.standardizedFileURL.path }
+        defer { free(resolved) }
+        return String(cString: resolved)
     }
 
     nonisolated static func shellSingleQuoted(_ path: String) -> String {
         "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
+
+    // MARK: LocalProcessTerminalViewDelegate
+
+    func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
+
+    func setTerminalTitle(source: LocalProcessTerminalView, title: String) {}
+
+    /// OSC 7, for shells configured to announce their directory.
+    func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {
+        guard source === terminalView, let directory, !directory.isEmpty else { return }
+        let path = URL(string: directory).flatMap { $0.isFileURL ? $0.path : nil } ?? directory
+        reportShellDirectory(URL(fileURLWithPath: path, isDirectory: true))
+    }
+
+    func processTerminated(source: TerminalView, exitCode: Int32?) {
+        guard source === terminalView else { return }
+        isRunning = false
+    }
+}
+
+/// Hosts the session's SwiftTerm view. The view is created by the session (it outlives the
+/// panel), so SwiftUI only places it; layout belongs to SwiftUI.
+private struct SwiftTermHostView: NSViewRepresentable {
+    let terminalView: DotphinTerminalView
+
+    func makeNSView(context: Context) -> DotphinTerminalView {
+        terminalView.focusWhenAttached = true
+        return terminalView
+    }
+
+    func updateNSView(_ nsView: DotphinTerminalView, context: Context) {}
 }
 
 /// KDE Dolphin-style integrated bottom terminal panel (`F4`), with live directory synchronization,
-/// command history (`↑` / `↓`), interrupt (`Ctrl+C`), clear,
-/// and a quick button to open macOS Terminal.app.
+/// interrupt (`Ctrl+C`), clear, and a quick button to open macOS Terminal.app.
 struct EmbeddedTerminalPanelView: View {
     nonisolated static let minHeight: CGFloat = 110
     nonisolated static let maxHeight: CGFloat = 560
@@ -567,11 +371,6 @@ struct EmbeddedTerminalPanelView: View {
     var onDirectoryChanged: ((URL) -> Void)? = nil
     let onOpenExternalTerminal: () -> Void
     let onClose: () -> Void
-
-    @State private var commandInput: String = ""
-    @State private var commandHistory: [String] = []
-    @State private var historyIndex: Int? = nil
-    @FocusState private var isInputFocused: Bool
 
     init(
         session: EmbeddedTerminalSession,
@@ -593,48 +392,45 @@ struct EmbeddedTerminalPanelView: View {
 
             Divider()
 
-            ScrollViewReader { proxy in
-                ScrollView {
-                    Text(session.outputText.isEmpty ? String(localized: "Iniciando sesión de terminal en \(currentDirectory.path)…", bundle: #bundle) : session.outputText)
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundStyle(Color.primary.opacity(0.92))
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .id("terminalBottom")
+            ZStack(alignment: .bottom) {
+                if let terminalView = session.terminalView {
+                    SwiftTermHostView(terminalView: terminalView)
+                        .id(ObjectIdentifier(terminalView))
+                        .padding(.leading, 6)
+                        .padding(.vertical, 4)
                 }
-                .background(Color(nsColor: .textBackgroundColor).opacity(0.65))
-                .onChange(of: session.outputText) { _, _ in
-                    proxy.scrollTo("terminalBottom", anchor: .bottom)
-                }
-                .onTapGesture {
-                    isInputFocused = true
+                if !session.isRunning, session.terminalView != nil {
+                    shellEndedBar
                 }
             }
-
-            Divider()
-
-            inputBar
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(nsColor: .textBackgroundColor))
         }
         .background(.bar)
         .onAppear {
             session.onDirectoryChanged = onDirectoryChanged
             session.startIfNeeded(initialDirectory: currentDirectory)
         }
-        .task {
-            isInputFocused = true
-        }
         .onChange(of: currentDirectory) { _, newURL in
             session.syncDirectory(to: newURL)
         }
-        // La altura la maneja el `VSplitView` que contiene al panel.
-        .onGeometryChange(for: CGFloat.self) { proxy in
-            proxy.size.height
-        } action: { newHeight in
-            let approxRows = UInt16(max(6, Int((newHeight - 64) / 15)))
-            session.updateWindowSize(rows: approxRows)
+        // La altura la maneja el `VSplitView` que contiene al panel; SwiftTerm ajusta el pty.
+    }
+
+    private var shellEndedBar: some View {
+        HStack(spacing: 8) {
+            Text(String(localized: "La sesión de la terminal terminó.", bundle: #bundle))
+                .font(.system(size: 11.5))
+                .foregroundStyle(.secondary)
+            Button(String(localized: "Reiniciar", bundle: #bundle)) {
+                session.startIfNeeded(initialDirectory: currentDirectory)
+            }
+            .controlSize(.small)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
+        .background(.bar)
     }
 
     private var headerBar: some View {
@@ -722,89 +518,5 @@ struct EmbeddedTerminalPanelView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
-    }
-
-    private var inputBar: some View {
-        HStack(spacing: 6) {
-            Text(String(localized: "❯", bundle: #bundle))
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.accentColor)
-
-            TextField(String(localized: "Escribir comando… (Intro para ejecutar, ↑/↓ historial)", bundle: #bundle), text: $commandInput)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12, design: .monospaced))
-                .focused($isInputFocused)
-                .onSubmit {
-                    submitCommand()
-                }
-                .onKeyPress(.upArrow) {
-                    navigateHistory(direction: -1)
-                    return .handled
-                }
-                .onKeyPress(.downArrow) {
-                    navigateHistory(direction: 1)
-                    return .handled
-                }
-                .onKeyPress(characters: CharacterSet(charactersIn: "cC"), phases: .down) { keyPress in
-                    if keyPress.modifiers.contains(.control) {
-                        session.sendInterrupt()
-                        return .handled
-                    }
-                    return .ignored
-                }
-
-            Button {
-                submitCommand()
-            } label: {
-                Image(systemName: "paperplane.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(commandInput.isEmpty ? .tertiary : .primary)
-            }
-            .buttonStyle(.plain)
-            .disabled(commandInput.isEmpty)
-            .help(String(localized: "Ejecutar comando (Intro)", bundle: #bundle))
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color(nsColor: .textBackgroundColor).opacity(0.85))
-    }
-
-    private func submitCommand() {
-        let trimmed = commandInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed == "clear" {
-            commandHistory.append(commandInput)
-            historyIndex = nil
-            commandInput = ""
-            session.clearOutput()
-            return
-        }
-        if !trimmed.isEmpty {
-            commandHistory.append(commandInput)
-        }
-        historyIndex = nil
-        let toSend = commandInput
-        commandInput = ""
-        session.sendCommand(toSend)
-    }
-
-    private func navigateHistory(direction: Int) {
-        guard !commandHistory.isEmpty else { return }
-        if let current = historyIndex {
-            let next = current + direction
-            if next < 0 {
-                historyIndex = 0
-                commandInput = commandHistory[0]
-            } else if next >= commandHistory.count {
-                historyIndex = nil
-                commandInput = ""
-            } else {
-                historyIndex = next
-                commandInput = commandHistory[next]
-            }
-        } else if direction < 0 {
-            let last = commandHistory.count - 1
-            historyIndex = last
-            commandInput = commandHistory[last]
-        }
     }
 }

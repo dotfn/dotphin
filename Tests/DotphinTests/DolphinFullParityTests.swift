@@ -218,21 +218,9 @@ final class DolphinFullParityTests: XCTestCase {
         XCTAssertEqual(entries.first?.sizeBytes, 4096)
     }
 
-    // MARK: - 8. Embedded Terminal Buffer & Zsh PROMPT_SP / PATH Handling
+    // MARK: - 8. Embedded Terminal PATH Handling
 
-    func test_terminalScreenBuffer_handlesZshPromptSpCarriageReturnAndEraseInLine() {
-        var buffer = TerminalScreenBuffer()
-        // Simulate zsh's PROMPT_SP sequence: `%` + 99 spaces + `\r \r` + ESC[J + actual prompt
-        let zshPromptSp = "\u{1B}[1m\u{1B}[7m%\u{1B}[27m\u{1B}[1m\u{1B}[0m"
-            + String(repeating: " ", count: 99)
-            + "\r \r\u{1B}[0m\u{1B}[27m\u{1B}[24m\u{1B}[Juser@Mac ~ % "
-        buffer.feed(zshPromptSp)
-        XCTAssertEqual(buffer.renderedText, "user@Mac ~ % ")
-
-        // Simulate typing a command with backspace and Ctrl+U (ESC[2K \r)
-        buffer.feed("ls -la\u{08}h\r\narchivo.txt\r\n")
-        XCTAssertEqual(buffer.renderedText, "user@Mac ~ % ls -lh\narchivo.txt\n")
-
+    func test_embeddedTerminal_enrichedPathIncludesDeveloperTools() {
         let path = EmbeddedTerminalSession.enrichedDeveloperPath(existingPath: "/usr/bin:/bin")
         XCTAssertTrue(path.contains("/opt/homebrew/bin"))
         XCTAssertTrue(path.contains("/usr/local/bin"))
@@ -357,13 +345,7 @@ final class DolphinFullParityTests: XCTestCase {
         window.close()
     }
 
-    func testTerminalVerticalCursorMovementAndResizeBounds() {
-        // Simulate fastfetch drawing 2 lines of ASCII art, moving up 1 line (ESC[1A),
-        // moving right to col 12 (ESC[12G), and printing system info alongside the logo
-        let stream = "LOGO_Row1\r\nLOGO_Row2\u{001B}[1A\u{001B}[12GHost: Mac\r\n\u{001B}[12GOS: macOS"
-        let rendered = EmbeddedTerminalSession.stripANSISequences(from: stream)
-        XCTAssertEqual(rendered, "LOGO_Row1  Host: Mac\nLOGO_Row2  OS: macOS")
-
+    func testTerminalPanelResizeBounds() {
         XCTAssertLessThan(EmbeddedTerminalPanelView.minHeight, EmbeddedTerminalPanelView.defaultHeight)
         XCTAssertLessThan(EmbeddedTerminalPanelView.defaultHeight, EmbeddedTerminalPanelView.expandedHeight)
         XCTAssertLessThanOrEqual(EmbeddedTerminalPanelView.expandedHeight, EmbeddedTerminalPanelView.maxHeight)
