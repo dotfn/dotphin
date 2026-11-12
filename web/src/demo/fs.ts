@@ -1,6 +1,8 @@
 // A small, believable home folder for the demo window.
 // Paths use "~" so nothing pretends to be a real user's disk.
 
+import { site } from "@/lib/site";
+
 export type GitStatus = "modified" | "added" | "untracked" | "deleted";
 
 export type Kind =
@@ -65,7 +67,7 @@ const unsortedFs: Record<string, Entry[]> = {
   ],
   "~/Downloads": [
     folder("Screenshots", 46, "Today"),
-    { name: "Dotphin-0.1.1-beta.zip", kind: "zip", size: "4.8 MB", modified: "Today" },
+    { name: site.download, kind: "zip", size: "6.4 MB", modified: "Today" },
     { name: "Q3-report.pdf", kind: "pdf", size: "2.1 MB", modified: "Yesterday" },
     { name: "harbor-dawn.heic", kind: "image", size: "3.4 MB", modified: "Nov 9" },
     { name: "invoice-1042.pdf", kind: "pdf", size: "188 KB", modified: "Nov 7" },

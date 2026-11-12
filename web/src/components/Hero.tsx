@@ -16,7 +16,7 @@ const heroInitial = initialState();
 
 // Copy a download into the project from the other pane, then ask git about it.
 const heroScript: Step[] = [
-  { wait: 1400, action: { type: "select", pane: 1, names: ["Dotphin-0.1.1-beta.zip"] } },
+  { wait: 1400, action: { type: "select", pane: 1, names: [site.download] } },
   { wait: 1100, action: { type: "transferToOther", mode: "copy" } },
   { wait: 1500, action: { type: "select", pane: 0, names: ["README.md"] } },
   { wait: 900, action: { type: "toggleTerminal" } },
@@ -41,11 +41,11 @@ export function Hero() {
         <Image src="/brand/icon-256.png" alt="" width={104} height={104} priority className="drop-shadow-[0_12px_24px_rgb(29_104_224/0.22)]" />
 
         <a
-          href="#terminal"
+          href="#features"
           className="mt-6 flex h-11 items-center gap-2 rounded-full sm:h-9 bg-surface py-1 pl-1 pr-3 text-[14px] font-medium text-ink shadow-[0_0_0_1px_var(--separator-soft),var(--shadow-lift)] transition-colors duration-[var(--dur-quick)] hover:bg-surface-soft"
         >
-          <span className="rounded-full bg-accent px-2.5 py-0.5 text-[13px] font-semibold text-white">New in 0.1.1</span>
-          A real terminal on ⌃`
+          <span className="rounded-full bg-accent px-2.5 py-0.5 text-[13px] font-semibold text-white">New in 0.1.2</span>
+          Finder-style sidebar
           <Icon.chevronRight size={13} className="text-ink-2" />
         </a>
 

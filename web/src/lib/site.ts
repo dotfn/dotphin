@@ -3,7 +3,8 @@
 
 export const site = {
   name: "Dotphin",
-  version: "0.1.1-beta",
+  version: "0.1.2-beta",
+  download: "Dotphin-0.1.2-beta.zip",
   // Assumed production domain — used for canonical/OG URLs only.
   url: "https://dotphin.dotfn.dev",
   repo: "https://github.com/dotfn/dotphin",
